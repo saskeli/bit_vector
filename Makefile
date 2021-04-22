@@ -8,7 +8,7 @@ bv_debug: bv_debug.cpp $(HEADERS)
 	g++ $(CFLAGS) -Ofast -o bv_debug bv_debug.cpp
 
 debug: bv_debug.cpp $(HEADERS)
-	g++ $(CFLAGS) -O0 -g -o bv_debug bv_debug.cpp
+	g++ $(CFLAGS) -DDEBUG -O0 -g -o bv_debug bv_debug.cpp
 
 bit_vector/%.hpp:
 

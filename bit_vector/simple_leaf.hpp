@@ -3,11 +3,13 @@
 #include <cstdint>
 #include <immintrin.h>
 
+#define WORD_BITS 64
+
 template <class data_type, uint8_t buffer_size, data_type size_limit, class allocator_type>
 class simple_leaf {
   private:
     uint8_t metadata_;
-    uint32_t buffer_[buffer_size];
+    uint32_t buffer_[buffer_size + 1];
     data_type capacity_;
     data_type size_;
     data_type p_sum_; //Should this just be recalculated when needed? Currently causes branching.
@@ -20,13 +22,15 @@ class simple_leaf {
 
   public:
     simple_leaf(allocator_type* allocator, data_type capacity, uint64_t* data) {
-        std::cout << "Called" << std::endl;
         allocator_ = allocator;
         metadata_ = 0;
         capacity_ = capacity;
         size_ = 0;
         p_sum_ = 0;
         data_ = data;
+#ifdef DEBUG
+        std::cout << "Leaf constructed with capacity " << capacity_ << std::endl;
+#endif
     }
 
     ~simple_leaf() {
@@ -57,7 +61,11 @@ class simple_leaf {
     uint64_t p_sum() const { return p_sum_; }
     uint64_t size() const { return size_; }
 
-    void insert(uint64_t i, uint64_t x) {
+    void insert(uint64_t i, bool x) {
+        if (size_ == capacity_ * WORD_BITS) {
+            std::cerr << "Memory overflow. Reallocate befor adding elements" << std::endl;
+            exit(1);
+        }
         if (i == size_) {
             push_back(x);
             return;
@@ -84,10 +92,6 @@ class simple_leaf {
             if (buffer_count() > buffer_size) commit();
         } else {
             size_++;
-            if (size_ > fast_mul(capacity_)) {
-                this = allocator_.reallocate_leaf(this, capacity_, capacity_ * 2);
-                capacity_ *= 2;
-            }
             auto target_word = fast_div(i);
             auto target_offset = fast_mod(i);
             for (size_t j = capacity_ - 1; j > target_word; j--) {
@@ -151,6 +155,10 @@ class simple_leaf {
     }
 
     void push_back(const bool x) {
+        if (size_ == capacity_ * WORD_BITS) {
+            std::cerr << "Memory overflow. Reallocate befor adding elements" << std::endl;
+            exit(1);
+        }
         auto pb_size = size_;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count(); i++) {
@@ -159,11 +167,6 @@ class simple_leaf {
         }
         size_++;
         
-        if (fast_div(pb_size) == capacity_) {
-            this = allocator_.reallocate_leaf(this, capacity_, capacity_ * 2);
-            capacity_ *= 2;
-        }
-
         data_[fast_div(pb_size)] |= uint64_t(x) << fast_mod(pb_size);
         p_sum_ += uint64_t(x);
 
@@ -235,7 +238,7 @@ class simple_leaf {
 
         // optimization for bitvectors
 
-        for (data_type j = 0; j < capacity_; ++j) {
+        for (data_type j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += 64;
             if constexpr (buffer_size != 0) {
@@ -313,29 +316,26 @@ class simple_leaf {
     }
 
     void commit() {
-        if (size_ > fast_mul(capacity_)) {
-            this = allocator_.reallocate_leaf(this, capacity_, capacity_ * 2);
-            capacity_ *= 2;
-        }
-
-        data_type overflow = 0;
+        uint64_t overflow = 0;
         uint8_t overflow_length = 0;
         uint8_t underflow_length = 0;
-        data_type current_word = 0;
+        uint64_t current_word = 0;
         uint8_t current_index = 0;
         uint32_t buf = buffer_[current_index];
         data_type target_word = fast_div(buffer_index(buf));
         data_type target_offset = fast_mod(buffer_index(buf));
 
-        while (current_word < capacity_) {
-            data_type underflow =
+        while (current_word * WORD_BITS < size_) {
+            std::cout << "Current_word: " << current_word << ", Cap: " << capacity_ << "\n"
+                      << "current_word + 1 < capacity: " << (current_word + 1 < capacity_) << std::endl;
+            uint64_t underflow =
                 current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
             if (overflow_length) {
                 underflow = (underflow << overflow_length) |
                             (data_[current_word] >> (64 - overflow_length));
             }
 
-            data_type new_overflow = 0;
+            uint64_t new_overflow = 0;
             // If buffers need to be commit to this word:
             if (current_word == target_word && current_index < buffer_count()) {
                 uint64_t word =

@@ -13,11 +13,12 @@ int main()
 
     leaf* lefa = alloc->allocate_leaf<leaf, uint32_t>(8);
 
-    uint8_t* data = reinterpret_cast<uint8_t*>(lefa);
-    for (size_t i = 0; i < (sizeof(leaf) + 8 * sizeof(uint64_t)); i++) {
-        if (i % 40 == 0) std::cout << "\n";
-        if (i % 4 == 0) std::cout << " ";
-        std::cout << std::setfill('0') << std::setw(2) << std::hex << uint16_t(data[i]);
+    for (uint64_t i = 0; i < 500; i++) {
+        lefa->insert(0, bool(i % 2));
+    }
+    std::cout << "Content: \n";
+    for (uint64_t i = 0; i < lefa->size(); i++) {
+        std::cout << lefa->at(i) << " ";
     }
     std::cout << std::endl;
 
