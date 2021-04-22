@@ -53,9 +53,9 @@ class simple_leaf {
                     break;
                 }
             }
-            return MASK & (data_[fast_div(index)] >> fast_mod(index));
+            return MASK & (data_[index / WORD_BITS] >> (index % WORD_BITS));
         }
-        return MASK & (data_[fast_div(i)] >> fast_mod(i));
+        return MASK & (data_[i / WORD_BITS] >> (i % WORD_BITS));
     }
 
     uint64_t p_sum() const { return p_sum_; }
@@ -92,8 +92,8 @@ class simple_leaf {
             if (buffer_count() > buffer_size) commit();
         } else {
             size_++;
-            auto target_word = fast_div(i);
-            auto target_offset = fast_mod(i);
+            auto target_word = i / WORD_BITS;
+            auto target_offset = i % WORD_BITS;
             for (size_t j = capacity_ - 1; j > target_word; j--) {
                 data_[j] <<= 1;
                 data_[j] |= (data_[j - 1] >> 63);
@@ -135,8 +135,8 @@ class simple_leaf {
             }
             if (buffer_count() > buffer_size) commit();
         } else {
-            auto target_word = fast_div(i);
-            auto target_offset = fast_mod(i);
+            auto target_word = i / WORD_BITS;
+            auto target_offset = i % WORD_BITS;
             p_sum_ -= MASK & (data_[target_word] >> target_offset);
             data_[target_word] =
                 (data_[target_word] & ((MASK << target_offset) - 1)) |
@@ -167,7 +167,7 @@ class simple_leaf {
         }
         size_++;
         
-        data_[fast_div(pb_size)] |= uint64_t(x) << fast_mod(pb_size);
+        data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
         p_sum_ += uint64_t(x);
 
     }
@@ -193,8 +193,8 @@ class simple_leaf {
                 }
             }
         }
-        const auto word_nr = fast_div(idx);
-        const auto pos = fast_mod(idx);
+        const auto word_nr = idx / WORD_BITS;
+        const auto pos = idx % WORD_BITS;
 
         if ((data_[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)) {
             p_sum_ += x ? 1 : -1;
@@ -219,8 +219,8 @@ class simple_leaf {
             }
         }
 
-        data_type target_word = fast_div(idx);
-        data_type target_offset = fast_mod(idx);
+        data_type target_word = idx / WORD_BITS;
+        data_type target_offset = idx % WORD_BITS;
         for (size_t i = 0; i < target_word; i++) {
             count += __builtin_popcountll(data_[i]);
         }
@@ -250,8 +250,8 @@ class simple_leaf {
                             pos++;
                             a_pos_offset--;
                         } else {
-                            pop -= (data_[fast_div(b_index + a_pos_offset)] &
-                                    (MASK << fast_mod(b_index + a_pos_offset)))
+                            pop -= (data_[(b_index + a_pos_offset) / WORD_BITS] &
+                                    (MASK << ((b_index + a_pos_offset) % WORD_BITS)))
                                        ? 1
                                        : 0;
                             pos--;
@@ -281,12 +281,6 @@ class simple_leaf {
     uint8_t buffer_count() const {
         return metadata_ & uint8_t(127);
     }
-    static data_type fast_mod(data_type const num) { return num & 63; }
-
-    static data_type fast_div(data_type const num) { return num >> 6; }
-
-    static data_type fast_mul(data_type const num) { return num << 6; }
-
     bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
 
     bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
@@ -322,8 +316,8 @@ class simple_leaf {
         uint64_t current_word = 0;
         uint8_t current_index = 0;
         uint32_t buf = buffer_[current_index];
-        data_type target_word = fast_div(buffer_index(buf));
-        data_type target_offset = fast_mod(buffer_index(buf));
+        data_type target_word = buffer_index(buf) / WORD_BITS;
+        data_type target_offset = buffer_index(buf) % WORD_BITS;
 
         while (current_word * WORD_BITS < size_) {
             std::cout << "Current_word: " << current_word << ", Cap: " << capacity_ << "\n"
@@ -380,8 +374,8 @@ class simple_leaf {
                     current_index++;
                     if (current_index >= buffer_count()) break;
                     buf = buffer_[current_index];
-                    target_word = fast_div(buffer_index(buf));
-                    target_offset = fast_mod(buffer_index(buf));
+                    target_word = buffer_index(buf) / WORD_BITS;
+                    target_offset = buffer_index(buf) % WORD_BITS;
                 }
                 new_word |=
                     start_offset < 64 ? (word << start_offset) : uint64_t(0);
