@@ -34,3 +34,6 @@
 # IDE stuff
 .vscode/*
 .idea/*
+
+# Compiled binaries
+bv_debug
