@@ -49,4 +49,8 @@ class malloc_alloc {
         n_leaf.set_data_ptr(reinterpret_cast<uint64_t*>(data_ptr));
         return n_leaf;
     }
+
+    uint64_t live_allocations() {
+        return allocations_;
+    }
 };
