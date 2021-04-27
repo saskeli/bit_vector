@@ -1,11 +1,12 @@
-
-#pragma once
+#ifndef BV_SIMPLE_NODE_HPP
+#define BV_SIMPLE_NODE_HPP
 
 #include <cstring>
+#include <cstdint>
 
 #define CHILDREN 32
 
-template <class data_type, class leaf_type, class allocator_type>
+template <class data_type, class leaf_type, class allocator_type, data_type leaf_size>
 class simple_node {
   private:
     uint8_t meta_data_;
@@ -26,3 +27,4 @@ class simple_node {
         allocator_.deallocate_node(this);
     }
 };
+#endif

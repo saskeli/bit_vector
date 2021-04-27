@@ -1,11 +1,13 @@
-#pragma once
+#ifndef BV_SIMPLE_LEAF_HPP
+#define BV_SIMPLE_LEAF_HPP
 
 #include <cstdint>
 #include <immintrin.h>
+#include <iostream>
 
 #define WORD_BITS 64
 
-template <class data_type, uint8_t buffer_size, data_type size_limit, class allocator_type>
+template <class data_type, class allocator_type, uint8_t buffer_size>
 class simple_leaf {
   private:
     uint8_t metadata_;
@@ -19,6 +21,7 @@ class simple_leaf {
     static constexpr uint32_t VALUE_MASK = 1;
     static constexpr uint32_t TYPE_MASK = 8;
     static constexpr uint32_t INDEX_MASK = ~((uint32_t(1) << 8) - 1);
+    static_assert(buffer_size < 64);
 
   public:
     simple_leaf(allocator_type* allocator, data_type capacity, uint64_t* data) {
@@ -28,9 +31,6 @@ class simple_leaf {
         size_ = 0;
         p_sum_ = 0;
         data_ = data;
-#ifdef DEBUG
-        std::cout << "Leaf constructed with capacity " << capacity_ << std::endl;
-#endif
     }
 
     ~simple_leaf() {
@@ -48,7 +48,7 @@ class simple_leaf {
                     }
                     index++;
                 } else if (b < i) {
-                    index += buffer_is_insertion(buffer_[idx]) ? -1 : 1;
+                    index -= buffer_is_insertion(buffer_[idx]) * 2 - 1;
                 } else {
                     break;
                 }
@@ -62,10 +62,12 @@ class simple_leaf {
     uint64_t size() const { return size_; }
 
     void insert(uint64_t i, bool x) {
+#ifdef DEBUG
         if (size_ == capacity_ * WORD_BITS) {
             std::cerr << "Memory overflow. Reallocate befor adding elements" << std::endl;
             exit(1);
         }
+#endif
         if (i == size_) {
             push_back(x);
             return;
@@ -155,10 +157,12 @@ class simple_leaf {
     }
 
     void push_back(const bool x) {
-        if (size_ == capacity_ * WORD_BITS) {
+#ifdef DEBUG
+        if (buffer_count() == buffer_size && size_ == capacity_ * WORD_BITS) {
             std::cerr << "Memory overflow. Reallocate befor adding elements" << std::endl;
             exit(1);
         }
+#endif
         auto pb_size = size_;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count(); i++) {
@@ -218,7 +222,6 @@ class simple_leaf {
                 }
             }
         }
-
         data_type target_word = idx / WORD_BITS;
         data_type target_offset = idx % WORD_BITS;
         for (size_t i = 0; i < target_word; i++) {
@@ -236,8 +239,6 @@ class simple_leaf {
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
 
-        // optimization for bitvectors
-
         for (data_type j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += 64;
@@ -250,10 +251,7 @@ class simple_leaf {
                             pos++;
                             a_pos_offset--;
                         } else {
-                            pop -= (data_[(b_index + a_pos_offset) / WORD_BITS] &
-                                    (MASK << ((b_index + a_pos_offset) % WORD_BITS)))
-                                       ? 1
-                                       : 0;
+                            pop -= (data_[(b_index + a_pos_offset) / WORD_BITS] >> ((b_index + a_pos_offset) % WORD_BITS)) & MASK;
                             pos--;
                             a_pos_offset++;
                         }
@@ -265,17 +263,29 @@ class simple_leaf {
             }
             if (pop >= x) break;
         }
+
         pos = size_ < pos ? size_ : pos;
-        // end optimization for bitvectors
-        while (pop > x && pos > 0) {
-            pop -= at(--pos);
+        pos--;
+        while (pop >= x && pos >= 0) {
+            pop -= at(pos);
+            pos--;
         }
-        return pos;
+        return ++pos;
     }
 
     uint64_t bit_size() const {
         return 8 * (sizeof(*this) + capacity_ * sizeof(uint64_t));
     }
+
+    bool need_realloc() const {
+        return size_ >= capacity_ * WORD_BITS;
+    }
+
+    data_type capacity() const { return capacity_; }
+
+    void set_data_ptr(uint64_t* ptr) { data_ = ptr; }
+
+    void capacity(data_type cap) {capacity_ = cap; }
 
   private:
     uint8_t buffer_count() const {
@@ -320,8 +330,6 @@ class simple_leaf {
         data_type target_offset = buffer_index(buf) % WORD_BITS;
 
         while (current_word * WORD_BITS < size_) {
-            std::cout << "Current_word: " << current_word << ", Cap: " << capacity_ << "\n"
-                      << "current_word + 1 < capacity: " << (current_word + 1 < capacity_) << std::endl;
             uint64_t underflow =
                 current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
             if (overflow_length) {
@@ -404,3 +412,4 @@ class simple_leaf {
         metadata_ = 0;
     }
 };
+#endif
