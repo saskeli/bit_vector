@@ -7,16 +7,15 @@
 
 #define WORD_BITS 64
 
-template <class data_type, class allocator_type, uint8_t buffer_size>
+template <uint8_t buffer_size>
 class simple_leaf {
   private:
     uint8_t metadata_;
     uint32_t buffer_[buffer_size + 1];
-    data_type capacity_;
-    data_type size_;
-    data_type p_sum_; //Should this just be recalculated when needed? Currently causes branching.
+    uint64_t capacity_;
+    uint64_t size_;
+    uint64_t p_sum_; //Should this just be recalculated when needed? Currently causes branching.
     uint64_t* data_;
-    allocator_type* allocator_;
     static constexpr uint64_t MASK = 1;
     static constexpr uint32_t VALUE_MASK = 1;
     static constexpr uint32_t TYPE_MASK = 8;
@@ -24,8 +23,7 @@ class simple_leaf {
     static_assert(buffer_size < 64);
 
   public:
-    simple_leaf(allocator_type* allocator, data_type capacity, uint64_t* data) {
-        allocator_ = allocator;
+    simple_leaf(uint64_t capacity, uint64_t* data) {
         metadata_ = 0;
         capacity_ = capacity;
         size_ = 0;
@@ -33,15 +31,11 @@ class simple_leaf {
         data_ = data;
     }
 
-    ~simple_leaf() {
-        allocator_.deallocate_leaf(this);
-    }
-
-    bool at(data_type i) const {
+    bool at(uint64_t i) const {
         if constexpr (buffer_size != 0) {
-            data_type index = i;
+            uint64_t index = i;
             for (uint8_t idx = 0; idx < buffer_count(); idx++) {
-                data_type b = buffer_index(buffer_[idx]);
+                uint64_t b = buffer_index(buffer_[idx]);
                 if (b == i) {
                     if (buffer_is_insertion(buffer_[idx])) {
                         return buffer_value(buffer_[idx]);
@@ -76,7 +70,7 @@ class simple_leaf {
         if constexpr (buffer_size != 0) {
             uint8_t idx = buffer_count();
             while (idx > 0) {
-                data_type b = buffer_index(buffer_[idx - 1]);
+                uint64_t b = buffer_index(buffer_[idx - 1]);
                 if (b > i || (b == i && buffer_is_insertion(buffer_[idx - 1]))) {
                     set_buffer_index(b + 1, idx - 1);
                 } else {
@@ -107,14 +101,14 @@ class simple_leaf {
         }
     }
 
-    void remove(data_type i) {
+    void remove(uint64_t i) {
         if constexpr (buffer_size != 0) {
             auto x = this->at(i);
             p_sum_ -= x;
             --size_;
             uint8_t idx = buffer_count();
             while (idx > 0) {
-                data_type b = buffer_index(buffer_[idx - 1]);
+                uint64_t b = buffer_index(buffer_[idx - 1]);
                 if (b == i) { 
                     if (buffer_is_insertion(buffer_[idx - 1])) {
                         delete_buffer_element(idx - 1);
@@ -176,11 +170,11 @@ class simple_leaf {
 
     }
 
-    void set(const data_type i, const bool x) {
-        data_type idx = i;
+    void set(const uint64_t i, const bool x) {
+        uint64_t idx = i;
         if constexpr (buffer_size != 0) {
             for (uint8_t j = 0; j < buffer_count(); j++) {
-                data_type b = buffer_index(buffer_[j]);
+                uint64_t b = buffer_index(buffer_[j]);
                 if (b < i) {
                     idx += buffer_is_insertion(buffer_[j]) ? -1 : 1;
                 } else if (b == i) {
@@ -206,10 +200,10 @@ class simple_leaf {
         }
     }
 
-    data_type rank(data_type n) const {
-        data_type count = 0;
+    uint64_t rank(uint64_t n) const {
+        uint64_t count = 0;
 
-        data_type idx = n;
+        uint64_t idx = n;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count(); i++) {
                 if (buffer_index(buffer_[i]) >= n) break;
@@ -222,8 +216,8 @@ class simple_leaf {
                 }
             }
         }
-        data_type target_word = idx / WORD_BITS;
-        data_type target_offset = idx % WORD_BITS;
+        uint64_t target_word = idx / WORD_BITS;
+        uint64_t target_offset = idx % WORD_BITS;
         for (size_t i = 0; i < target_word; i++) {
             count += __builtin_popcountll(data_[i]);
         }
@@ -232,19 +226,19 @@ class simple_leaf {
         return count;
     }
 
-    data_type select(const data_type x) const {
+    uint64_t select(const uint64_t x) const {
 
-        data_type pop = 0;
-        data_type pos = 0;
+        uint64_t pop = 0;
+        uint64_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
 
-        for (data_type j = 0; j < capacity_; j++) {
+        for (uint64_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += 64;
             if constexpr (buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count(); b++) {
-                    data_type b_index = buffer_index(buffer_[b]);
+                    uint64_t b_index = buffer_index(buffer_[b]);
                     if (b_index < pos) {
                         if (buffer_is_insertion(buffer_[b])) {
                             pop += buffer_value(buffer_[b]);
@@ -281,11 +275,11 @@ class simple_leaf {
         return size_ >= capacity_ * WORD_BITS;
     }
 
-    data_type capacity() const { return capacity_; }
+    uint64_t capacity() const { return capacity_; }
 
     void set_data_ptr(uint64_t* ptr) { data_ = ptr; }
 
-    void capacity(data_type cap) {capacity_ = cap; }
+    void capacity(uint64_t cap) {capacity_ = cap; }
 
   private:
     uint8_t buffer_count() const {
@@ -295,7 +289,7 @@ class simple_leaf {
 
     bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
 
-    data_type buffer_index(uint32_t e) const { return (e & INDEX_MASK) >> 8; }
+    uint64_t buffer_index(uint32_t e) const { return (e & INDEX_MASK) >> 8; }
 
     void set_buffer_index(uint32_t v, uint8_t i) {
         buffer_[i] = (v << 8) | (buffer_[i] & ((MASK << 7) - 1));
@@ -326,8 +320,8 @@ class simple_leaf {
         uint64_t current_word = 0;
         uint8_t current_index = 0;
         uint32_t buf = buffer_[current_index];
-        data_type target_word = buffer_index(buf) / WORD_BITS;
-        data_type target_offset = buffer_index(buf) % WORD_BITS;
+        uint64_t target_word = buffer_index(buf) / WORD_BITS;
+        uint64_t target_offset = buffer_index(buf) % WORD_BITS;
 
         while (current_word * WORD_BITS < size_) {
             uint64_t underflow =
