@@ -281,37 +281,51 @@ class simple_leaf {
 
     void capacity(uint64_t cap) {capacity_ = cap; }
 
-  private:
-    uint8_t buffer_count() const {
-        return metadata_ & uint8_t(127);
-    }
-    bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
-
-    bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
-
-    uint64_t buffer_index(uint32_t e) const { return (e & INDEX_MASK) >> 8; }
-
-    void set_buffer_index(uint32_t v, uint8_t i) {
-        buffer_[i] = (v << 8) | (buffer_[i] & ((MASK << 7) - 1));
+    uint64_t* data() {
+        return data_;
     }
 
-    uint32_t create_buffer(uint32_t idx, bool t, bool v) {
-        return ((idx << 8) | (t ? TYPE_MASK : uint32_t(0))) |
-               (v ? VALUE_MASK : uint32_t(0));
+    void transfer_append(typeof(this)* other, uint64_t elems) {
+        commit();
+        other->commit();
+        uint64_t* o_data = other->data();
+        uint64_t split_point = size_ & 64;
+        uint64_t target_word = size_ / 64;
+        uint64_t copy_words = elems / 64;
+        uint64_t overhang = elems % 64;
+        if (split_point == 0) {
+            for (size_t i = 0; i < copy_words; i++) {
+                data_[target_word++] = o_data[i];
+                p_sum_ += __builtin_popcountll(o_data[i]);
+            }
+            if (elems % 64 != 0) {
+                data_[target_word] = o_data[copy_words] & ((MASK << overhang) - 1);
+                [[likely]] p_sum += __builtin_popcountll(data_[target_word]);
+            }
+            [[unlikely]] ((void)0);
+        } else {
+            for (size_t i = 0; i < copy_words; i++) {
+                data_[target_word++] |= o_data[i] << split_point
+                data_[target_word] |= o_data[i] >> (64 - split_point);
+                p_sum_ += __builtin_popcountll(o_data[i]);
+            }
+            if (elems % 64 != 0) {
+                uint64_t to_write = o_data[copy_words] & ((MASK << overhang) - 1);
+                p_sum += __builtin_popcountll(to_write);
+                data_[target_word++] |= to_write << split_point;
+                if (target_word < capacity_) {
+                    data_[target_word] |= to_write >> (64 - split_point);
+                }
+                [[likely]] ((void)0)
+            }
+        }
+        size_ += elems;
+        other->clear_first(elems);
     }
 
-    void insert_buffer(uint8_t idx, uint32_t buf) {
-        memmove(buffer_ + idx + 1, buffer_ + idx,
-                (buffer_count() - idx) * sizeof(uint32_t));
-        buffer_[idx] = buf;
-        metadata_++;
-    }
+    transfer_prepend
 
-    void delete_buffer_element(uint8_t idx) {
-        metadata_--;
-        memmove(buffer_ + idx, buffer_ + idx + 1, (buffer_count() - idx) * sizeof(uint32_t));
-        buffer_[buffer_count()] = 0;
-    }
+    append_all
 
     void commit() {
         uint64_t overflow = 0;
@@ -405,5 +419,38 @@ class simple_leaf {
         }
         metadata_ = 0;
     }
+
+  private:
+    uint8_t buffer_count() const {
+        return metadata_ & uint8_t(127);
+    }
+    bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
+
+    bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
+
+    uint64_t buffer_index(uint32_t e) const { return (e & INDEX_MASK) >> 8; }
+
+    void set_buffer_index(uint32_t v, uint8_t i) {
+        buffer_[i] = (v << 8) | (buffer_[i] & ((MASK << 7) - 1));
+    }
+
+    uint32_t create_buffer(uint32_t idx, bool t, bool v) {
+        return ((idx << 8) | (t ? TYPE_MASK : uint32_t(0))) |
+               (v ? VALUE_MASK : uint32_t(0));
+    }
+
+    void insert_buffer(uint8_t idx, uint32_t buf) {
+        memmove(buffer_ + idx + 1, buffer_ + idx,
+                (buffer_count() - idx) * sizeof(uint32_t));
+        buffer_[idx] = buf;
+        metadata_++;
+    }
+
+    void delete_buffer_element(uint8_t idx) {
+        metadata_--;
+        memmove(buffer_ + idx, buffer_ + idx + 1, (buffer_count() - idx) * sizeof(uint32_t));
+        buffer_[buffer_count()] = 0;
+    }
+
 };
 #endif
