@@ -38,3 +38,13 @@
 # Compiled binaries
 bv_debug
 test/test
+
+#Gcov
+*.gcda 
+*.gcno 
+*.gcov 
+test/*.gcdna 
+test/*.gcno 
+test/*.gcov
+index.info
+target/
