@@ -1,4 +1,4 @@
-CFLAGS = -std=c++20 -Wall -Wextra -march=native
+CFLAGS = -std=c++2a -Wall -Wextra -march=native
 
 HEADERS = bit_vector/simple_node.hpp bit_vector/allocator.hpp bit_vector/simple_leaf.hpp
 

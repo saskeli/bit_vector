@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <immintrin.h>
 #include <iostream>
+#include <cstring>
 
 #define WORD_BITS 64
 
@@ -191,8 +192,8 @@ class simple_leaf {
                 }
             }
         }
-        const auto word_nr = idx / WORD_BITS;
-        const auto pos = idx % WORD_BITS;
+        uint64_t word_nr = idx / WORD_BITS;
+        uint64_t pos = idx % WORD_BITS;
 
         if ((data_[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)) {
             p_sum_ += x ? 1 : -1;
@@ -285,28 +286,47 @@ class simple_leaf {
         return data_;
     }
 
-    void transfer_append(typeof(this)* other, uint64_t elems) {
+    void clear_first(uint64_t elems) {
+        uint64_t ones = rank(elems);
+        uint64_t words = elems / WORD_BITS;
+        for (uint64_t i = 0; i < words; i++) {
+            data_[i] = 0;
+        }
+        uint64_t tail = elems % WORD_BITS;
+        uint64_t tail_mask = (MASK << tail) - 1;
+        data_[words] &= ~tail_mask;
+        uint64_t words_to_shuffle = capacity_ - words - 1;
+        for (uint64_t i = 0; i < words_to_shuffle; i++) {
+            data_[i] = data_[words + i] >> tail;
+            data_[i] |= (data_[words + i + 1] & tail_mask) << (WORD_BITS - tail);
+        }
+        data_[capacity_ - 1] >>= tail;
+        size_ -= elems;
+        p_sum_ -= ones;
+    }
+
+    template <class sibling_type>
+    void transfer_append(sibling_type* other, uint64_t elems) {
         commit();
         other->commit();
         uint64_t* o_data = other->data();
-        uint64_t split_point = size_ & 64;
-        uint64_t target_word = size_ / 64;
-        uint64_t copy_words = elems / 64;
-        uint64_t overhang = elems % 64;
+        uint64_t split_point = size_ % WORD_BITS;
+        uint64_t target_word = size_ / WORD_BITS;
+        uint64_t copy_words = elems / WORD_BITS;
+        uint64_t overhang = elems % WORD_BITS;
         if (split_point == 0) {
             for (size_t i = 0; i < copy_words; i++) {
                 data_[target_word++] = o_data[i];
                 p_sum_ += __builtin_popcountll(o_data[i]);
             }
-            if (elems % 64 != 0) {
+            if (overhang != 0) {
                 data_[target_word] = o_data[copy_words] & ((MASK << overhang) - 1);
-                [[likely]] p_sum += __builtin_popcountll(data_[target_word]);
+                [[unlikely]] p_sum += __builtin_popcountll(data_[target_word]);
             }
-            [[unlikely]] ((void)0);
         } else {
             for (size_t i = 0; i < copy_words; i++) {
-                data_[target_word++] |= o_data[i] << split_point
-                data_[target_word] |= o_data[i] >> (64 - split_point);
+                data_[target_word++] |= o_data[i] << split_point;
+                data_[target_word] |= o_data[i] >> (WORD_BITS - split_point);
                 p_sum_ += __builtin_popcountll(o_data[i]);
             }
             if (elems % 64 != 0) {
@@ -314,18 +334,121 @@ class simple_leaf {
                 p_sum += __builtin_popcountll(to_write);
                 data_[target_word++] |= to_write << split_point;
                 if (target_word < capacity_) {
-                    data_[target_word] |= to_write >> (64 - split_point);
+                    data_[target_word] |= to_write >> (WORD_BITS - split_point);
                 }
-                [[likely]] ((void)0)
+                [[likely]] ((void)0);
             }
         }
         size_ += elems;
         other->clear_first(elems);
     }
 
-    transfer_prepend
+    void clear_last(uint64_t elems) {
+        size_ -= elems;
+        p_sum_ = rank(size_);
+        uint64_t offset = size_ % 64;
+        uint64_t words = size_ / 64;
+        if (offset != 0) {
+            [[likely]] data_[words++] &= (MASK << offset) - 1;
+        }
+        for (uint64_t i = words; i < capacity_; i++) {
+            data_[i] = 0;
+        }
+    }
 
-    append_all
+    template<class sibling_type>
+    void transfer_prepend(sibling_type* other, uint64_t elems) {
+        commit();
+        other->commit();
+        uint64_t* o_data = other->data();
+        uint64_t words = elems / 64;
+        // Make space for new data
+        for (uint64_t i = capacity_ - 1; i >= words; i--) {
+            data_[i] = data_[i - words];
+        }
+        for (uint64_t i = 0; i < words; i++) {
+            data_[i] = 0;
+        }
+        uint64_t overflow = elems % 64;
+        if (overflow > 0) {
+            for (uint64_t i = capacity_ - 1; i >= words; i--) {
+                data_[i] <<= overflow;
+                data_[i] |= data[i - 1] >> (64 - overflow);
+            }
+            [[likely]] (void(0));
+        }
+
+        // Copy over data from sibling
+        uint64_t source_word = other->size();
+        uint64_t source_offset = source_word % 64;
+        source_word /= 64;
+        if (source_offset == 0) {
+            if (overflow == 0) {
+                for (uint64_t i = words - 1; i >= 0; i--) {
+                    data_[i] = o_data[source_word--];
+                    p_sum_ += __builtin_popcountll(data_[i]);
+                }
+            } else {
+                for (uint64_t i = words; i > 0; i--) {
+                    p_sum_ += __builtin_popcountll(o_data[source_word]);
+                    data_[i] |= o_data[source_word] >> (64 - overflow);
+                    data_[i - 1] |= o_data[source_word--] << overflow;
+                }
+                uint64_t w = o_data[source_word] >> (64 - overflow);
+                p_sum_ += __builtin_popcountll(w);
+                [[likely]] data_[0] |= w;
+            }
+            [[unlikely]] (void(0));
+        } else {
+            if (overflow == 0) {
+                for (uint64_t i = words - 1; i >= 0; i--) {
+                    data_[i] = o_data[source_word + 1] << (64 - source_offset);
+                    data_[i] |= o_data[source_word--] >> source_offset;
+                    p_sum_ += __builtin_popcountll(data_[i]);
+                }
+            } else {
+                uint64_t w;
+                for (uint64_t i = words; i < 0; i--) {
+                    w = o_data[source_word + 1] << (64 - source_offset);
+                    w |= o_data[source_word--] >> source_offset;
+                    p_sum_ += __builtin_popcountll(w);
+                    data_[i] |= w >> (64 - overflow);
+                    data_[i - 1] |= w << overflow;
+                }
+                w = o_data[source_word + 1] << (64 - source_offset);
+                w |= o_data[source_word] >> source_offset;
+                w >> 64 - overflow;
+                p_sum_ += __builtin_popcountll(w);
+                [[likely]] data_[0] |= w;
+            }
+        }
+        size_ += elems;
+        other->clear_last(elems);
+    }
+
+    template <class sibling_type>
+    void append_all(sibling_type* other) {
+        uint64_t* o_data = other->data();
+        uint64_t offset = size_ % 64;
+        uint64_t word = size / 64;
+        uint64_t o_size = other->size();
+        uint64_t o_p_sum = other->p_sum();
+        uint64_t o_words = o_size / 64;
+        o_words += o_size % 64 == 0 ? 0 : 1;
+        if (offset == 0) {
+            for (uint64_t i = 0; i < o_words; i++) {
+                data_[word++] = o_data[i];            
+            }
+            [[unlikely]] (void(0));
+        } else {
+            for (uint64_t i = 0; i < o_words; i++) {
+                data_[word++] |= o_data[i] << offset;
+                data_[word] |= o_data[i] << (64 - offset);
+            }
+        }
+        size_ += o_size;
+        p_sum_ += o_p_sum;
+    }
 
     void commit() {
         uint64_t overflow = 0;

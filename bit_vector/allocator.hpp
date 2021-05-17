@@ -35,7 +35,7 @@ class malloc_alloc {
         void* leaf = malloc(sizeof(leaf_type) + size * sizeof(uint64_t));
         uint8_t* data_ptr = reinterpret_cast<uint8_t*>(leaf)+sizeof(leaf_type);
         memset(data_ptr, 0, size * sizeof(uint64_t));
-        return new(leaf) leaf_type(this, size, reinterpret_cast<uint64_t*>(data_ptr));
+        return new(leaf) leaf_type(size, reinterpret_cast<uint64_t*>(data_ptr));
     }
 
     template <class leaf_type>
