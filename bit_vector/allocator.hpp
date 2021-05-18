@@ -56,7 +56,7 @@ class malloc_alloc {
         return n_leaf;
     }
 
-    uint64_t live_allocations() {
+    uint64_t live_allocations() const {
         return allocations_;
     }
 };

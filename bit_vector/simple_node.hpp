@@ -31,7 +31,67 @@ class simple_node {
         return meta_data_ >> 7;
     }
 
-    template<class allocator, class s_node>
+    bool at(uint64_t index) const {
+        uint8_t child_index = find_size(index);
+        index -= child_index == 0 ? 0 : child_sizes_[child_index - 1];
+        if (has_leaves()) {
+            [[unlikely]] return reinterpret_cast<leaf_type*>(children_[child_index])->at(index);
+        } else {
+            return reinterpret_cast<simple_node*>(children_[child_index])->at(index);
+        }
+    }
+
+    uint64_t set(uint64_t index, bool v) {
+        uint8_t child_index = find_size(index);
+        index -= child_index == 0 ? 0 : child_sizes_[child_index - 1];
+        uint64_t change = 0;
+        if (has_leaves()) {
+            leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
+            [[unlikely]] change = child->set(index, v);
+        } else {
+            simple_node* child = reinterpret_cast<simple_node*>(children_[child_index]);
+            change = child->set(index, v);
+        }
+        uint8_t c_count = child_count();
+        for (uint8_t i = child_index; i < c_count; i++) {
+            child_sums_[i] += change;
+        }
+        return change;
+    }
+
+    uint64_t rank(uint64_t index) const {
+        uint8_t child_index = find_size(index);
+        uint64_t res = 0;
+        if (child_index != 0) {
+            res = child_sums_[child_index - 1];
+            [[likely]] index -= child_sizes_[child_index - 1];
+        }
+        if (has_leaves()) {
+            leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
+            [[unlikely]] return res + child->rank(index);
+        } else {
+            simple_node* child = reinterpret_cast<simple_node*>(children_[child_index]);
+            return res + child->rank(index);
+        }
+    }
+
+    uint64_t select(uint64_t count) const {
+        uint8_t child_index = find_sum(count);
+        uint64_t res = 0;
+        if (child_index != 0) {
+            res = child_sizes_[child_index - 1];
+            [[likely]] count -= child_sums_[child_index - 1];
+        }
+        if (has_leaves()) {
+            leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
+            [[unlikely]] return res + child->select(count);
+        } else {
+            simple_node* child = reinterpret_cast<simple_node*>(children_[child_index]);
+            return res + child->select(count);
+        }
+    }
+
+    template<class allocator>
     void deallocate() {
         uint8_t c_count = child_count();
         allocator* a = reinterpret_cast<allocator*>(allocator_);
@@ -42,18 +102,18 @@ class simple_node {
                 a->deallocate_leaf(l);
             }
         } else {
-            s_node** children = reinterpret_cast<s_node**>(children_);
+            simple_node** children = reinterpret_cast<simple_node**>(children_);
             for (uint8_t i = 0; i < c_count; i++) {
-                s_node* n = children[i];
-                n->template deallocate<allocator, s_node>();
+                simple_node* n = children[i];
+                n->template deallocate<allocator>();
                 a->deallocate_node(n);
             }
         }
     }
     
-    template<class allocator, class s_node>
-    s_node* split() {
-        s_node* sibling = reinterpret_cast<allocator*>(allocator_)->allocate_node();
+    template<class allocator>
+    simple_node* split() {
+        simple_node* sibling = reinterpret_cast<allocator*>(allocator_)->allocate_node();
         if (has_leaves()) sibling->has_leaves(true);
         for (size_t i = CHILDREN >> 1; i < CHILDREN; i++) {
             sibling->append_child(children_[i]);
@@ -146,8 +206,7 @@ class simple_node {
         meta_data_ -= elems;
     }
 
-    template<class s_node>
-    void transfer_append(s_node* other, uint8_t elems) {
+    void transfer_append(simple_node* other, uint8_t elems) {
         void** o_children = other->children();
         uint64_t* o_sizes = other->child_sizes();
         uint64_t* o_sums = other->child_sums();
@@ -169,8 +228,7 @@ class simple_node {
         meta_data_ -= elems;
     }
 
-    template<class s_node>
-    void transfer_prepend(s_node* other, uint8_t elems) {
+    void transfer_prepend(simple_node* other, uint8_t elems) {
         void** o_children = other->children();
         uint64_t* o_sizes = other->child_sizes();
         uint64_t* o_sums = other->child_sums();
@@ -192,8 +250,7 @@ class simple_node {
         other->clear_last(elems);
     }
 
-    template<class s_node>
-    void append_all(s_node* other) {
+    void append_all(simple_node* other) {
         void** o_children = other->children();
         uint64_t* o_sizes = other->child_sizes();
         uint64_t* o_sums = other->child_sums();

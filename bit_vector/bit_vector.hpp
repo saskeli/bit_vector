@@ -30,7 +30,7 @@ class bit_vector {
         if (root_is_leaf_) {
             allocator_->deallocate_leaf(l_root_);
         } else {
-            n_root_->template deallocate<allocator, node>();
+            n_root_->template deallocate<allocator>();
             allocator_->deallocate_node(n_root_);
         }
     }
@@ -82,27 +82,27 @@ class bit_vector {
         }
     }
 
-    uint64_t size() {
+    uint64_t size() const {
         return root_is_leaf_ ? l_root_->size() : n_root_->size();
     }
 
-    bool at(uint64_t index) {
+    bool at(uint64_t index) const {
         return root_is_leaf_ ? l_root_->at(index) : n_root_->at(index);
     }
 
-    uint64_t rank(uint64_t index) {
+    uint64_t rank(uint64_t index) const {
         return root_is_leaf_ ? l_root_->rank(index) : n_root_->rank(index);
     }
 
-    uint64_t select(uint64_t count) {
-        return root_is_leaf_ ? l_root_->selec(count) : n_root_->select(count);
+    uint64_t select(uint64_t count) const {
+        return root_is_leaf_ ? l_root_->select(count) : n_root_->select(count);
     }
 
     void set(uint64_t index, bool value) {
         root_is_leaf_ ? l_root_->set(index, value) : n_root_->set(index, value);
     }
 
-    uint64_t bits_size() {
+    uint64_t bits_size() const {
         uint64_t tree_size = root_is_leaf_ ? l_root_->bits_size() : n_root_->bits_size();
         return 8 * sizeof(bit_vector) + tree_size;
     }
