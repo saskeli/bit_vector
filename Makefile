@@ -29,7 +29,7 @@ debug: bv_debug.cpp $(HEADERS)
 
 bit_vector/%.hpp:
 
-test/helpers.hpp:
+test/%.hpp:
 
 clean:
 	rm -f bv_debug gtest_main.o gtest-all.o test/test.o test/test test/gtest_main.a \
@@ -48,7 +48,7 @@ gtest.a: gtest-all.o
 test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
-test/test.o: test/test.cpp $(GTEST_HEADERS) $(HEADERS) test/helpers.hpp
+test/test.o: test/test.cpp $(GTEST_HEADERS) $(HEADERS) test/leaf_tests.hpp
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -c test/test.cpp -o test/test.o
 
 test: clean test/test.o test/gtest_main.a

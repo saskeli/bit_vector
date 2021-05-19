@@ -5,6 +5,7 @@
 #include <immintrin.h>
 #include <iostream>
 #include <cstring>
+#include <bitset>
 
 #define WORD_BITS 64
 
@@ -12,7 +13,7 @@ template <uint8_t buffer_size>
 class simple_leaf {
   private:
     uint8_t metadata_;
-    uint32_t buffer_[buffer_size + 1];
+    uint32_t buffer_[buffer_size];
     uint64_t capacity_;
     uint64_t size_;
     uint64_t p_sum_; //Should this just be recalculated when needed? Currently causes branching.
@@ -86,7 +87,7 @@ class simple_leaf {
             } else {
                 insert_buffer(idx, create_buffer(i, 1, x));
             }
-            if (buffer_count() > buffer_size) commit();
+            if (buffer_count() >= buffer_size) commit();
         } else {
             size_++;
             auto target_word = i / WORD_BITS;
@@ -130,7 +131,7 @@ class simple_leaf {
             } else {
                 insert_buffer(idx, create_buffer(i, 0, x));
             }
-            if (buffer_count() > buffer_size) commit();
+            if (buffer_count() >= buffer_size) commit();
         } else {
             auto target_word = i / WORD_BITS;
             auto target_offset = i % WORD_BITS;
@@ -350,6 +351,7 @@ class simple_leaf {
         // Make space for new data
         for (uint64_t i = capacity_ - 1; i >= words; i--) {
             data_[i] = data_[i - words];
+            if (i == 0) break;
         }
         for (uint64_t i = 0; i < words; i++) {
             data_[i] = 0;
@@ -359,6 +361,7 @@ class simple_leaf {
             for (uint64_t i = capacity_ - 1; i >= words; i--) {
                 data_[i] <<= overflow;
                 data_[i] |= data_[i - 1] >> (64 - overflow);
+                if (i == 0) break;
             }
             [[likely]] (void(0));
         }
@@ -369,11 +372,12 @@ class simple_leaf {
         source_word /= 64;
         if (source_offset == 0) {
             if (overflow == 0) {
-                for (uint64_t i = words - 1; i >= 0; i--) {
-                    data_[i] = o_data[source_word--];
+                for (uint64_t i = words - 1; i < words; i--) {
+                    data_[i] = o_data[--source_word];
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
             } else {
+                source_word--;
                 for (uint64_t i = words; i > 0; i--) {
                     p_sum_ += __builtin_popcountll(o_data[source_word]);
                     data_[i] |= o_data[source_word] >> (64 - overflow);
@@ -386,22 +390,22 @@ class simple_leaf {
             [[unlikely]] (void(0));
         } else {
             if (overflow == 0) {
-                for (uint64_t i = words - 1; i >= 0; i--) {
-                    data_[i] = o_data[source_word + 1] << (64 - source_offset);
-                    data_[i] |= o_data[source_word--] >> source_offset;
+                for (uint64_t i = words - 1; i < words; i--) {
+                    data_[i] = o_data[source_word] << (64 - source_offset);
+                    data_[i] |= o_data[--source_word] >> source_offset;
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
             } else {
                 uint64_t w;
-                for (uint64_t i = words; i < 0; i--) {
-                    w = o_data[source_word + 1] << (64 - source_offset);
-                    w |= o_data[source_word--] >> source_offset;
+                for (uint64_t i = words; i > 0; i--) {
+                    w = o_data[source_word] << (64 - source_offset);
+                    w |= o_data[--source_word] >> source_offset;
                     p_sum_ += __builtin_popcountll(w);
                     data_[i] |= w >> (64 - overflow);
                     data_[i - 1] |= w << overflow;
                 }
-                w = o_data[source_word + 1] << (64 - source_offset);
-                w |= o_data[source_word] >> source_offset;
+                w = o_data[source_word] << (64 - source_offset);
+                w |= o_data[--source_word] >> source_offset;
                 w >>= 64 - overflow;
                 p_sum_ += __builtin_popcountll(w);
                 [[likely]] data_[0] |= w;
@@ -413,9 +417,11 @@ class simple_leaf {
 
     template <class sibling_type>
     void append_all(sibling_type* other) {
+        commit();
+        other->commit();
         uint64_t* o_data = other->data();
         uint64_t offset = size_ % 64;
-        uint64_t word = size / 64;
+        uint64_t word = size_ / 64;
         uint64_t o_size = other->size();
         uint64_t o_p_sum = other->p_sum();
         uint64_t o_words = o_size / 64;
@@ -428,7 +434,7 @@ class simple_leaf {
         } else {
             for (uint64_t i = 0; i < o_words; i++) {
                 data_[word++] |= o_data[i] << offset;
-                data_[word] |= o_data[i] << (64 - offset);
+                data_[word] |= o_data[i] >> (64 - offset);
             }
         }
         size_ += o_size;
@@ -528,6 +534,32 @@ class simple_leaf {
             }
             metadata_ = 0;
         }
+    }
+
+    void print() const {
+        std::cout << "{\n\"type\": \"leaf\",\n"
+                  << "\"size\": " << size() << ",\n"
+                  << "\"p_sum\": " << p_sum() << ",\n"
+                  << "\"buffer_size\": " << int(buffer_size) << ",\n"
+                  << "\"buffer\": [\n";
+        for (uint8_t i = 0; i < buffer_count(); i++) {
+            std::cout << "{\"is_insertion\": " << buffer_is_insertion(buffer_[i]) << ", "
+                       << "\"buffer_value\": " << buffer_value(buffer_[i]) << ", "
+                       << "\"buffer_index\": " << buffer_index(buffer_[i]) << "}";
+            if (i != buffer_count() - 1) {
+                std::cout << ",\n";
+            }
+        }
+        std::cout << "],\n"
+                  << "\"data\": [\n";
+        for (uint64_t i = 0; i < capacity_; i++) {
+            std::bitset<64> b(data_[i]);
+            std::cout << "\"" << b << "\"";
+            if (i != capacity_ - 1) {
+                std::cout << ",\n";
+            } 
+        }
+        std::cout << "]}";
     }
 
   private:

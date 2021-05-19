@@ -4,7 +4,7 @@
 #include "../bit_vector/allocator.hpp"
 #include "../bit_vector/simple_node.hpp"
 
-#include "helpers.hpp"
+#include "leaf_tests.hpp"
 
 typedef malloc_alloc ma;
 typedef simple_leaf<8> sl;
@@ -53,6 +53,15 @@ TEST(SimpleLeaf, ClearLast) {
 TEST(SimpleLeaf, TransferPrepend) {
     leaf_transfer_prepend_test<sl, ma>();
 }
+
+TEST(SimpleLeaf, AppendAll) {
+    leaf_append_all_test<sl, ma>();
+}
+
+TEST(SimpleLeaf, BufferHit) {
+    leaf_hit_buffer_test<sl, ma>();
+}
+
 
 TEST(SimpleLeaf, UnbInsert) {
     leaf_insert_test<ubl, ma>(10000);
