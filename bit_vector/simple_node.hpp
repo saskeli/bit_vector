@@ -113,10 +113,19 @@ class simple_node {
     
     template<class allocator>
     simple_node* split() {
-        simple_node* sibling = reinterpret_cast<allocator*>(allocator_)->allocate_node();
-        if (has_leaves()) sibling->has_leaves(true);
-        for (size_t i = CHILDREN >> 1; i < CHILDREN; i++) {
-            sibling->append_child(children_[i]);
+        allocator* alloc = reinterpret_cast<allocator*>(allocator_);
+        simple_node* sibling = alloc->template allocate_node<simple_node>();
+        if (has_leaves()) {
+            sibling->has_leaves(true);
+            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            for (size_t i = CHILDREN >> 1; i < CHILDREN; i++) {
+                sibling->template append_child<leaf_type>(children[i]);
+            }
+        } else {
+            simple_node** children = reinterpret_cast<simple_node**>(children_);
+            for (size_t i = CHILDREN >> 1; i < CHILDREN; i++) {
+                sibling->template append_child<simple_node>(children[i]);
+            }
         }
         memset(&child_sizes_[CHILDREN >> 1], 0xff, sizeof(uint64_t) * (CHILDREN >> 1));
         memset(&child_sums_[CHILDREN >> 1], 0xff, sizeof(uint64_t) * (CHILDREN >> 1));

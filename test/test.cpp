@@ -96,9 +96,13 @@ TEST(SimpleLeafUnb, Set) {
 
 //Node tests
 TEST(SimpleNode, AddLeaf) {
-    node_add_child<nd, sl, ma>();
+    node_add_child_test<nd, sl, ma>();
 }
 
 TEST(SimpleNode, AddNode) {
-    node_add_node<nd, sl, ma>();
+    node_add_node_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, Split) {
+    node_split_test<nd, sl, ma>();
 }
