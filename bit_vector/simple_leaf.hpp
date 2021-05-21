@@ -247,7 +247,7 @@ class simple_leaf {
 
         pos = size_ < pos ? size_ : pos;
         pos--;
-        while (pop >= x && pos >= 0) {
+        while (pop >= x && pos < capacity_ * 64) {
             pop -= at(pos);
             pos--;
         }

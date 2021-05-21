@@ -1,5 +1,5 @@
-#ifndef TEST_HELPERS_HPP
-#define TEST_HELPERS_HPP
+#ifndef TEST_LEAF_HPP
+#define TEST_LEAF_HPP
 
 #include <iostream>
 #include <cstdint>

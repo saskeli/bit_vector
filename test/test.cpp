@@ -5,11 +5,14 @@
 #include "../bit_vector/simple_node.hpp"
 
 #include "leaf_tests.hpp"
+#include "node_tests.hpp"
 
 typedef malloc_alloc ma;
 typedef simple_leaf<8> sl;
 typedef simple_leaf<0> ubl;
+typedef simple_node<sl, 16384> nd;
 
+//Tests for buffered leaf
 TEST(SimpleLeaf, Insert) {
     leaf_insert_test<sl, ma>(10000);
 }
@@ -62,31 +65,40 @@ TEST(SimpleLeaf, BufferHit) {
     leaf_hit_buffer_test<sl, ma>();
 }
 
-
-TEST(SimpleLeaf, UnbInsert) {
+//A couple of tests to check that unbuffered works as well.
+TEST(SimpleLeafUnb, Insert) {
     leaf_insert_test<ubl, ma>(10000);
 }
 
-TEST(SimpleLeaf, UnbRemove) {
+TEST(SimpleLeafUnb, Remove) {
     leaf_remove_test<ubl, ma>(10000);
 }
 
-TEST(SimpleLeaf, UnbRank) {
+TEST(SimpleLeafUnb, Rank) {
     leaf_rank_test<ubl, ma>(10000);
 }
 
-TEST(SimpleLeaf, UnbRankOffset) {
+TEST(SimpleLeafUnb, RankOffset) {
     leaf_rank_test<ubl, ma>(11);
 }
 
-TEST(SimpleLeaf, UnbSelect) {
+TEST(SimpleLeafUnb, Select) {
     leaf_select_test<ubl, ma>(10000);
 }
 
-TEST(SimpleLeaf, UnbSelectOffset) {
+TEST(SimpleLeafUnb, SelectOffset) {
     leaf_select_test<ubl, ma>(11);
 }
 
-TEST(SimpleLeaf, UnbSet) {
+TEST(SimpleLeafUnb, Set) {
     leaf_set_test<ubl, ma>(10000);
+}
+
+//Node tests
+TEST(SimpleNode, AddLeaf) {
+    node_add_child<nd, sl, ma>();
+}
+
+TEST(SimpleNode, AddNode) {
+    node_add_node<nd, sl, ma>();
 }

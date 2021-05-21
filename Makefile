@@ -11,6 +11,8 @@ GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
 
 GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 
+TEST_CODE = test/leaf_tests.hpp test/node_tests.hpp test/test.cpp
+
 COVERAGE = -g
 
 .PHONY: clean test cover
@@ -48,7 +50,7 @@ gtest.a: gtest-all.o
 test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
-test/test.o: test/test.cpp $(GTEST_HEADERS) $(HEADERS) test/leaf_tests.hpp
+test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -c test/test.cpp -o test/test.o
 
 test: clean test/test.o test/gtest_main.a

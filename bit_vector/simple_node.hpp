@@ -132,28 +132,20 @@ class simple_node {
         return children_;
     }
 
-    uint64_t* child_sizes() const {
+    uint64_t* child_sizes() {
         return child_sizes_;
     }
 
-    uint64_t* child_sums() const {
+    uint64_t* child_sums() {
         return child_sums_;
     }
 
     uint64_t size() const {
-        uint8_t c_count = child_count();
-        if (c_count == 0) {
-            [[unlikely]] return 0;
-        }
-        return child_sizes_[c_count - 1];
+        return child_sizes_[child_count() - 1];
     }
 
     uint64_t p_sum() const {
-        uint8_t c_count = child_count();
-        if (c_count == 0) {
-            [[unlikely]] return 0;
-        }
-        return child_sums_[c_count - 1];
+        return child_sums_[child_count() - 1];
     }
 
     template<class child>
@@ -166,6 +158,7 @@ class simple_node {
             uint8_t count = child_count();
             child_sizes_[count] = child_sizes_[count - 1] + new_child->size();
             child_sums_[count] = child_sums_[count - 1] + new_child->p_sum();
+            children_[count] = new_child;
         }
         meta_data_++;
     }
