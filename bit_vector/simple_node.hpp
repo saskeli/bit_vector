@@ -19,8 +19,10 @@ class simple_node {
     simple_node(void* allocator) {
         meta_data_ = 0;
         allocator_ = allocator;
-        memset(&child_sizes_, 0xff, sizeof(uint64_t) * CHILDREN);
-        memset(&child_sums_, 0xff, sizeof(uint64_t) * CHILDREN);
+        for (uint8_t i = 0; i < CHILDREN; i++) {
+            child_sizes_[i] = 0x7fffffffffffffff;
+            child_sums_[i] = 0x7fffffffffffffff;
+        }
     }
 
     void has_leaves(bool leaves) {
@@ -32,7 +34,7 @@ class simple_node {
     }
 
     bool at(uint64_t index) const {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = find_size(index + 1);
         index -= child_index == 0 ? 0 : child_sizes_[child_index - 1];
         if (has_leaves()) {
             [[unlikely]] return reinterpret_cast<leaf_type*>(children_[child_index])->at(index);
@@ -137,7 +139,7 @@ class simple_node {
         return meta_data_ & 0b01111111;
     }
 
-    void* children() const {
+    void** children() {
         return children_;
     }
 
@@ -199,7 +201,7 @@ class simple_node {
         uint64_t o_sum = child_sums_[elems - 1];
         uint8_t size = child_count();
         for (uint8_t i = 0; i < size - elems; i++) {
-            children_[i] = children[i + elems];
+            children_[i] = children_[i + elems];
             child_sizes_[i] = child_sizes_[i + elems] - o_size;
             child_sums_[i] = child_sums_[i + elems] - o_sum;
         }
@@ -218,6 +220,7 @@ class simple_node {
             children_[local_index] = o_children[i];
             child_sizes_[local_index] = child_sizes_[high_index] + o_sizes[i];
             child_sums_[local_index] = child_sums_[high_index] + o_sums[i];
+            local_index++;
         }
         meta_data_ += elems;
         other->clear_first(elems);
@@ -261,9 +264,70 @@ class simple_node {
         for (uint8_t i = 0; i < o_size; i++) {
             children_[size + i] = o_children[i];
             child_sums_[size + i] = o_sums[i] + child_sums_[size - 1];
-            child_sizes_[size + i] = o_sums[i] + child_sizes_[size - 1];
+            child_sizes_[size + i] = o_sizes[i] + child_sizes_[size - 1];
         }
         meta_data_ += o_size;
+    }
+
+    uint64_t bits_size() const {
+        uint64_t ret = sizeof(this) * 8;
+        if (has_leaves()) {
+            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            for (uint8_t i = 0; i < child_count(); i++) {
+                ret += children[i]->bits_size();
+            }
+        } else {
+            simple_node** children = reinterpret_cast<simple_node**>(children_);
+            for (uint8_t i = 0; i < child_count(); i++) {
+                ret += children[i]->bits_size();
+            }
+        }
+        return ret;
+    }
+
+    void print() {
+        std::cout << "{\n\"type\": \"node\",\n"
+                  << "\"has_leaves\": " << has_leaves() << ",\n"
+                  << "\"child_count\": " << int(child_count()) << ",\n"
+                  << "\"size\": " << size() << ",\n"
+                  << "\"child_sizes\": [";
+        for (uint8_t i = 0; i < child_count(); i++) {
+            std::cout << child_sizes_[i];
+            if (i != child_count() - 1) {
+                    std::cout << ", ";
+            } 
+        }
+        std::cout << "],\n"
+                  << "\"p_sum\": " << p_sum() << ",\n"
+                  << "\"child_sums\": [";
+        for (uint8_t i = 0; i < child_count(); i++) {
+            std::cout << child_sums_[i];
+            if (i != child_count() - 1) {
+                    std::cout << ", ";
+            } 
+        }
+        std::cout << "],\n"
+                  << "\"children\": [\n";
+        if (has_leaves()) {
+            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            for (uint8_t i = 0; i < child_count(); i++) {
+                children[i]->print();
+                if (i != child_count() - 1) {
+                    std::cout << ",";
+                } 
+                std::cout << "\n";
+            }
+        } else {
+            simple_node** children = reinterpret_cast<simple_node**>(children_);
+            for (uint8_t i = 0; i < child_count(); i++) {
+                children[i]->print();
+                if (i != child_count() - 1) {
+                    std::cout << ",";
+                } 
+                std::cout << "\n";
+            }
+        }
+        std::cout << "]}";
     }
 
   private:

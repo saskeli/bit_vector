@@ -254,7 +254,7 @@ class simple_leaf {
         return ++pos;
     }
 
-    uint64_t bit_size() const {
+    uint64_t bits_size() const {
         return 8 * (sizeof(*this) + capacity_ * sizeof(uint64_t));
     }
 

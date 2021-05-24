@@ -103,6 +103,42 @@ TEST(SimpleNode, AddNode) {
     node_add_node_test<nd, sl, ma>();
 }
 
-TEST(SimpleNode, Split) {
-    node_split_test<nd, sl, ma>();
+TEST(SimpleNode, SplitLeaves) {
+    node_split_leaves_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, SplitNodes) {
+    node_split_nodes_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, AppendAll) {
+    node_append_all_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, ClearLast) {
+    node_clear_last_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, TransferPrepend) {
+    node_transfer_prepend_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, ClearFirst) {
+    node_clear_first_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, TransferAppend) {
+    node_transfer_append_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, AccessSingleLeaf) {
+    node_access_single_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, AccessLeaf) {
+    node_access_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, AccessNode) {
+    node_access_node_test<nd, sl, ma>();
 }
