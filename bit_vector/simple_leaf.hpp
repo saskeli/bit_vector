@@ -59,8 +59,9 @@ class simple_leaf {
 
     void insert(const uint64_t i, const bool x) {
 #ifdef DEBUG
-        if (size_ == capacity_ * WORD_BITS) {
-            std::cerr << "Memory overflow. Reallocate befor adding elements" << std::endl;
+        if (size_ >= capacity_ * WORD_BITS) {
+            std::cerr << "Overflow. Reallocate before adding elements" << "\n";
+            std::cerr << "Attempted to insert to " << i << std::endl;
             exit(1);
         }
 #endif
@@ -103,9 +104,9 @@ class simple_leaf {
         }
     }
 
-    void remove(const uint64_t i) {
+    bool remove(const uint64_t i) {
         if constexpr (buffer_size != 0) {
-            auto x = this->at(i);
+            bool x = this->at(i);
             p_sum_ -= x;
             --size_;
             uint8_t idx = buffer_count();
@@ -114,7 +115,7 @@ class simple_leaf {
                 if (b == i) { 
                     if (buffer_is_insertion(buffer_[idx - 1])) {
                         delete_buffer_element(idx - 1);
-                        return;
+                        return x;
                     } else {
                         break;
                     }
@@ -132,10 +133,12 @@ class simple_leaf {
                 insert_buffer(idx, create_buffer(i, 0, x));
             }
             if (buffer_count() >= buffer_size) commit();
+            return x;
         } else {
-            auto target_word = i / WORD_BITS;
-            auto target_offset = i % WORD_BITS;
-            p_sum_ -= MASK & (data_[target_word] >> target_offset);
+            uint64_t target_word = i / WORD_BITS;
+            uint64_t target_offset = i % WORD_BITS;
+            bool x = MASK & (data_[target_word] >> target_offset);
+            p_sum_ -= x;
             data_[target_word] =
                 (data_[target_word] & ((MASK << target_offset) - 1)) |
                 ((data_[target_word] >> 1) & (~((MASK << target_offset) - 1)));
@@ -149,6 +152,7 @@ class simple_leaf {
             data_[capacity_ - 1] >>=
                 (capacity_ - 1 > target_word) ? 1 : 0;
             size_--;
+            return x;
         }
     }
 
@@ -275,20 +279,39 @@ class simple_leaf {
     void clear_first(uint64_t elems) {
         uint64_t ones = rank(elems);
         uint64_t words = elems / WORD_BITS;
-        for (uint64_t i = 0; i < words; i++) {
-            data_[i] = 0;
+
+        if (elems % WORD_BITS == 0) {
+            for (uint64_t i = 0; i < capacity_ - words; i++) {
+                data_[i] = data_[i + words];
+            }
+            for (uint64_t i = capacity_ - words; i < capacity_; i++) {
+                data_[i] = 0;
+            }
+        } else {
+            //clear elem bits at start of data
+            for (uint64_t i = 0; i < words; i++) {
+                data_[i] = 0;
+            }
+            uint64_t tail = elems % WORD_BITS;
+            uint64_t tail_mask = (MASK << tail) - 1;
+            data_[words] &= ~tail_mask;
+
+            //Copy data backwars by elem bits
+            uint64_t words_to_shuffle = capacity_ - words - 1;
+            for (uint64_t i = 0; i < words_to_shuffle; i++) {
+                data_[i] = data_[words + i] >> tail;
+                data_[i] |= (data_[words + i + 1]) << (WORD_BITS - tail);
+            }
+            data_[capacity_ - words - 1] = data_[capacity_ - 1] >> tail;
+            for (uint64_t i = capacity_ - words; i < capacity_; i++) {
+                data_[i] = 0;
+            }
+            [[unlikely]] (void(0));
         }
-        uint64_t tail = elems % WORD_BITS;
-        uint64_t tail_mask = (MASK << tail) - 1;
-        data_[words] &= ~tail_mask;
-        uint64_t words_to_shuffle = capacity_ - words - 1;
-        for (uint64_t i = 0; i < words_to_shuffle; i++) {
-            data_[i] = data_[words + i] >> tail;
-            data_[i] |= (data_[words + i + 1] & tail_mask) << (WORD_BITS - tail);
-        }
-        data_[capacity_ - 1] >>= tail;
+        
         size_ -= elems;
         p_sum_ -= ones;
+
     }
 
     template <class sibling_type>

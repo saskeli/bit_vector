@@ -7,10 +7,12 @@
 #include "leaf_tests.hpp"
 #include "node_tests.hpp"
 
+#define SIZE 16384
+
 typedef malloc_alloc ma;
 typedef simple_leaf<8> sl;
 typedef simple_leaf<0> ubl;
-typedef simple_node<sl, 16384> nd;
+typedef simple_node<sl, SIZE> nd;
 
 //Tests for buffered leaf
 TEST(SimpleLeaf, Insert) {
@@ -141,4 +143,64 @@ TEST(SimpleNode, AccessLeaf) {
 
 TEST(SimpleNode, AccessNode) {
     node_access_node_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, SetLeaf) {
+    node_set_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, SetNode) {
+    node_set_node_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, RankLeaf) {
+    node_rank_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, RankNode) {
+    node_rank_node_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, SelectSingleLeaf) {
+    node_select_single_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, SelectLeaf) {
+    node_select_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, SelectNode) {
+    node_select_node_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, InsertSingleLeaf) {
+    node_insert_single_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, InsertSingleLeafRealloc) {
+    node_insert_single_leaf_realloc_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, InsertSingleLeafSplit) {
+    node_insert_single_leaf_split_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, InsertLeafSplit) {
+    node_inset_leaf_split_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, InsertNode) {
+    node_insert_node_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, InsertNodeSplit) {
+    node_insert_node_split_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, RemoveLeafSimple) {
+    node_remove_leaf_simple_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveLeaf) {
+    node_remove_leaf_test<nd, sl, ma>(SIZE);
 }

@@ -15,6 +15,11 @@ class simple_node {
     void* children_[CHILDREN]; // pointers to leaf_type or simple_node elements
     void* allocator_; //This will be the allocator
 
+    //leaf size needs to be a power of 2
+    static_assert((leaf_size & (leaf_size - 1)) == 0);
+    //leaf size needs to be divisible by 64
+    static_assert((leaf_size % 64) == 0);
+
   public:
     simple_node(void* allocator) {
         meta_data_ = 0;
@@ -44,7 +49,7 @@ class simple_node {
     }
 
     uint64_t set(uint64_t index, bool v) {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = find_size(index + 1);
         index -= child_index == 0 ? 0 : child_sizes_[child_index - 1];
         uint64_t change = 0;
         if (has_leaves()) {
@@ -62,7 +67,7 @@ class simple_node {
     }
 
     uint64_t rank(uint64_t index) const {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = find_size(index + 1);
         uint64_t res = 0;
         if (child_index != 0) {
             res = child_sums_[child_index - 1];
@@ -357,17 +362,18 @@ class simple_node {
     void leaf_insert(uint64_t index, bool value) {
         uint8_t child_index = find_size(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
-
         if (child->need_realloc()) {
             if (child->size() >= leaf_size) {
                 constexpr uint64_t n_cap = leaf_size / (64 * 2);
-                leaf_type* new_child = reinterpret_cast<allocator*>(allocator_)->allocate_leaf(n_cap);
+                allocator* a = reinterpret_cast<allocator*>(allocator_);
+                leaf_type* new_child = a->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_append(child, n_cap * 64);
                 for (size_t i = child_count(); i > child_index; i--) {
                     child_sizes_[i] = child_sizes_[i - 1];
                     child_sums_[i] = child_sums_[i - 1];
                     children_[i] = children_[i - 1];
                 }
+                children_[child_index] = new_child;
                 if (child_index == 0) {
                     child_sizes_[0] = new_child->size();
                     [[unlikely]] child_sums_[0] = new_child->p_sum();
@@ -375,18 +381,13 @@ class simple_node {
                     child_sizes_[child_index] = child_sizes_[child_index - 1] + new_child->size();
                     child_sums_[child_index] = child_sums_[child_index - 1] + new_child->p_sum();
                 }
-                if (child_sizes_[child_index] >= index) {
-                    child = new_child;
-                } else {
-                    child_index++;
-                }
-                [[unlikely]] children_[child_index] = new_child;
+                [[unlikely]] meta_data_++;
             } else {
                 uint64_t cap = child->capacity();
                 child = reinterpret_cast<allocator*>(allocator_)->reallocate_leaf(child, cap, cap * 2);
                 children_[child_index] = child;
             }
-            [[unlikely]] ((void)0);
+            [[unlikely]] return leaf_insert<allocator>(index, value);
         }
         if (child_index != 0) {
             [[likely]] index -= child_sizes_[child_index - 1];
@@ -398,13 +399,13 @@ class simple_node {
         child->insert(index, value);
     }
 
-    template<class allocator, class s_node>
+    template<class allocator>
     void node_insert(uint64_t index, bool value) {
         uint8_t child_index = find_size(index);
-        s_node* child = reinterpret_cast<s_node*>(children_[child_index]);
+        simple_node* child = reinterpret_cast<simple_node*>(children_[child_index]);
 
         if (child->child_count() == 64) {
-            s_node* new_child = child->split();
+            simple_node* new_child = child->template split<allocator>();
             for (size_t i = child_count(); i > child_index; i--) {
                 child_sizes_[i] = child_sizes_[i - 1];
                 child_sums_[i] = child_sums_[i - 1];
@@ -422,7 +423,7 @@ class simple_node {
                 child = new_child;
                 child_index++;
             }
-            [[unlikely]] ((void)0);
+            [[unlikely]] meta_data_++;
         }
         if (child_index != 0) {
             [[likely]] index -= child_sizes_[child_index - 1];
@@ -431,10 +432,16 @@ class simple_node {
             child_sizes_[i]++;
             child_sums_[i] += value;
         }
-        child->insert(index, value);
+        child->template insert<allocator>(index, value);
     }
 
+    template<class allocator>
     void rebalance_leaves_right(leaf_type* a, leaf_type* b, uint8_t idx) {
+        uint64_t a_cap = a->capacity();
+        if (a_cap * 64 < a->size() + (b->size() - leaf_size / 3) / 2) {
+            a = reinterpret_cast<allocator*>(allocator_)->reallocate_leaf(a, a_cap, 2 * a_cap);
+            children_[idx] = a;
+        }
         a->transfer_append(b, (b->size() - leaf_size / 3) / 2);
         if (idx == 0) {
             child_sizes_[0] = a->size();
@@ -445,7 +452,13 @@ class simple_node {
         }
     }
 
+    template<class allocator>
     void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx) {
+        uint64_t b_cap = b->capacity();
+        if (b_cap * 64 < b->size() + (a->size() - leaf_size / 3) / 2) {
+            b = reinterpret_cast<allocator*>(allocator_)->reallocate_leaf(b, b_cap, 2 * b_cap);
+            children_[idx + 1] = b;
+        }
         b->transfer_prepend(a, (a->size() - leaf_size / 3) / 2);
         if (idx == 0) {
             child_sizes_[0] = a->size();
@@ -477,13 +490,13 @@ class simple_node {
 
     template<class allocator>
     bool leaf_remove(uint64_t index) {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = find_size(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->size() <= leaf_size / 3) {
             if (child_index == 0) {
                 leaf_type* sibling = reinterpret_cast<leaf_type*>(children_[1]);
                 if (sibling->size() > leaf_size * 5 / 9) {
-                    rebalance_leaves_right(child, sibling, 0);
+                    rebalance_leaves_right<allocator>(child, sibling, 0);
                 } else {
                     merge_leaves<allocator>(child, sibling, 0);
                 }
@@ -491,7 +504,7 @@ class simple_node {
             } else {
                 leaf_type* sibling = reinterpret_cast<leaf_type*>(children_[child_index - 1]);
                 if (sibling->size() > leaf_size * 5 / 9) {
-                    rebalance_leaves_left(sibling, child, child_index - 1);
+                    rebalance_leaves_left<allocator>(sibling, child, child_index - 1);
                 } else {
                     merge_leaves<allocator>(sibling, child, child_index - 1);
                 }
@@ -510,8 +523,7 @@ class simple_node {
         return value;
     }
     
-    template<class s_node>
-    void rebalance_nodes_right(s_node* a, s_node* b, uint8_t idx) {
+    void rebalance_nodes_right(simple_node* a, simple_node* b, uint8_t idx) {
         a->transfer_append(b, (b->child_count() - CHILDREN / 3) / 2);
         if (idx == 0) {
             child_sizes_[0] = a->size();
@@ -522,8 +534,7 @@ class simple_node {
         }
     }
 
-    template<class s_node>
-    void rebalance_nodes_left(s_node* a, s_node* b, uint8_t idx) {
+    void rebalance_nodes_left(simple_node* a, simple_node* b, uint8_t idx) {
         b->transfer_prepend(a, (a->child_count() - CHILDREN / 3) / 2);
         if (idx == 0) {
             child_sizes_[0] = a->size();
@@ -534,8 +545,8 @@ class simple_node {
         }
     }
 
-    template<class allocator, class s_node>
-    void merge_nodes(s_node* a, s_node* b, uint8_t idx) {
+    template<class allocator>
+    void merge_nodes(simple_node* a, simple_node* b, uint8_t idx) {
         a->append_all(b);
         reinterpret_cast<allocator*>(allocator_)->deallocate_node(b);
         uint8_t count = child_count();
@@ -549,21 +560,21 @@ class simple_node {
         child_sizes_[count - 1] = ~(uint64_t(0));
     }
 
-    template<class allocator, class s_node>
+    template<class allocator>
     bool node_remove(uint64_t index) {
         uint8_t child_index = find_size(index);
-        s_node* child = reinterpret_cast<s_node*>(children_[child_index]);
+        simple_node* child = reinterpret_cast<simple_node*>(children_[child_index]);
         if (child->child_count() <= CHILDREN / 3) {
             if (child_index == 0) {
-                s_node* sibling = reinterpret_cast<s_node*>(children_[1]);
+                simple_node* sibling = reinterpret_cast<simple_node*>(children_[1]);
                 if (sibling->child_count() > CHILDREN * 5 / 9) {
                     rebalance_nodes_right(child, sibling, 0);
                 } else {
-                    merge_nodes(child, sibling, 0);
+                    merge_nodes<allocator>(child, sibling, 0);
                 }
                 [[unlikely]] ((void)0);
             } else {
-                s_node* sibling = reinterpret_cast<s_node*>(children_[child_index - 1]);
+                simple_node* sibling = reinterpret_cast<simple_node*>(children_[child_index - 1]);
                 if (sibling->child_count() > CHILDREN * 5 / 9) {
                     rebalance_nodes_left(sibling, child, child_index - 1);
                 } else {
@@ -571,12 +582,12 @@ class simple_node {
                 }
             }
             child_index = find_size(index);
-            [[unlikely]] child = reinterpret_cast<s_node*>(children_[child_index]);
+            [[unlikely]] child = reinterpret_cast<simple_node*>(children_[child_index]);
         }
         if (child_index != 0) {
-            [[likely]] index -= child_sizes_[child];
+            [[likely]] index -= child_sizes_[child_index];
         }
-        bool value = child->remove(index);
+        bool value = child->template remove<allocator>(index);
         uint8_t c_count = child_count();
         for (uint8_t i = child_index; i < c_count; i++) {
             child_sizes_[i]--;
