@@ -69,7 +69,7 @@ class bit_vector {
                     l_root_ = n_root_->child(0);
                     root_is_leaf_ = true;
                     allocator_->deallocate_node(n_root_);
-                    l_root_->reamove(index);
+                    l_root_->remove(index);
                 } else {
                     node* new_root = n_root_->child(0);
                     allocator_->deallocate_node(n_root_);

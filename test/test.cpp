@@ -201,6 +201,50 @@ TEST(SimpleNode, RemoveLeafSimple) {
     node_remove_leaf_simple_test<nd, sl, ma>(SIZE);
 }
 
-TEST(SimpleNode, RemoveLeaf) {
-    node_remove_leaf_test<nd, sl, ma>(SIZE);
+TEST(SimpleNode, RemoveLeafA) {
+    node_remove_leaf_a_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveLeafB) {
+    node_remove_leaf_b_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveLeafC) {
+    node_remove_leaf_c_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveLeafD) {
+    node_remove_leaf_d_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveLeafE) {
+    node_remove_leaf_e_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveLeafF) {
+    node_remove_leaf_f_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveNodeSimple) {
+    node_remove_node_simple_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveNodeA) {
+    node_remove_node_a_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveNodeB) {
+    node_remove_node_b_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveNodeC) {
+    node_remove_node_c_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveNodeD) {
+    node_remove_node_d_test<nd, sl, ma>(SIZE);
+}
+
+TEST(SimpleNode, RemoveNodeE) {
+    node_remove_node_e_test<nd, sl, ma>(SIZE);
 }

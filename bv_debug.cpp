@@ -17,56 +17,42 @@ int main() {
     uint64_t size = 16384;
     alloc* a = new alloc();
     node* n = a->template allocate_node<node>();
-    n->has_leaves(true);
-    leaf* l = a->template allocate_leaf<leaf>(size / 64);
-    uint64_t m = 0;
-    for (uint64_t j = 0; j < size; j++) {
-        l->insert(j, (m++) % 2);
+    node* c = a->template allocate_node<node>();
+    c->has_leaves(true);
+    for (uint64_t i = 0; i < 21; i++) {
+        leaf* l = a->template allocate_leaf<leaf>(size / 64);
+        for (uint64_t j = 0; j < size; j++) {
+            l->insert(j, j % 2);
+        }
+        c->append_child(l);
     }
-    n->append_child(l);
+    n->append_child(c);
 
-    l = a->template allocate_leaf<leaf>(size / 64);
-    for (uint64_t j = 0; j < size / 3; j++) {
-        l->insert(j, (m++) % 2);
+    c = a->template allocate_node<node>();
+    c->has_leaves(true);
+    for (uint64_t i = 0; i < 64; i++) {
+        leaf* l = a->template allocate_leaf<leaf>(size / 64);
+        for (uint64_t j = 0; j < size; j++) {
+            l->insert(j, j % 2);
+        }
+        c->append_child(l);
     }
-    n->append_child(l);
+    n->append_child(c);
 
     assert((2u) == (n->child_count()));
-    assert((m) == (n->size()));
-    assert((m / 2) == (n->p_sum()));
+    assert((64u * size + 21u * size) == (n->size()));
+    assert((32u * size + 21u * size / 2) == (n->p_sum()));
 
-    n->template remove<alloc>(5 * size / 6);
-    n->template remove<alloc>(5 * size / 6);
-
-    assert((2u) == (n->child_count()));
-    assert((m - 2) == (n->size()));
-    assert(m / 2 - 1 == n->p_sum());
-    for (uint64_t j = 0; j < m - 2; j++) {
-        assert(j % 2 == n->at(j));
-    }
-
-    uint64_t rem = size / 3;
-    rem += rem % 2 ? 1 : 2;
-    for (uint64_t i = 0; i < rem; i++) {
-        n->template remove<alloc>(2 * size / 3 + 2);
-    }
+    n->template remove<alloc>(0);
 
     assert((2u) == (n->child_count()));
-    assert((m - rem - 2) == (n->size()));
-    assert(m / 2 - rem / 2 - 1 == n->p_sum());
-    for (uint64_t j = 0; j < m - rem - 2; j++) {
-        assert(j % 2 == n->at(j));
-    }
-
-    for (uint64_t i = 0; i < rem; i++) {
-        n->template remove<alloc>(size / 2 + 2);
-    }
-
-    assert((1u) == (n->child_count()));
-    assert((m - 2 * rem - 2) == (n->size()));
-    assert(m / 2 - rem - 1 == n->p_sum());
-    for (uint64_t j = 0; j < m - 2 * rem - 2; j++) {
-        assert(j % 2 == n->at(j));
+    assert((64u * size + 21u * size - 1) == (n->size()));
+    assert((32u * size + 21u * size / 2) == (n->p_sum()));
+    node* n1 = reinterpret_cast<node*>(n->child(0));
+    node* n2 = reinterpret_cast<node*>(n->child(1));
+    assert(abs(n1->child_count() - n2->child_count()) <= 1);
+    for (uint64_t j = 0; j < 64u * size + 21u * size - 1; j++) {
+        assert((j % 2 == 0) == (n->at(j)));
     }
 
     n->template deallocate<alloc>();

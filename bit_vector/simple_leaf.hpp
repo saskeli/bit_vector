@@ -365,8 +365,7 @@ class simple_leaf {
         }
     }
 
-    template<class sibling_type>
-    void transfer_prepend(sibling_type* other, uint64_t elems) {
+    void transfer_prepend(simple_leaf* other, uint64_t elems) {
         commit();
         other->commit();
         uint64_t* o_data = other->data();
@@ -466,6 +465,7 @@ class simple_leaf {
 
     void commit() {
         if constexpr (buffer_size != 0) {
+            if (buffer_count() == 0) return;
             uint64_t overflow = 0;
             uint8_t overflow_length = 0;
             uint8_t underflow_length = 0;
@@ -559,7 +559,7 @@ class simple_leaf {
         }
     }
 
-    void print() const {
+    void print(bool internal_only) const {
         std::cout << "{\n\"type\": \"leaf\",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"p_sum\": " << p_sum() << ",\n"
