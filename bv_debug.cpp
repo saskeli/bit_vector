@@ -1,62 +1,79 @@
 #include <iostream>
 #include <iomanip>
 #include <cassert>
+#include <random>
+#include <chrono>
+
+//#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
 #include "bit_vector/allocator.hpp"
 #include "bit_vector/simple_leaf.hpp"
 #include "bit_vector/simple_node.hpp"
-//#include "bit_vector/bit_vector.hpp"
+#include "bit_vector/bit_vector.hpp"
 
 typedef uint32_t data_type;
 typedef simple_leaf<8> leaf;
-typedef simple_node<leaf, 16384> node;
+typedef simple_node<leaf, 8192> node;
 typedef malloc_alloc alloc;
-//typedef bit_vector<leaf, node, malloc_alloc, 16384> simple_bv;
+typedef bit_vector<leaf, node, malloc_alloc, 8192> simple_bv;
 
 int main() {
-    uint64_t size = 16384;
-    alloc* a = new alloc();
-    node* n = a->template allocate_node<node>();
-    node* c = a->template allocate_node<node>();
-    c->has_leaves(true);
-    for (uint64_t i = 0; i < 21; i++) {
-        leaf* l = a->template allocate_leaf<leaf>(size / 64);
-        for (uint64_t j = 0; j < size; j++) {
-            l->insert(j, j % 2);
+    uint64_t size = 1000000;
+    uint64_t steps = 100;
+
+    simple_bv ubv;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    using std::chrono::duration_cast;
+    using std::chrono::high_resolution_clock;
+    using std::chrono::microseconds;
+
+    uint64_t N = 100000;
+
+    for (uint64_t i = 1; i <= size; i++) {
+        uint64_t pos = gen() % i;
+        uint64_t val = gen() % 2;
+        ubv.insert(pos, val);
+    }
+
+    double step = 1.0 / (steps - 1);
+    std::vector<uint64_t> ops, loc, val;
+    uint64_t checksum = 0;
+
+    std::cout << "P\tcontrol\tchecksum" << std::endl;
+
+    for (uint64_t mul = 0; mul < steps; mul++) {
+        double p = step * mul;
+        std::cout << p << "\t";
+        std::bernoulli_distribution bool_dist(p);
+        ops.clear();
+        checksum = 0;
+
+        for (uint64_t opn = 0; opn < N; opn++) {
+            ops.push_back(bool_dist(gen));
+            loc.push_back(gen() % size);
+            val.push_back(gen() % 2);
         }
-        c->append_child(l);
-    }
-    n->append_child(c);
 
-    c = a->template allocate_node<node>();
-    c->has_leaves(true);
-    for (uint64_t i = 0; i < 64; i++) {
-        leaf* l = a->template allocate_leaf<leaf>(size / 64);
-        for (uint64_t j = 0; j < size; j++) {
-            l->insert(j, j % 2);
+        auto t1 = high_resolution_clock::now();
+        for (uint64_t opn = 0; opn < N; opn++) {
+            if (ops[opn]) {
+                ubv.insert(loc[opn], val[opn]);
+            } else {
+                checksum += ubv.rank(loc[opn]);
+            }
         }
-        c->append_child(l);
+        auto t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N
+                  << "\t";
+
+        while (ubv.size() > size) {
+            uint64_t pos = gen() % ubv.size();
+            ubv.remove(pos);
+        }
+
+        std::cout << checksum << std::endl;
     }
-    n->append_child(c);
-
-    assert((2u) == (n->child_count()));
-    assert((64u * size + 21u * size) == (n->size()));
-    assert((32u * size + 21u * size / 2) == (n->p_sum()));
-
-    n->template remove<alloc>(0);
-
-    assert((2u) == (n->child_count()));
-    assert((64u * size + 21u * size - 1) == (n->size()));
-    assert((32u * size + 21u * size / 2) == (n->p_sum()));
-    node* n1 = reinterpret_cast<node*>(n->child(0));
-    node* n2 = reinterpret_cast<node*>(n->child(1));
-    assert(abs(n1->child_count() - n2->child_count()) <= 1);
-    for (uint64_t j = 0; j < 64u * size + 21u * size - 1; j++) {
-        assert((j % 2 == 0) == (n->at(j)));
-    }
-
-    n->template deallocate<alloc>();
-    a->deallocate_node(n);
-    assert((0u) == (a->live_allocations()));
-    delete(a);
 }

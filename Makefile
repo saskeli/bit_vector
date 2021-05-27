@@ -11,7 +11,7 @@ GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
 
 GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 
-TEST_CODE = test/leaf_tests.hpp test/node_tests.hpp test/test.cpp
+TEST_CODE = test/leaf_tests.hpp test/node_tests.hpp test/test.cpp test/bv_tests.hpp
 
 COVERAGE = -g
 
@@ -28,6 +28,9 @@ bv_debug: bv_debug.cpp $(HEADERS)
 
 debug: bv_debug.cpp $(HEADERS)
 	g++ $(CFLAGS) -DDEBUG -O0 -g -o bv_debug bv_debug.cpp
+
+bench: bench.cpp $(HEADERS)
+	g++ $(CFLAGS) -DNDEBUG -Ofast -o bench bench.cpp
 
 bit_vector/%.hpp:
 
@@ -54,14 +57,12 @@ test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -c test/test.cpp -o test/test.o
 
 test: clean test/test.o test/gtest_main.a
-	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
 	g++ $(CFLAGS) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 
 cover: clean test/test.o test/gtest_main.a
-	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test

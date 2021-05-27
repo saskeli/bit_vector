@@ -117,11 +117,9 @@ void leaf_rank_test(uint64_t n) {
         }
     }
 
-    uint64_t plus = (n - 1) % 2;
+    uint64_t first = (n - 1) % 2;
     for (uint64_t i = 0; i <= n; i++) {
-        uint64_t ex = (i + plus) >> 1;
-        uint64_t val = l->rank(i);
-        ASSERT_EQ(val, ex) << "Rank(" << i << ") should be " << ex;
+        ASSERT_EQ((i + first) / 2, l->rank(i)) << "Rank(" << i << ") failed";
     }
 
     allocator->template deallocate_leaf<leaf>(l);
@@ -561,6 +559,38 @@ void leaf_hit_buffer_test() {
     }
 
     allocator->template deallocate_leaf<leaf>(a);
+    delete allocator;
+}
+
+template<class leaf, class alloc>
+void leaf_commit_test(uint64_t size) {
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>(size / (2 * 64));
+    if (5461 >= size / 2) return;
+
+    for (int i = 0; i < 5464; i++) {
+        l->insert(i, i % 2);
+    }
+
+    ASSERT_EQ(5464u, l->size());
+    ASSERT_EQ(5464u / 2, l->p_sum());
+    for (uint64_t i = 0; i < 5464; i++) {
+        ASSERT_EQ(i % 2, l->at(i));
+    }
+
+    l->remove(0);
+    l->remove(0);
+    l->remove(0);
+
+    l->commit();
+    
+    ASSERT_EQ(5461u, l->size());
+    ASSERT_EQ(5464u / 2 - 1, l->p_sum());
+    for (uint64_t i = 0; i < 5461; i++) {
+        ASSERT_EQ(i % 2 == 0, l->at(i));
+    }
+
+    allocator->template deallocate_leaf<leaf>(l);
     delete allocator;
 }
 

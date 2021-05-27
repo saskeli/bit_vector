@@ -67,7 +67,7 @@ class simple_node {
     }
 
     uint64_t rank(uint64_t index) const {
-        uint8_t child_index = find_size(index + 1);
+        uint8_t child_index = find_size(index);
         uint64_t res = 0;
         if (child_index != 0) {
             res = child_sums_[child_index - 1];
@@ -281,12 +281,12 @@ class simple_node {
     uint64_t bits_size() const {
         uint64_t ret = sizeof(this) * 8;
         if (has_leaves()) {
-            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            leaf_type* const* children = reinterpret_cast<leaf_type* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 ret += children[i]->bits_size();
             }
         } else {
-            simple_node** children = reinterpret_cast<simple_node**>(children_);
+            simple_node* const* children = reinterpret_cast<simple_node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 ret += children[i]->bits_size();
             }
@@ -319,7 +319,7 @@ class simple_node {
                   << "\"children\": [\n";
         if (has_leaves()) {
             if (!internal_only) {
-                leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+                leaf_type* const* children = reinterpret_cast<leaf_type* const*>(children_);
                 for (uint8_t i = 0; i < child_count(); i++) {
                     children[i]->print(internal_only);
                     if (i != child_count() - 1) {
@@ -329,7 +329,7 @@ class simple_node {
                 }
             }
         } else {
-            simple_node** children = reinterpret_cast<simple_node**>(children_);
+            simple_node* const* children = reinterpret_cast<simple_node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 children[i]->print(internal_only);
                 if (i != child_count() - 1) {
@@ -442,11 +442,11 @@ class simple_node {
     }
 
     template<class allocator>
-    void rebalance_leaves_right(leaf_type* a, leaf_type* b, uint8_t idx) {
+    void rebalance_leaves_right(leaf_type* a, leaf_type* b) {
         uint64_t a_cap = a->capacity();
         if (a_cap * 64 < a->size() + (b->size() - leaf_size / 3) / 2) {
             a = reinterpret_cast<allocator*>(allocator_)->reallocate_leaf(a, a_cap, 2 * a_cap);
-            children_[idx] = a;
+            children_[0] = a;
         }
         a->transfer_append(b, (b->size() - leaf_size / 3) / 2);
         child_sizes_[0] = a->size();
@@ -499,7 +499,7 @@ class simple_node {
             if (child_index == 0) {
                 leaf_type* sibling = reinterpret_cast<leaf_type*>(children_[1]);
                 if (sibling->size() > leaf_size * 5 / 9) {
-                    rebalance_leaves_right<allocator>(child, sibling, 0);
+                    rebalance_leaves_right<allocator>(child, sibling);
                 } else {
                     merge_leaves<allocator>(child, sibling, 0);
                 }

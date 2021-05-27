@@ -12,7 +12,7 @@
 template <uint8_t buffer_size>
 class simple_leaf {
   private:
-    uint8_t metadata_;
+    uint8_t buffer_count_;
     uint32_t buffer_[buffer_size];
     uint64_t capacity_;
     uint64_t size_;
@@ -26,7 +26,7 @@ class simple_leaf {
 
   public:
     simple_leaf(uint64_t capacity, uint64_t* data) {
-        metadata_ = 0;
+        buffer_count_ = 0;
         capacity_ = capacity;
         size_ = 0;
         p_sum_ = 0;
@@ -36,7 +36,7 @@ class simple_leaf {
     bool at(const uint64_t i) const {
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
-            for (uint8_t idx = 0; idx < buffer_count(); idx++) {
+            for (uint8_t idx = 0; idx < buffer_count_; idx++) {
                 uint64_t b = buffer_index(buffer_[idx]);
                 if (b == i) {
                     if (buffer_is_insertion(buffer_[idx])) {
@@ -71,7 +71,7 @@ class simple_leaf {
         }
         p_sum_ += x ? 1 : 0;
         if constexpr (buffer_size != 0) {
-            uint8_t idx = buffer_count();
+            uint8_t idx = buffer_count_;
             while (idx > 0) {
                 uint64_t b = buffer_index(buffer_[idx - 1]);
                 if (b > i || (b == i && buffer_is_insertion(buffer_[idx - 1]))) {
@@ -82,13 +82,13 @@ class simple_leaf {
                 idx--;
             }
             size_++;
-            if (idx == buffer_count()) {
-                buffer_[buffer_count()] = create_buffer(i, 1, x);
-                metadata_++;
+            if (idx == buffer_count_) {
+                buffer_[buffer_count_] = create_buffer(i, 1, x);
+                buffer_count_++;
             } else {
                 insert_buffer(idx, create_buffer(i, 1, x));
             }
-            if (buffer_count() >= buffer_size) commit();
+            if (buffer_count_ >= buffer_size) commit();
         } else {
             size_++;
             auto target_word = i / WORD_BITS;
@@ -109,7 +109,7 @@ class simple_leaf {
             bool x = this->at(i);
             p_sum_ -= x;
             --size_;
-            uint8_t idx = buffer_count();
+            uint8_t idx = buffer_count_;
             while (idx > 0) {
                 uint64_t b = buffer_index(buffer_[idx - 1]);
                 if (b == i) { 
@@ -126,13 +126,13 @@ class simple_leaf {
                 }
                 idx--;
             }
-            if (idx == buffer_count()) {
+            if (idx == buffer_count_) {
                 buffer_[idx] = create_buffer(i, 0, x);
-                metadata_++;
+                buffer_count_++;
             } else {
                 insert_buffer(idx, create_buffer(i, 0, x));
             }
-            if (buffer_count() >= buffer_size) commit();
+            if (buffer_count_ >= buffer_size) commit();
             return x;
         } else {
             uint64_t target_word = i / WORD_BITS;
@@ -159,7 +159,7 @@ class simple_leaf {
     uint64_t set(const uint64_t i, const bool x) {
         uint64_t idx = i;
         if constexpr (buffer_size != 0) {
-            for (uint8_t j = 0; j < buffer_count(); j++) {
+            for (uint8_t j = 0; j < buffer_count_; j++) {
                 uint64_t b = buffer_index(buffer_[j]);
                 if (b < i) {
                     idx += buffer_is_insertion(buffer_[j]) ? -1 : 1;
@@ -196,7 +196,7 @@ class simple_leaf {
 
         uint64_t idx = n;
         if constexpr (buffer_size != 0) {
-            for (uint8_t i = 0; i < buffer_count(); i++) {
+            for (uint8_t i = 0; i < buffer_count_; i++) {
                 if (buffer_index(buffer_[i]) >= n) break;
                 if (buffer_is_insertion(buffer_[i])) {
                     idx--;
@@ -212,8 +212,10 @@ class simple_leaf {
         for (size_t i = 0; i < target_word; i++) {
             count += __builtin_popcountll(data_[i]);
         }
-        count += __builtin_popcountll(data_[target_word] &
-                                      ((MASK << target_offset) - 1));
+        if (target_offset != 0) {
+            count += __builtin_popcountll(data_[target_word] &
+                                        ((MASK << target_offset) - 1));
+        }
         return count;
     }
 
@@ -228,7 +230,7 @@ class simple_leaf {
             pop += __builtin_popcountll(data_[j]);
             pos += 64;
             if constexpr (buffer_size != 0) {
-                for (uint8_t b = current_buffer; b < buffer_count(); b++) {
+                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
                     uint64_t b_index = buffer_index(buffer_[b]);
                     if (b_index < pos) {
                         if (buffer_is_insertion(buffer_[b])) {
@@ -464,112 +466,114 @@ class simple_leaf {
     }
 
     void commit() {
-        if constexpr (buffer_size != 0) {
-            if (buffer_count() == 0) return;
-            uint64_t overflow = 0;
-            uint8_t overflow_length = 0;
-            uint8_t underflow_length = 0;
-            uint64_t current_word = 0;
-            uint8_t current_index = 0;
-            uint32_t buf = buffer_[current_index];
-            uint64_t target_word = buffer_index(buf) / WORD_BITS;
-            uint64_t target_offset = buffer_index(buf) % WORD_BITS;
+        if constexpr (buffer_size == 0) return;
+        if (buffer_count_ == 0) return;
+        
+        uint64_t overflow = 0;
+        uint8_t overflow_length = 0;
+        uint8_t underflow_length = 0;
+        uint64_t current_word = 0;
+        uint8_t current_index = 0;
+        uint32_t buf = buffer_[current_index];
+        uint64_t target_word = buffer_index(buf) / WORD_BITS;
+        uint64_t target_offset = buffer_index(buf) % WORD_BITS;
 
-            while (current_word * WORD_BITS < size_) {
-                uint64_t underflow =
-                    current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
-                if (overflow_length) {
-                    underflow = (underflow << overflow_length) |
-                                (data_[current_word] >> (64 - overflow_length));
-                }
-
-                uint64_t new_overflow = 0;
-                // If buffers need to be commit to this word:
-                if (current_word == target_word && current_index < buffer_count()) {
-                    uint64_t word =
-                        underflow_length
-                            ? (data_[current_word] >> underflow_length) |
-                                (underflow << (64 - underflow_length))
-                            : (data_[current_word] << overflow_length) | overflow;
-                    underflow >>= underflow_length;
-                    uint64_t new_word = 0;
-                    uint8_t start_offset = 0;
-                    // While there are buffers for this word
-                    while (current_word == target_word) {
-                        new_word |=
-                            (word << start_offset) & ((MASK << target_offset) - 1);
-                        word = (word >> (target_offset - start_offset)) |
-                            (target_offset == 0
-                                    ? 0
-                                    : target_offset - start_offset == 0
-                                        ? 0
-                                        : (underflow << (64 - (target_offset -
-                                                                start_offset))));
-                        underflow >>= target_offset - start_offset;
-                        if (buffer_is_insertion(buf)) {
-                            if (buffer_value(buf)) {
-                                new_word |= MASK << target_offset;
-                            }
-                            start_offset = target_offset + 1;
-                            if (underflow_length)
-                                underflow_length--;
-                            else
-                                overflow_length++;
-                        } else {
-                            word >>= 1;
-                            word |= underflow << 63;
-                            underflow >>= 1;
-                            if (overflow_length)
-                                overflow_length--;
-                            else
-                                underflow_length++;
-                            start_offset = target_offset;
-                        }
-                        current_index++;
-                        if (current_index >= buffer_count()) break;
-                        buf = buffer_[current_index];
-                        target_word = buffer_index(buf) / WORD_BITS;
-                        target_offset = buffer_index(buf) % WORD_BITS;
-                    }
-                    new_word |=
-                        start_offset < 64 ? (word << start_offset) : uint64_t(0);
-                    new_overflow = overflow_length ? data_[current_word] >>
-                                                        (64 - overflow_length)
-                                                : 0;
-                    data_[current_word] = new_word;
-                } else {
-                    if (underflow_length) {
-                        data_[current_word] =
-                            (data_[current_word] >> underflow_length) |
-                            (underflow << (64 - underflow_length));
-                    } else if (overflow_length) {
-                        new_overflow =
-                            data_[current_word] >> (64 - overflow_length);
-                        data_[current_word] =
-                            (data_[current_word] << overflow_length) | overflow;
-                        overflow = new_overflow;
-                    } else {
-                        overflow = 0;
-                    }
-                }
-                overflow = new_overflow;
-                current_word++;
+        while (current_word * WORD_BITS < size_) {
+            uint64_t underflow =
+                current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
+            if (overflow_length) {
+                underflow = (underflow << overflow_length) |
+                            (data_[current_word] >> (64 - overflow_length));
             }
-            metadata_ = 0;
+
+            uint64_t new_overflow = 0;
+            // If buffers need to be commit to this word:
+            if (current_word == target_word && current_index < buffer_count_) {
+                uint64_t word =
+                    underflow_length
+                        ? (data_[current_word] >> underflow_length) |
+                            (underflow << (64 - underflow_length))
+                        : (data_[current_word] << overflow_length) | overflow;
+                underflow >>= underflow_length;
+                uint64_t new_word = 0;
+                uint8_t start_offset = 0;
+                // While there are buffers for this word
+                while (current_word == target_word) {
+                    new_word |=
+                        (word << start_offset) & ((MASK << target_offset) - 1);
+                    word = (word >> (target_offset - start_offset)) |
+                        (target_offset == 0
+                                ? 0
+                                : target_offset - start_offset == 0
+                                    ? 0
+                                    : (underflow << (64 - (target_offset -
+                                                            start_offset))));
+                    underflow >>= target_offset - start_offset;
+                    if (buffer_is_insertion(buf)) {
+                        if (buffer_value(buf)) {
+                            new_word |= MASK << target_offset;
+                        }
+                        start_offset = target_offset + 1;
+                        if (underflow_length)
+                            underflow_length--;
+                        else
+                            overflow_length++;
+                    } else {
+                        word >>= 1;
+                        word |= underflow << 63;
+                        underflow >>= 1;
+                        if (overflow_length)
+                            overflow_length--;
+                        else
+                            underflow_length++;
+                        start_offset = target_offset;
+                    }
+                    current_index++;
+                    if (current_index >= buffer_count_) break;
+                    buf = buffer_[current_index];
+                    target_word = buffer_index(buf) / WORD_BITS;
+                    target_offset = buffer_index(buf) % WORD_BITS;
+                }
+                new_word |=
+                    start_offset < 64 ? (word << start_offset) : uint64_t(0);
+                new_overflow = overflow_length ? data_[current_word] >>
+                                                    (64 - overflow_length)
+                                            : 0;
+                data_[current_word] = new_word;
+            } else {
+                if (underflow_length) {
+                    data_[current_word] =
+                        (data_[current_word] >> underflow_length) |
+                        (underflow << (64 - underflow_length));
+                } else if (overflow_length) {
+                    new_overflow =
+                        data_[current_word] >> (64 - overflow_length);
+                    data_[current_word] =
+                        (data_[current_word] << overflow_length) | overflow;
+                    overflow = new_overflow;
+                } else {
+                    overflow = 0;
+                }
+            }
+            overflow = new_overflow;
+            current_word++;
         }
+        if (capacity_ > current_word) data_[current_word] = 0;
+        buffer_count_ = 0;
     }
 
     void print(bool internal_only) const {
+        if (internal_only) return;
         std::cout << "{\n\"type\": \"leaf\",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"p_sum\": " << p_sum() << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
                   << "\"buffer\": [\n";
-        for (uint8_t i = 0; i < buffer_count(); i++) {
+        for (uint8_t i = 0; i < buffer_count_; i++) {
             std::cout << "{\"is_insertion\": " << buffer_is_insertion(buffer_[i]) << ", "
                        << "\"buffer_value\": " << buffer_value(buffer_[i]) << ", "
                        << "\"buffer_index\": " << buffer_index(buffer_[i]) << "}";
-            if (i != buffer_count() - 1) {
+            if (i != buffer_count_ - 1) {
                 std::cout << ",\n";
             }
         }
@@ -587,7 +591,7 @@ class simple_leaf {
 
   private:
     uint8_t buffer_count() const {
-        return metadata_ & uint8_t(127);
+        return buffer_count_;
     }
     bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
 
@@ -606,21 +610,21 @@ class simple_leaf {
 
     void insert_buffer(uint8_t idx, uint32_t buf) {
         memmove(buffer_ + idx + 1, buffer_ + idx,
-                (buffer_count() - idx) * sizeof(uint32_t));
+                (buffer_count_ - idx) * sizeof(uint32_t));
         buffer_[idx] = buf;
-        metadata_++;
+        buffer_count_++;
     }
 
     void delete_buffer_element(uint8_t idx) {
-        metadata_--;
-        memmove(buffer_ + idx, buffer_ + idx + 1, (buffer_count() - idx) * sizeof(uint32_t));
-        buffer_[buffer_count()] = 0;
+        buffer_count_--;
+        memmove(buffer_ + idx, buffer_ + idx + 1, (buffer_count_ - idx) * sizeof(uint32_t));
+        buffer_[buffer_count_] = 0;
     }
 
     void push_back(const bool x) {
         auto pb_size = size_;
         if constexpr (buffer_size != 0) {
-            for (uint8_t i = 0; i < buffer_count(); i++) {
+            for (uint8_t i = 0; i < buffer_count_; i++) {
                 pb_size += buffer_is_insertion(buffer_[i]) ? -1 : 1;
             }
         }
