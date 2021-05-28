@@ -30,14 +30,12 @@
 *.exe
 *.out
 *.app
+bv_debug
+test/test
 
 # IDE stuff
 .vscode/*
 .idea/*
-
-# Compiled binaries
-bv_debug
-test/test
 
 #Gcov
 *.gcda 
@@ -48,3 +46,6 @@ test/*.gcno
 test/*.gcov
 index.info
 target/
+
+#benchmark results
+*.tsv

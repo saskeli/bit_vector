@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+namespace bv {
+
 template <class leaf, class node, class allocator, uint64_t leaf_size>
 class bit_vector {
   private:
@@ -30,7 +32,7 @@ class bit_vector {
     bit_vector() {
         allocator_ = new allocator();
         owned_allocator_ = true;
-        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size / 2 * 64);
+        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
     }
 
     ~bit_vector() {
@@ -126,5 +128,5 @@ class bit_vector {
         std::cout << std::endl;
     }
 };
-
+}
 #endif

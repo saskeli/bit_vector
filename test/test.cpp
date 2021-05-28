@@ -1,9 +1,9 @@
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 
-#include "../bit_vector/simple_leaf.hpp"
-#include "../bit_vector/allocator.hpp"
-#include "../bit_vector/simple_node.hpp"
-#include "../bit_vector/bit_vector.hpp"
+#include "../bit_vector/internal/allocator.hpp"
+#include "../bit_vector/internal/leaf.hpp"
+#include "../bit_vector/internal/node.hpp"
+#include "../bit_vector/internal/bit_vector.hpp"
 
 #include "leaf_tests.hpp"
 #include "node_tests.hpp"
@@ -11,11 +11,13 @@
 
 #define SIZE 16384
 
+using namespace bv;
+
 typedef malloc_alloc ma;
 typedef simple_leaf<8> sl;
 typedef simple_leaf<0> ubl;
 typedef simple_node<sl, SIZE> nd;
-typedef bit_vector<sl, nd, ma, SIZE> bv;
+typedef bit_vector<sl, nd, ma, SIZE> simple_bv;
 
 //Tests for buffered leaf
 TEST(SimpleLeaf, Insert) {
@@ -262,57 +264,57 @@ TEST(SimpleNode, RemoveNodeE) {
 
 //Bit vector tests
 TEST(SimpleBV, InstantiateWithAlloc) {
-    bv_instantiation_with_allocator_test<ma, bv>();
+    bv_instantiation_with_allocator_test<ma, simple_bv>();
 }
 
 TEST(SimpleBV, InstantiateWithoutAlloc) {
-    bv_instantiation_without_allocator_test<bv>();
+    bv_instantiation_without_allocator_test<simple_bv>();
 }
 
 TEST(SimpleBV, InsertSplitDeallocA) {
-    bv_insert_split_dealloc_a_test<ma, bv>(SIZE);
+    bv_insert_split_dealloc_a_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, InsertSplitDeallocB) {
-    bv_insert_split_dealloc_b_test<ma, bv>(SIZE);
+    bv_insert_split_dealloc_b_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, AccessLeaf) {
-    bv_access_leaf_test<ma, bv>(SIZE);
+    bv_access_leaf_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, RemoveLeaf) {
-    bv_remove_leaf_test<ma, bv>(SIZE);
+    bv_remove_leaf_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, RemoveNode) {
-    bv_remove_node_test<ma, bv>(SIZE);
+    bv_remove_node_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, RemoveNodeNode) {
-    bv_remove_node_node_test<ma, bv>(SIZE);
+    bv_remove_node_node_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, SetLeaf) {
-    bv_set_leaf_test<ma, bv>(SIZE);
+    bv_set_leaf_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, SetNode) {
-    bv_set_node_test<ma, bv>(SIZE);
+    bv_set_node_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, RankLeaf) {
-    bv_rank_leaf_test<ma, bv>(SIZE);
+    bv_rank_leaf_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, RankNode) {
-    bv_rank_node_test<ma, bv>(SIZE);
+    bv_rank_node_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, SelectLeaf) {
-    bv_select_leaf_test<ma, bv>(SIZE);
+    bv_select_leaf_test<ma, simple_bv>(SIZE);
 }
 
 TEST(SimpleBV, SelectNode) {
-    bv_select_node_test<ma, bv>(SIZE);
+    bv_select_node_test<ma, simple_bv>(SIZE);
 }

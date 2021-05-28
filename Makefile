@@ -1,7 +1,8 @@
 CFLAGS = -std=c++2a -Wall -Wextra -march=native
 
-HEADERS = bit_vector/simple_node.hpp bit_vector/allocator.hpp \
-          bit_vector/simple_leaf.hpp bit_vector/bit_vector.hpp
+HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
+          bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \
+		  bit_vector/bv.hpp
 
 GTEST_DIR = deps/googletest/googletest
 GFLAGS = -isystem $(GTEST_DIR)/include -I $(GTEST_DIR)/include -pthread
@@ -33,6 +34,8 @@ bench: bench.cpp $(HEADERS)
 	g++ $(CFLAGS) -DNDEBUG -Ofast -o bench bench.cpp
 
 bit_vector/%.hpp:
+
+bit_vector/internal/%.hpp:
 
 test/%.hpp:
 

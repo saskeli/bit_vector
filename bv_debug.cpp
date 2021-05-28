@@ -4,75 +4,170 @@
 #include <random>
 #include <chrono>
 
-//#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
+#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
-#include "bit_vector/allocator.hpp"
-#include "bit_vector/simple_leaf.hpp"
-#include "bit_vector/simple_node.hpp"
-#include "bit_vector/bit_vector.hpp"
-
-typedef uint32_t data_type;
-typedef simple_leaf<8> leaf;
-typedef simple_node<leaf, 8192> node;
-typedef malloc_alloc alloc;
-typedef bit_vector<leaf, node, malloc_alloc, 8192> simple_bv;
+#include "bit_vector/bv.hpp"
 
 int main() {
-    uint64_t size = 1000000;
+    uint64_t size = 100000000;
     uint64_t steps = 100;
-
-    simple_bv ubv;
+    bv::simple_bv bv;
+    dyn::b_suc_bv cbv;
 
     std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<unsigned long long> gen(
+        std::numeric_limits<std::uint64_t>::min(),
+        std::numeric_limits<std::uint64_t>::max()
+    );
 
     using std::chrono::duration_cast;
     using std::chrono::high_resolution_clock;
     using std::chrono::microseconds;
 
-    uint64_t N = 100000;
+    uint64_t start_size = 1000000;
 
-    for (uint64_t i = 1; i <= size; i++) {
-        uint64_t pos = gen() % i;
-        uint64_t val = gen() % 2;
-        ubv.insert(pos, val);
+    double startexp = log2(double(start_size));
+    double delta = (log2(double(size)) - log2(double(start_size))) / steps;
+    uint64_t ops = 100000;
+    std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
+    std::vector<uint64_t> loc, val;
+
+    std::cout << "Size\tremove\tc_remove\tinsert\tc_insert\taccess\tc_access\trank\tc_rank\tselect\tc_select\tsize(bits)\tc_size(bits)\tchecksum"
+              << std::endl;
+
+    for (uint64_t i = 0; i < 900000; i++) {
+        uint64_t aloc = gen(mt) % (i + 1);
+        bool aval = gen(mt) % 2;
+        bv.insert(aloc, aval);
+        cbv.insert(aloc, aval);
     }
 
-    double step = 1.0 / (steps - 1);
-    std::vector<uint64_t> ops, loc, val;
-    uint64_t checksum = 0;
+    for (uint64_t step = 1; step <= steps; step++) {
+        uint64_t start = bv.size();
+        uint64_t target = uint64_t(pow(2.0, startexp + delta * step));
 
-    std::cout << "P\tcontrol\tchecksum" << std::endl;
+        uint64_t checksum = 0;
 
-    for (uint64_t mul = 0; mul < steps; mul++) {
-        double p = step * mul;
-        std::cout << p << "\t";
-        std::bernoulli_distribution bool_dist(p);
-        ops.clear();
-        checksum = 0;
+        std::cout << target << "\t";
 
-        for (uint64_t opn = 0; opn < N; opn++) {
-            ops.push_back(bool_dist(gen));
-            loc.push_back(gen() % size);
-            val.push_back(gen() % 2);
+        for (size_t i = start; i < target; i++) {
+            uint64_t aloc = gen(mt) % (i + 1);
+            bool aval = gen(mt) % 2;
+            bv.insert(aloc, aval);
+            cbv.insert(aloc, aval);
+        }
+
+        loc.clear();
+        for (uint64_t i = target; i > target - ops; i--) {
+            loc.push_back(gen(mt) % i);
         }
 
         auto t1 = high_resolution_clock::now();
-        for (uint64_t opn = 0; opn < N; opn++) {
-            if (ops[opn]) {
-                ubv.insert(loc[opn], val[opn]);
-            } else {
-                checksum += ubv.rank(loc[opn]);
-            }
+        for (size_t i = 0; i < ops; i++) {
+            bv.remove(loc[i]);
         }
         auto t2 = high_resolution_clock::now();
-        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / N
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
-        while (ubv.size() > size) {
-            uint64_t pos = gen() % ubv.size();
-            ubv.remove(pos);
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            cbv.remove(loc[i]);
         }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        loc.clear();
+        val.clear();
+        for (uint64_t i = bv.size(); i < target; i++) {
+            loc.push_back(gen(mt) % (i + 1));
+            val.push_back(gen(mt) % 2);
+        }
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            bv.insert(loc[i], val[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            cbv.insert(loc[i], val[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        loc.clear();
+        for (size_t i = 0; i < ops; i++) {
+            loc.push_back(gen(mt) % target);
+        }
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum += bv.at(loc[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum -= cbv.at(loc[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        loc.clear();
+        for (size_t i = 0; i < ops; i++) {
+            loc.push_back(gen(mt) % target);
+        }
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum += bv.rank(loc[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum -= cbv.rank(loc[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        uint64_t limit = bv.rank(target - 1);
+        loc.clear();
+        for (size_t i = 0; i < ops; i++) {
+            loc.push_back(gen(mt) % limit);
+        }
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum += bv.select(loc[i] + 1);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        t1 = high_resolution_clock::now();
+        for (size_t i = 0; i < ops; i++) {
+            checksum -= bv.select(loc[i]);
+        }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
+
+        std::cout << bv.bit_size() << "\t";
+        std::cout << cbv.bit_size() << "\t";
 
         std::cout << checksum << std::endl;
     }

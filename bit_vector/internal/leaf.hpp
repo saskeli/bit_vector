@@ -7,6 +7,8 @@
 #include <cstring>
 #include <bitset>
 
+namespace bv {
+
 #define WORD_BITS 64
 
 template <uint8_t buffer_size>
@@ -472,13 +474,14 @@ class simple_leaf {
         uint64_t overflow = 0;
         uint8_t overflow_length = 0;
         uint8_t underflow_length = 0;
-        uint64_t current_word = 0;
         uint8_t current_index = 0;
         uint32_t buf = buffer_[current_index];
         uint64_t target_word = buffer_index(buf) / WORD_BITS;
         uint64_t target_offset = buffer_index(buf) % WORD_BITS;
 
-        while (current_word * WORD_BITS < size_) {
+        uint64_t words = size_ / WORD_BITS;
+        words += size_ % WORD_BITS > 0 ? 1 : 0;
+        for (uint64_t current_word = 0; current_word < words; current_word++) {
             uint64_t underflow =
                 current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
             if (overflow_length) {
@@ -539,7 +542,7 @@ class simple_leaf {
                 new_overflow = overflow_length ? data_[current_word] >>
                                                     (64 - overflow_length)
                                             : 0;
-                data_[current_word] = new_word;
+                [[unlikely]] data_[current_word] = new_word;
             } else {
                 if (underflow_length) {
                     data_[current_word] =
@@ -550,15 +553,13 @@ class simple_leaf {
                         data_[current_word] >> (64 - overflow_length);
                     data_[current_word] =
                         (data_[current_word] << overflow_length) | overflow;
-                    overflow = new_overflow;
                 } else {
                     overflow = 0;
                 }
             }
             overflow = new_overflow;
-            current_word++;
         }
-        if (capacity_ > current_word) data_[current_word] = 0;
+        if (capacity_ > words) data_[words] = 0;
         buffer_count_ = 0;
     }
 
@@ -636,4 +637,5 @@ class simple_leaf {
     }
 
 };
+}
 #endif

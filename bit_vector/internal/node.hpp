@@ -4,6 +4,8 @@
 #include <cstring>
 #include <cstdint>
 
+namespace bv {
+
 #define CHILDREN 64
 
 template <class leaf_type, uint64_t leaf_size>
@@ -134,8 +136,10 @@ class simple_node {
                 sibling->template append_child<simple_node>(children[i]);
             }
         }
-        memset(&child_sizes_[CHILDREN >> 1], 0xff, sizeof(uint64_t) * (CHILDREN >> 1));
-        memset(&child_sums_[CHILDREN >> 1], 0xff, sizeof(uint64_t) * (CHILDREN >> 1));
+        for (uint64_t i = CHILDREN >> 1; i < CHILDREN; i++) {
+            child_sizes_[i] = 0x7fffffffffffffff;
+            child_sums_[i] = 0x7fffffffffffffff;
+        }
         meta_data_ ^= 0b01100000;
         return sibling;
     }
@@ -595,4 +599,5 @@ class simple_node {
         return value;
     }
 };
+}
 #endif

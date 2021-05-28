@@ -7,8 +7,10 @@
 #include <cstdlib>
 #include <iostream>
 
+namespace bv {
+
 class malloc_alloc {
-  private:
+  protected:
     uint64_t allocations_;
 
   public:
@@ -60,4 +62,5 @@ class malloc_alloc {
         return allocations_;
     }
 };
+}
 #endif
