@@ -1,11 +1,12 @@
 #ifndef TEST_LEAF_HPP
 #define TEST_LEAF_HPP
 
-#include <iostream>
 #include <cstdint>
+#include <iostream>
+
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_insert_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
@@ -18,7 +19,8 @@ void leaf_insert_test(uint64_t n) {
         }
         uint64_t val = l->p_sum();
         uint64_t expected = 0;
-        EXPECT_EQ(expected, val) << "Sum should be " << expected << " after " << (i + 1) << " 0-insertions.";
+        EXPECT_EQ(expected, val) << "Sum should be " << expected << " after "
+                                 << (i + 1) << " 0-insertions.";
     }
     for (uint64_t i = hp; i < n; i++) {
         l->insert(hp / 2, i % 2);
@@ -28,28 +30,32 @@ void leaf_insert_test(uint64_t n) {
         }
         uint64_t val = l->p_sum();
         uint64_t expected = (1 + i) / 2 - hp / 2;
-        EXPECT_EQ(expected, val) << "Sum should be " << expected << " after " << (1 + i - hp) << " alternating insertions.";
+        EXPECT_EQ(expected, val) << "Sum should be " << expected << " after "
+                                 << (1 + i - hp) << " alternating insertions.";
     }
 
-    for (uint64_t i = 0; i < hp / 2; i ++) {
-        EXPECT_EQ(false, l->at(i)) << "Initial " << (hp / 2) << " values should be 0";
+    for (uint64_t i = 0; i < hp / 2; i++) {
+        EXPECT_EQ(false, l->at(i))
+            << "Initial " << (hp / 2) << " values should be 0";
     }
 
     bool naw = !bool(n % 2);
-    for (uint64_t i = hp/2; i < n - hp + hp/2; i++) {
-        EXPECT_EQ(naw, l->at(i)) << "Alternating value should be " << !naw << " at " << i << ".";
+    for (uint64_t i = hp / 2; i < n - hp + hp / 2; i++) {
+        EXPECT_EQ(naw, l->at(i))
+            << "Alternating value should be " << !naw << " at " << i << ".";
         naw = !naw;
     }
 
-    for (uint64_t i = hp/2 + n - hp; i < n; i++) {
-        EXPECT_EQ(false, l->at(i)) << "Final " << (hp / 2) << " values should be 0";
+    for (uint64_t i = hp / 2 + n - hp; i < n; i++) {
+        EXPECT_EQ(false, l->at(i))
+            << "Final " << (hp / 2) << " values should be 0";
     }
 
     allocator->template deallocate_leaf<leaf>(l);
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_remove_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
@@ -86,26 +92,29 @@ void leaf_remove_test(uint64_t n) {
         l->remove(0);
         ex = n - 2 * i - 1;
         val = l->size();
-        EXPECT_EQ(val, ex) << "Size should be " << ex << " after " << (2 * i + 1) << " removals.";
+        EXPECT_EQ(val, ex) << "Size should be " << ex << " after "
+                           << (2 * i + 1) << " removals.";
         ex = n / 2 - i;
         val = l->p_sum();
-        EXPECT_EQ(val, ex) << " Should have " << ex << " ones after " << (2 * i + 1) << " removals.";
+        EXPECT_EQ(val, ex) << " Should have " << ex << " ones after "
+                           << (2 * i + 1) << " removals.";
 
         l->remove(l->size() / 2);
         ex = n - 2 * (i + 1);
         val = l->size();
-        EXPECT_EQ(val, ex) << "Size should be " << ex << " after " << (2 * (i + 1)) << " removals.";
+        EXPECT_EQ(val, ex) << "Size should be " << ex << " after "
+                           << (2 * (i + 1)) << " removals.";
         ex = n / 2 - i - 1;
         val = l->p_sum();
-        EXPECT_EQ(val, ex) << " Should have " << ex << " ones after " << (2 * (i + 1)) << " removals.";
-        
+        EXPECT_EQ(val, ex) << " Should have " << ex << " ones after "
+                           << (2 * (i + 1)) << " removals.";
     }
 
     allocator->template deallocate_leaf<leaf>(l);
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_rank_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
@@ -126,7 +135,7 @@ void leaf_rank_test(uint64_t n) {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_select_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
@@ -149,7 +158,7 @@ void leaf_select_test(uint64_t n) {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_set_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(1 + n / 64);
@@ -180,7 +189,7 @@ void leaf_set_test(uint64_t n) {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_clear_start_test() {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(10);
@@ -228,7 +237,7 @@ void leaf_clear_start_test() {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_transfer_append_test() {
     alloc* allocator = new alloc();
     leaf* a = allocator->template allocate_leaf<leaf>(10);
@@ -282,7 +291,7 @@ void leaf_transfer_append_test() {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_clear_end_test() {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(10);
@@ -296,7 +305,7 @@ void leaf_clear_end_test() {
     for (uint64_t i = n - 64; i < n; i++) {
         l->insert(i, false);
     }
-    
+
     uint64_t num = n / 2;
     ASSERT_EQ(num, l->p_sum());
 
@@ -319,7 +328,6 @@ void leaf_clear_end_test() {
     for (uint64_t i = n - 128; i < n - 128 + 54; i++) {
         ASSERT_EQ(l->at(i), true);
     }
-    
 
     l->clear_last(64 * 2 - 10);
     ASSERT_EQ(num - 96, l->p_sum());
@@ -332,7 +340,7 @@ void leaf_clear_end_test() {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_transfer_prepend_test() {
     alloc* allocator = new alloc();
     leaf* a = allocator->template allocate_leaf<leaf>(10);
@@ -401,7 +409,7 @@ void leaf_transfer_prepend_test() {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_append_all_test() {
     alloc* allocator = new alloc();
     leaf* a = allocator->template allocate_leaf<leaf>(10);
@@ -450,17 +458,17 @@ void leaf_append_all_test() {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_hit_buffer_test() {
     alloc* allocator = new alloc();
     leaf* a = allocator->template allocate_leaf<leaf>(10);
 
-    //Put in some ones:
+    // Put in some ones:
     for (uint64_t i = 0; i < 128; i++) {
         a->insert(0, true);
     }
 
-    //Make sure the buffer is empty
+    // Make sure the buffer is empty
     a->commit();
 
     a->set(20, true);
@@ -470,7 +478,7 @@ void leaf_hit_buffer_test() {
         ASSERT_EQ(true, a->at(i));
     }
 
-    //Operations (on buffer) while checking integrity
+    // Operations (on buffer) while checking integrity
     a->insert(37, false);
     ASSERT_EQ(128u + 1, a->size());
     ASSERT_EQ(128u, a->p_sum());
@@ -513,24 +521,26 @@ void leaf_hit_buffer_test() {
     ASSERT_EQ(128u + 2, a->size());
     ASSERT_EQ(128u - 2, a->p_sum());
     for (uint64_t i = 0; i < 128u + 2; i++) {
-        ASSERT_EQ(i != 12 && i != 19 && i != 36 && i != 17, a->at(i)) << "i = " << i;
+        ASSERT_EQ(i != 12 && i != 19 && i != 36 && i != 17, a->at(i))
+            << "i = " << i;
     }
 
     a->insert(128u + 2, true);
     ASSERT_EQ(128u + 3, a->size());
     ASSERT_EQ(128u - 1, a->p_sum());
     for (uint64_t i = 0; i < 128u + 3; i++) {
-        ASSERT_EQ(i != 12 && i != 19 && i != 36 && i != 17, a->at(i)) << "i = " << i;
+        ASSERT_EQ(i != 12 && i != 19 && i != 36 && i != 17, a->at(i))
+            << "i = " << i;
     }
 
     ASSERT_EQ(128u - 1, a->rank(128u + 3));
     a->insert(80, false);
     ASSERT_EQ(64u + 3, a->select(64u));
 
-    //Make sure the buffer is empty
+    // Make sure the buffer is empty
     a->commit();
 
-    //Buffer offset calculation test for committing
+    // Buffer offset calculation test for committing
     a->insert(110, false);
     a->insert(112, false);
     a->remove(114);
@@ -540,7 +550,7 @@ void leaf_hit_buffer_test() {
     a->insert(120, false);
     a->insert(122, false);
     a->insert(124, false);
-    
+
     ASSERT_EQ(128u + 5, a->size());
     ASSERT_EQ(128u - 5, a->p_sum());
     for (uint64_t i = 0; i < 128u + 5; i++) {
@@ -562,7 +572,7 @@ void leaf_hit_buffer_test() {
     delete allocator;
 }
 
-template<class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_commit_test(uint64_t size) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(size / (2 * 64));
@@ -583,7 +593,7 @@ void leaf_commit_test(uint64_t size) {
     l->remove(0);
 
     l->commit();
-    
+
     ASSERT_EQ(5461u, l->size());
     ASSERT_EQ(5464u / 2 - 1, l->p_sum());
     for (uint64_t i = 0; i < 5461; i++) {

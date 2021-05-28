@@ -1,25 +1,23 @@
-#include <iostream>
-#include <iomanip>
 #include <cassert>
-#include <random>
 #include <chrono>
-
-#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
+#include <iomanip>
+#include <iostream>
+#include <random>
 
 #include "bit_vector/bv.hpp"
+#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
 int main() {
-    uint64_t size = 100000000;
+    uint64_t size = 10000000;
     uint64_t steps = 100;
-    bv::simple_bv bv;
+    bv::small_bv<8, 8192, 16> bv;
     dyn::b_suc_bv cbv;
 
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<unsigned long long> gen(
         std::numeric_limits<std::uint64_t>::min(),
-        std::numeric_limits<std::uint64_t>::max()
-    );
+        std::numeric_limits<std::uint64_t>::max());
 
     using std::chrono::duration_cast;
     using std::chrono::high_resolution_clock;
@@ -33,7 +31,9 @@ int main() {
     std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
     std::vector<uint64_t> loc, val;
 
-    std::cout << "Size\tremove\tc_remove\tinsert\tc_insert\taccess\tc_access\trank\tc_rank\tselect\tc_select\tsize(bits)\tc_size(bits)\tchecksum"
+    std::cout << "Size\tremove\tc_remove\tinsert\tc_insert\taccess\tc_"
+                 "access\trank\tc_rank\tselect\tc_select\tsize(bits)\tc_size("
+                 "bits)\tchecksum"
               << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
@@ -152,7 +152,7 @@ int main() {
 
         t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
-            checksum += bv.select(loc[i] + 1);
+            checksum += bv.select(loc[i]);
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops

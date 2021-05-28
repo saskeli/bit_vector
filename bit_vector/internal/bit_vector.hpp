@@ -6,9 +6,10 @@
 
 namespace bv {
 
-template <class leaf, class node, class allocator, uint64_t leaf_size>
+template <class leaf, class node, class allocator, uint64_t leaf_size,
+          uint8_t branches>
 class bit_vector {
-  private:
+   protected:
     bool root_is_leaf_ = true;
     bool owned_allocator_ = false;
     node* n_root_;
@@ -23,16 +24,18 @@ class bit_vector {
         n_root_ = new_root;
     }
 
-  public:
+   public:
     bit_vector(allocator* alloc) {
         allocator_ = alloc;
-        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
+        l_root_ =
+            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
     }
 
     bit_vector() {
         allocator_ = new allocator();
         owned_allocator_ = true;
-        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
+        l_root_ =
+            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
     }
 
     ~bit_vector() {
@@ -43,7 +46,7 @@ class bit_vector {
             allocator_->deallocate_node(n_root_);
         }
         if (owned_allocator_) {
-            delete(allocator_);
+            delete (allocator_);
         }
     }
 
@@ -58,14 +61,15 @@ class bit_vector {
                     n_root_->template insert<allocator>(index, value);
                 } else {
                     uint64_t cap = l_root_->capacity();
-                    l_root_ = allocator_->reallocate_leaf(l_root_, cap, cap * 2);
+                    l_root_ =
+                        allocator_->reallocate_leaf(l_root_, cap, cap * 2);
                     l_root_->insert(index, value);
                 }
             } else {
                 [[likely]] l_root_->insert(index, value);
             }
         } else {
-            if (n_root_->child_count() == 64) {
+            if (n_root_->child_count() == branches) {
                 [[unlikely]] split_root();
             }
             [[likely]] n_root_->template insert<allocator>(index, value);
@@ -119,14 +123,16 @@ class bit_vector {
     }
 
     uint64_t bit_size() const {
-        uint64_t tree_size = root_is_leaf_ ? l_root_->bits_size() : n_root_->bits_size();
+        uint64_t tree_size =
+            root_is_leaf_ ? l_root_->bits_size() : n_root_->bits_size();
         return 8 * sizeof(bit_vector) + tree_size;
     }
 
     void print(bool internal_only) const {
-        root_is_leaf_ ? l_root_->print(internal_only) : n_root_->print(internal_only);
+        root_is_leaf_ ? l_root_->print(internal_only)
+                      : n_root_->print(internal_only);
         std::cout << std::endl;
     }
 };
-}
+}  // namespace bv
 #endif
