@@ -8,14 +8,15 @@
 #include "node_tests.hpp"
 
 #define SIZE 16384
+#define BRANCH 16
 
 using namespace bv;
 
 typedef malloc_alloc ma;
 typedef simple_leaf<8> sl;
 typedef simple_leaf<0> ubl;
-typedef simple_node<sl, uint64_t, SIZE, 64> nd;
-typedef bit_vector<sl, nd, ma, SIZE, 64> simple_bv;
+typedef simple_node<sl, uint64_t, SIZE, BRANCH> nd;
+typedef bit_vector<sl, nd, ma, SIZE, BRANCH> simple_bv;
 
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
@@ -62,47 +63,47 @@ TEST(SimpleLeafUnb, SelectOffset) { leaf_select_test<ubl, ma>(11); }
 TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
 
 // Node tests
-TEST(SimpleNode, AddLeaf) { node_add_child_test<nd, sl, ma>(); }
+TEST(SimpleNode, AddLeaf) { node_add_child_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, AddNode) { node_add_node_test<nd, sl, ma>(); }
+TEST(SimpleNode, AddNode) { node_add_node_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, SplitLeaves) { node_split_leaves_test<nd, sl, ma>(); }
+TEST(SimpleNode, SplitLeaves) { node_split_leaves_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, SplitNodes) { node_split_nodes_test<nd, sl, ma>(); }
+TEST(SimpleNode, SplitNodes) { node_split_nodes_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, AppendAll) { node_append_all_test<nd, sl, ma>(); }
+TEST(SimpleNode, AppendAll) { node_append_all_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, ClearLast) { node_clear_last_test<nd, sl, ma>(); }
+TEST(SimpleNode, ClearLast) { node_clear_last_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, TransferPrepend) { node_transfer_prepend_test<nd, sl, ma>(); }
+TEST(SimpleNode, TransferPrepend) { node_transfer_prepend_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, ClearFirst) { node_clear_first_test<nd, sl, ma>(); }
+TEST(SimpleNode, ClearFirst) { node_clear_first_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, TransferAppend) { node_transfer_append_test<nd, sl, ma>(); }
+TEST(SimpleNode, TransferAppend) { node_transfer_append_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, AccessSingleLeaf) {
     node_access_single_leaf_test<nd, sl, ma>();
 }
 
-TEST(SimpleNode, AccessLeaf) { node_access_leaf_test<nd, sl, ma>(); }
+TEST(SimpleNode, AccessLeaf) { node_access_leaf_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, AccessNode) { node_access_node_test<nd, sl, ma>(); }
+TEST(SimpleNode, AccessNode) { node_access_node_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, SetLeaf) { node_set_leaf_test<nd, sl, ma>(); }
+TEST(SimpleNode, SetLeaf) { node_set_leaf_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, SetNode) { node_set_node_test<nd, sl, ma>(); }
+TEST(SimpleNode, SetNode) { node_set_node_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, RankLeaf) { node_rank_leaf_test<nd, sl, ma>(); }
+TEST(SimpleNode, RankLeaf) { node_rank_leaf_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, RankNode) { node_rank_node_test<nd, sl, ma>(); }
+TEST(SimpleNode, RankNode) { node_rank_node_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, SelectSingleLeaf) {
     node_select_single_leaf_test<nd, sl, ma>();
 }
 
-TEST(SimpleNode, SelectLeaf) { node_select_leaf_test<nd, sl, ma>(); }
+TEST(SimpleNode, SelectLeaf) { node_select_leaf_test<nd, sl, ma>(BRANCH); }
 
-TEST(SimpleNode, SelectNode) { node_select_node_test<nd, sl, ma>(); }
+TEST(SimpleNode, SelectNode) { node_select_node_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, InsertSingleLeaf) {
     node_insert_single_leaf_test<nd, sl, ma>();
@@ -117,12 +118,12 @@ TEST(SimpleNode, InsertSingleLeafSplit) {
 }
 
 TEST(SimpleNode, InsertLeafSplit) {
-    node_inset_leaf_split_test<nd, sl, ma>(SIZE);
+    node_insert_leaf_split_test<nd, sl, ma>(SIZE);
 }
 
 TEST(SimpleNode, InsertNode) { node_insert_node_test<nd, sl, ma>(); }
 
-TEST(SimpleNode, InsertNodeSplit) { node_insert_node_split_test<nd, sl, ma>(); }
+TEST(SimpleNode, InsertNodeSplit) { node_insert_node_split_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, RemoveLeafSimple) {
     node_remove_leaf_simple_test<nd, sl, ma>(SIZE);
@@ -143,18 +144,18 @@ TEST(SimpleNode, RemoveLeafF) { node_remove_leaf_f_test<nd, sl, ma>(SIZE); }
 TEST(SimpleNode, RemoveLeafG) { node_remove_leaf_g_test<nd, sl, ma>(SIZE); }
 
 TEST(SimpleNode, RemoveNodeSimple) {
-    node_remove_node_simple_test<nd, sl, ma>(SIZE);
+    node_remove_node_simple_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
-TEST(SimpleNode, RemoveNodeA) { node_remove_node_a_test<nd, sl, ma>(SIZE); }
+TEST(SimpleNode, RemoveNodeA) { node_remove_node_a_test<nd, sl, ma>(SIZE, BRANCH); }
 
-TEST(SimpleNode, RemoveNodeB) { node_remove_node_b_test<nd, sl, ma>(SIZE); }
+TEST(SimpleNode, RemoveNodeB) { node_remove_node_b_test<nd, sl, ma>(SIZE, BRANCH); }
 
-TEST(SimpleNode, RemoveNodeC) { node_remove_node_c_test<nd, sl, ma>(SIZE); }
+TEST(SimpleNode, RemoveNodeC) { node_remove_node_c_test<nd, sl, ma>(SIZE, BRANCH); }
 
-TEST(SimpleNode, RemoveNodeD) { node_remove_node_d_test<nd, sl, ma>(SIZE); }
+TEST(SimpleNode, RemoveNodeD) { node_remove_node_d_test<nd, sl, ma>(SIZE, BRANCH); }
 
-TEST(SimpleNode, RemoveNodeE) { node_remove_node_e_test<nd, sl, ma>(SIZE); }
+TEST(SimpleNode, RemoveNodeE) { node_remove_node_e_test<nd, sl, ma>(SIZE, BRANCH); }
 
 // Bit vector tests
 TEST(SimpleBV, InstantiateWithAlloc) {

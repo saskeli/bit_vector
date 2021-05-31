@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <cassert>
 
 namespace bv {
 
@@ -149,7 +150,8 @@ class simple_node {
             child_sizes_[i] = (~dtype(0)) >> 1;
             child_sums_[i] = (~dtype(0)) >> 1;
         }
-        meta_data_ ^= 0b01100000;
+        meta_data_ &= 0b10000000;
+        meta_data_ |= branches >> 1;
         return sibling;
     }
 

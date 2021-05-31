@@ -49,3 +49,6 @@ target/
 
 #benchmark results
 *.tsv
+
+#valgrind
+callgrind.*

@@ -5,12 +5,13 @@
 #include <random>
 
 #include "bit_vector/bv.hpp"
+#include "../valgrind/callgrind.h"
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
 int main() {
-    uint64_t size = 10000000;
+    uint64_t size = 1000000000;
     uint64_t steps = 100;
-    bv::small_bv<8, 8192, 16> bv;
+    bv::simple_bv<8, 16384, 64> bv;
     dyn::b_suc_bv cbv;
 
     std::random_device rd;
@@ -108,17 +109,25 @@ int main() {
         }
 
         t1 = high_resolution_clock::now();
+        CALLGRIND_START_INSTRUMENTATION;
+        CALLGRIND_TOGGLE_COLLECT;
         for (size_t i = 0; i < ops; i++) {
             checksum += bv.at(loc[i]);
         }
+        CALLGRIND_STOP_INSTRUMENTATION;
+        CALLGRIND_TOGGLE_COLLECT;
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
         t1 = high_resolution_clock::now();
+        CALLGRIND_START_INSTRUMENTATION;
+        CALLGRIND_TOGGLE_COLLECT;
         for (size_t i = 0; i < ops; i++) {
             checksum -= cbv.at(loc[i]);
         }
+        CALLGRIND_STOP_INSTRUMENTATION;
+        CALLGRIND_TOGGLE_COLLECT;
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
