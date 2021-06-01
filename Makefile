@@ -1,4 +1,6 @@
-CFLAGS = -std=c++2a -Wall -Wextra -march=native
+CL = $(shell getconf LEVEL1_DCACHE_LINESIZE)
+
+CFLAGS = -std=c++2a -Wall -Wextra -DCACHE_LINE=$(CL) -march=native
 
 HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
           bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \

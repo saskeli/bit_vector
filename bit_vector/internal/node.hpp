@@ -5,6 +5,10 @@
 #include <cstring>
 #include <cassert>
 
+#ifndef CACHE_LINE
+#define CACHE_LINE 64
+#endif
+
 namespace bv {
 
 template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches>
@@ -352,6 +356,10 @@ class simple_node {
     uint8_t find_size(dtype q) const {
         constexpr dtype SIGN_BIT = ~((~dtype(0)) >> 1);
         constexpr dtype num_bits = sizeof(dtype) * 8;
+        constexpr dtype lines = CACHE_LINE / sizeof(dtype);
+        for (dtype i = 0; i < branches; i += lines) {
+            __builtin_prefetch(child_sizes_ + i);
+        }
         uint8_t idx;
         if constexpr (branches == 128) {
             idx = (uint8_t(1) << 6) - 1;

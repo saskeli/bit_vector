@@ -51,4 +51,4 @@ target/
 *.tsv
 
 #valgrind
-callgrind.*
+callgrind.out.*
