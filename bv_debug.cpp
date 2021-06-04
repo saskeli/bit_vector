@@ -11,8 +11,8 @@
 int main() {
     uint64_t size = 10000000;
     uint64_t steps = 100;
-    bv::small_bv<8, 16384, 64> bv;
-    dyn::b_suc_bv cbv;
+    bv::simple_bv<8, 16384, 64> bv;
+    dyn::suc_bv cbv;
 
     std::random_device rd;
     std::mt19937 mt(rd());
@@ -43,7 +43,6 @@ int main() {
         bv.insert(aloc, aval);
         cbv.insert(aloc, aval);
     }
-    
     for (uint64_t step = 1; step <= steps; step++) {
         uint64_t start = bv.size();
         uint64_t target = uint64_t(pow(2.0, startexp + delta * step));
@@ -78,7 +77,7 @@ int main() {
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t";//*/
 
         loc.clear();
         val.clear();
@@ -101,7 +100,7 @@ int main() {
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t";//*/
 
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
@@ -109,28 +108,20 @@ int main() {
         }
 
         t1 = high_resolution_clock::now();
-        CALLGRIND_START_INSTRUMENTATION;
-        CALLGRIND_TOGGLE_COLLECT;
         for (size_t i = 0; i < ops; i++) {
             checksum += bv.at(loc[i]);
         }
-        CALLGRIND_TOGGLE_COLLECT;
-        CALLGRIND_STOP_INSTRUMENTATION;
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
         t1 = high_resolution_clock::now();
-        CALLGRIND_START_INSTRUMENTATION;
-        CALLGRIND_TOGGLE_COLLECT;
         for (size_t i = 0; i < ops; i++) {
             checksum -= cbv.at(loc[i]);
         }
-        CALLGRIND_TOGGLE_COLLECT;
-        CALLGRIND_STOP_INSTRUMENTATION;
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t";//*/
 
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
@@ -151,7 +142,7 @@ int main() {
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t";//*/
 
         uint64_t limit = bv.rank(target - 1);
         loc.clear();
@@ -169,11 +160,11 @@ int main() {
 
         t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
-            checksum -= bv.select(loc[i]);
+            checksum -= cbv.select(loc[i]);
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t";//*/
 
         std::cout << bv.bit_size() << "\t";
         std::cout << cbv.bit_size() << "\t";

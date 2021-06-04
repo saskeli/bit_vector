@@ -62,8 +62,8 @@ class bit_vector {
                 } else {
                     uint64_t cap = l_root_->capacity();
                     l_root_ =
-                        allocator_->reallocate_leaf(l_root_, cap, cap * 2);
-                    l_root_->insert(index, value);
+                        allocator_->reallocate_leaf(l_root_, cap, cap + 2);
+                    [[likely]] l_root_->insert(index, value);
                 }
             } else {
                 [[likely]] l_root_->insert(index, value);
@@ -99,27 +99,27 @@ class bit_vector {
     }
 
     uint64_t sum() {
-        return root_is_leaf_ ? l_root_->p_sum() : n_root_->p_sum();
+        return !root_is_leaf_ ? n_root_->p_sum() : l_root_->p_sum();
     }
 
     uint64_t size() const {
-        return root_is_leaf_ ? l_root_->size() : n_root_->size();
+        return !root_is_leaf_ ? n_root_->size(): l_root_->size();
     }
 
     bool at(uint64_t index) const {
-        return root_is_leaf_ ? l_root_->at(index) : n_root_->at(index);
+        return !root_is_leaf_ ? n_root_->at(index) : l_root_->at(index);
     }
 
     uint64_t rank(uint64_t index) const {
-        return root_is_leaf_ ? l_root_->rank(index) : n_root_->rank(index);
+        return !root_is_leaf_ ? n_root_->rank(index) : l_root_->rank(index);
     }
 
     uint64_t select(uint64_t count) const {
-        return root_is_leaf_ ? l_root_->select(count) : n_root_->select(count);
+        return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
     }
 
     void set(uint64_t index, bool value) {
-        root_is_leaf_ ? l_root_->set(index, value) : n_root_->set(index, value);
+        !root_is_leaf_ ? n_root_->set(index, value) : l_root_->set(index, value);
     }
 
     uint64_t bit_size() const {
