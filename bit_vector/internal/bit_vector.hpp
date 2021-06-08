@@ -54,8 +54,11 @@ class bit_vector {
         if (root_is_leaf_) {
             if (l_root_->need_realloc()) {
                 if (l_root_->size() >= leaf_size) {
+                    leaf* sibling = allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
+                    sibling->transfer_append(l_root_, leaf_size / 2);
                     n_root_ = allocator_->template allocate_node<node>();
                     n_root_->has_leaves(true);
+                    n_root_->append_child(sibling);
                     n_root_->append_child(l_root_);
                     root_is_leaf_ = false;
                     n_root_->template insert<allocator>(index, value);
@@ -80,20 +83,18 @@ class bit_vector {
         if (root_is_leaf_) {
             [[unlikely]] l_root_->remove(index);
         } else {
+            n_root_->template remove<allocator>(index);
             if (n_root_->child_count() == 1) {
                 if (n_root_->has_leaves()) {
                     l_root_ = reinterpret_cast<leaf*>(n_root_->child(0));
                     root_is_leaf_ = true;
                     allocator_->deallocate_node(n_root_);
-                    l_root_->remove(index);
                 } else {
                     node* new_root = reinterpret_cast<node*>(n_root_->child(0));
                     allocator_->deallocate_node(n_root_);
                     n_root_ = new_root;
-                    n_root_->template remove<allocator>(index);
                 }
-            } else {
-                [[likely]] n_root_->template remove<allocator>(index);
+                [[unlikely]] (void(0));
             }
         }
     }

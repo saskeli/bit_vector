@@ -32,6 +32,8 @@
 *.app
 bv_debug
 test/test
+bench
+brute
 
 # IDE stuff
 .vscode/*

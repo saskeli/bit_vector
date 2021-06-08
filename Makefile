@@ -24,16 +24,19 @@ COVERAGE = -g
 
 cover: COVERAGE = --coverage -O0 -g
 
-all: bv_debug
+all: bv_debug bench
 
 bv_debug: bv_debug.cpp $(HEADERS)
 	g++ $(CFLAGS) -DNDEBUG -Ofast -o bv_debug bv_debug.cpp
 
-debug: bv_debug.cpp $(HEADERS)
+debug: bench.cpp bv_debug.cpp $(HEADERS)
 	g++ $(CFLAGS) -DDEBUG -O0 -g -o bv_debug bv_debug.cpp
 
 bench: bench.cpp $(HEADERS)
 	g++ $(CFLAGS) -DNDEBUG -Ofast -o bench bench.cpp
+
+brute: brute_force.cpp $(HEADERS)
+	g++ $(CFLAGS) -DDEBUG -O0 -g -o brute brute_force.cpp
 
 bit_vector/%.hpp:
 
@@ -42,7 +45,8 @@ bit_vector/internal/%.hpp:
 test/%.hpp:
 
 clean:
-	rm -f bv_debug gtest_main.o gtest-all.o test/test.o test/test test/gtest_main.a \
+	rm -f bv_debug bench brute
+	rm -f gtest_main.o gtest-all.o test/test.o test/test test/gtest_main.a \
 	      *.gcda *.gcno *.gcov test/*.gcda test/*.gcno test/*.gcov index.info
 	rm -rf target
 

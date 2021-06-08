@@ -67,7 +67,7 @@ class simple_leaf {
             std::cerr << "Overflow. Reallocate before adding elements"
                       << "\n";
             std::cerr << "Attempted to insert to " << i << std::endl;
-            exit(1);
+            assert(size_ < capacity_ * WORD_BITS);
         }
 #endif
         if (i == size_) {
@@ -148,14 +148,14 @@ class simple_leaf {
             data_[target_word] =
                 (data_[target_word] & ((MASK << target_offset) - 1)) |
                 ((data_[target_word] >> 1) & (~((MASK << target_offset) - 1)));
-            data_[target_word] |= (capacity_ - 1 > target_word)
+            data_[target_word] |= (uint32_t(capacity_ - 1) > target_word)
                                       ? (data_[target_word + 1] << 63)
                                       : 0;
-            for (size_t j = target_word + 1; j < capacity_ - 1; j++) {
+            for (size_t j = target_word + 1; j < uint32_t(capacity_ - 1); j++) {
                 data_[j] >>= 1;
                 data_[j] |= data_[j + 1] << 63;
             }
-            data_[capacity_ - 1] >>= (capacity_ - 1 > target_word) ? 1 : 0;
+            data_[capacity_ - 1] >>= (uint64_t(capacity_ - 1) > target_word) ? 1 : 0;
             size_--;
             return x;
         }
@@ -587,7 +587,7 @@ class simple_leaf {
         for (uint64_t i = 0; i < capacity_; i++) {
             std::bitset<64> b(data_[i]);
             std::cout << "\"" << b << "\"";
-            if (i != capacity_ - 1) {
+            if (i != uint64_t(capacity_ - 1)) {
                 std::cout << ",\n";
             }
         }

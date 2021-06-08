@@ -157,8 +157,11 @@ void bv_remove_node_test(uint64_t size) {
     ASSERT_EQ((size + 6) / 2, bv->sum());
     ASSERT_EQ(3u, a->live_allocations());
 
+    uint64_t counter = 0;
     for (uint64_t i = size + 5; i < size + 6; i -= 2) {
         bv->remove(i);
+        counter++;
+        ASSERT_EQ(size + 6 - counter, bv->size()) << "after " << counter << " removals";
     }
 
     ASSERT_EQ((size + 6) / 2, bv->size());
