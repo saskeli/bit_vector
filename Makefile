@@ -18,7 +18,7 @@ TEST_CODE = test/leaf_tests.hpp test/node_tests.hpp test/test.cpp test/bv_tests.
 
 COVERAGE = -g
 
-.PHONY: clean test cover
+.PHONY: clean test cover clean_test
 
 .DEFAULT: bv_debug
 
@@ -44,8 +44,10 @@ bit_vector/internal/%.hpp:
 
 test/%.hpp:
 
-clean:
+clean: clean_test
 	rm -f bv_debug bench brute
+
+clean_test:
 	rm -f gtest_main.o gtest-all.o test/test.o test/test test/gtest_main.a \
 	      *.gcda *.gcno *.gcov test/*.gcda test/*.gcno test/*.gcov index.info
 	rm -rf target
@@ -65,13 +67,13 @@ test/gtest_main.a: gtest-all.o gtest_main.o
 test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -c test/test.cpp -o test/test.o
 
-test: clean test/test.o test/gtest_main.a
+test: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
 	g++ $(CFLAGS) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 
-cover: clean test/test.o test/gtest_main.a
+cover: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test

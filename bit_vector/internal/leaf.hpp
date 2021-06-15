@@ -5,6 +5,7 @@
 
 #include <bitset>
 #include <cstdint>
+#include <cassert>
 #include <cstring>
 #include <iostream>
 
@@ -25,7 +26,7 @@ class simple_leaf {
     static constexpr uint64_t MASK = 1;
     static constexpr uint32_t VALUE_MASK = 1;
     static constexpr uint32_t TYPE_MASK = 8;
-    static constexpr uint32_t INDEX_MASK = ~((uint32_t(1) << 8) - 1);
+    static constexpr uint32_t INDEX_MASK = ((uint32_t(1) << 8) - 1);
     static_assert(buffer_size < 64);
 
    public:
@@ -37,7 +38,7 @@ class simple_leaf {
         data_ = data;
     }
 
-    bool at(const uint64_t i) const {
+    bool at(const uint32_t i) const {
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
             for (uint8_t idx = 0; idx < buffer_count_; idx++) {
@@ -48,7 +49,8 @@ class simple_leaf {
                     }
                     index++;
                 } else if (b < i) {
-                    [[likely]] index -= buffer_is_insertion(buffer_[idx]) * 2 - 1;
+                    [[likely]] index -=
+                        buffer_is_insertion(buffer_[idx]) * 2 - 1;
                 } else {
                     break;
                 }
@@ -94,7 +96,8 @@ class simple_leaf {
             } else {
                 insert_buffer(idx, create_buffer(i, 1, x));
             }
-            if (buffer_count_ >= buffer_size) [[unlikely]] commit();
+            if (buffer_count_ >= buffer_size) [[unlikely]]
+                commit();
         } else {
             size_++;
             auto target_word = i / WORD_BITS;
@@ -138,7 +141,8 @@ class simple_leaf {
             } else {
                 [[likely]] insert_buffer(idx, create_buffer(i, 0, x));
             }
-            if (buffer_count_ >= buffer_size) [[unlikely]] commit();
+            if (buffer_count_ >= buffer_size) [[unlikely]]
+                commit();
             return x;
         } else {
             uint64_t target_word = i / WORD_BITS;
@@ -155,7 +159,8 @@ class simple_leaf {
                 data_[j] >>= 1;
                 data_[j] |= data_[j + 1] << 63;
             }
-            data_[capacity_ - 1] >>= (uint64_t(capacity_ - 1) > target_word) ? 1 : 0;
+            data_[capacity_ - 1] >>=
+                (uint64_t(capacity_ - 1) > target_word) ? 1 : 0;
             size_--;
             return x;
         }
@@ -202,7 +207,9 @@ class simple_leaf {
         uint64_t idx = n;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
-                if (buffer_index(buffer_[i]) >= n) [[unlikely]] break;
+                if (buffer_index(buffer_[i]) >= n) {
+                    [[unlikely]] break;
+                }
                 if (buffer_is_insertion(buffer_[i])) {
                     idx--;
                     count += buffer_value(buffer_[i]);
@@ -255,7 +262,8 @@ class simple_leaf {
                     }
                 }
             }
-            if (pop >= x) [[unlikely]] break;
+            if (pop >= x) [[unlikely]]
+                break;
         }
 
         pos = size_ < pos ? size_ : pos;
@@ -273,11 +281,11 @@ class simple_leaf {
 
     bool need_realloc() const { return size_ >= capacity_ * WORD_BITS; }
 
-    uint64_t capacity() const { return capacity_; }
+    uint32_t capacity() const { return capacity_; }
+    
+    void capacity(uint32_t cap) { capacity_ = cap; }
 
     void set_data_ptr(uint64_t* ptr) { data_ = ptr; }
-
-    void capacity(uint64_t cap) { capacity_ = cap; }
 
     uint64_t* data() { return data_; }
 
@@ -386,14 +394,13 @@ class simple_leaf {
         }
         uint64_t overflow = elems % 64;
         if (overflow > 0) {
-            for (uint64_t i = capacity_ - 1; i >= words; i--) {
+            for (uint64_t i = capacity_ - 1; i > words; i--) {
                 data_[i] <<= overflow;
                 data_[i] |= data_[i - 1] >> (64 - overflow);
-                if (i == 0) break;
             }
+            data_[words] <<= overflow;
             [[likely]] (void(0));
         }
-
         // Copy over data from sibling
         uint64_t source_word = other->size();
         uint64_t source_offset = source_word % 64;
@@ -471,7 +478,8 @@ class simple_leaf {
 
     void commit() {
         if constexpr (buffer_size == 0) return;
-        if (buffer_count_ == 0) [[unlikely]] return;
+        if (buffer_count_ == 0) [[unlikely]]
+            return;
 
         uint64_t overflow = 0;
         uint8_t overflow_length = 0;
@@ -487,8 +495,9 @@ class simple_leaf {
             uint64_t underflow =
                 current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
             if (overflow_length) {
-                [[likely]] underflow = (underflow << overflow_length) |
-                            (data_[current_word] >> (64 - overflow_length));
+                [[likely]] underflow =
+                    (underflow << overflow_length) |
+                    (data_[current_word] >> (64 - overflow_length));
             }
 
             uint64_t new_overflow = 0;
@@ -518,8 +527,8 @@ class simple_leaf {
                             new_word |= MASK << target_offset;
                         }
                         start_offset = target_offset + 1;
-                        if (underflow_length)
-                            [[unlikely]] underflow_length--;
+                        if (underflow_length) [[unlikely]]
+                            underflow_length--;
                         else
                             overflow_length++;
                     } else {
@@ -528,12 +537,13 @@ class simple_leaf {
                         underflow >>= 1;
                         if (overflow_length)
                             overflow_length--;
-                        else
-                            [[likely]] underflow_length++;
+                        else [[likely]]
+                            underflow_length++;
                         start_offset = target_offset;
                     }
                     current_index++;
-                    if (current_index >= buffer_count_) [[unlikely]] break;
+                    if (current_index >= buffer_count_) [[unlikely]]
+                        break;
                     buf = buffer_[current_index];
                     target_word = buffer_index(buf) / WORD_BITS;
                     [[unlikely]] target_offset = buffer_index(buf) % WORD_BITS;
@@ -560,15 +570,35 @@ class simple_leaf {
             }
             overflow = new_overflow;
         }
-        if (capacity_ > words) [[likely]] data_[words] = 0;
+        if (capacity_ > words) [[likely]]
+            data_[words] = 0;
         buffer_count_ = 0;
+    }
+
+    uint64_t validate() const {
+        assert(size_ <= capacity_ * WORD_BITS);
+        assert(p_sum_ <= size_);
+        uint64_t last_word = size_ / WORD_BITS;
+        uint64_t overflow = size_ % WORD_BITS;
+        if (overflow != 0) {
+            for (uint64_t i = overflow; i < WORD_BITS; i++) {
+                uint64_t val = (MASK << i) & data_[last_word];
+                assert(val == 0);
+            }
+            last_word++;
+        }
+        for (uint64_t i = last_word; i < capacity_; i++) {
+            assert(data_[i] == 0);
+        }
+        return 1;
     }
 
     void print(bool internal_only) const {
         if (internal_only) return;
         std::cout << "{\n\"type\": \"leaf\",\n"
-                  << "\"size\": " << size() << ",\n"
-                  << "\"p_sum\": " << p_sum() << ",\n"
+                  << "\"size\": " << size_ << ",\n"
+                  << "\"capacity\": " << capacity_ << ",\n"
+                  << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
                   << "\"buffer\": [\n";
         for (uint8_t i = 0; i < buffer_count_; i++) {
@@ -600,10 +630,10 @@ class simple_leaf {
 
     bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
 
-    uint64_t buffer_index(uint32_t e) const { return (e & INDEX_MASK) >> 8; }
+    uint64_t buffer_index(uint32_t e) const { return (e) >> 8; }
 
     void set_buffer_index(uint32_t v, uint8_t i) {
-        buffer_[i] = (v << 8) | (buffer_[i] & ((MASK << 7) - 1));
+        buffer_[i] = (v << 8) | (buffer_[i] & INDEX_MASK);
     }
 
     uint32_t create_buffer(uint32_t idx, bool t, bool v) {
@@ -626,15 +656,23 @@ class simple_leaf {
     }
 
     void push_back(const bool x) {
+        assert(size_ < capacity_ * WORD_BITS);
         auto pb_size = size_;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
                 pb_size += buffer_is_insertion(buffer_[i]) ? -1 : 1;
             }
         }
-        size_++;
 
-        data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
+        if (pb_size >= capacity_ * WORD_BITS) {
+            commit();
+            [[unlikely]] data_[size_ / WORD_BITS] |= uint64_t(x)
+                                                     << (size_ % WORD_BITS);
+        } else {
+            data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
+        }
+
+        size_++;
         p_sum_ += uint64_t(x);
     }
 };

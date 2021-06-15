@@ -3,6 +3,7 @@
 #define BV_BIT_VECTOR_HPP
 
 #include <cstdint>
+#include <cassert>
 
 namespace bv {
 
@@ -18,7 +19,9 @@ class bit_vector {
 
     void split_root() {
         node* new_root = allocator_->template allocate_node<node>();
-        node* sibling = n_root_->template split<allocator>();
+        node* sibling = allocator_->template allocate_node<node>();
+        if (n_root_->has_leaves()) sibling->has_leaves(true);
+        sibling->transfer_prepend(n_root_, branches / 2);
         new_root->append_child(n_root_);
         new_root->append_child(sibling);
         n_root_ = new_root;
@@ -127,6 +130,15 @@ class bit_vector {
         uint64_t tree_size =
             root_is_leaf_ ? l_root_->bits_size() : n_root_->bits_size();
         return 8 * sizeof(bit_vector) + tree_size;
+    }
+
+    void validate() const {
+        uint64_t allocs = allocator_->live_allocations();
+        if (root_is_leaf_) {
+            assert(allocs == l_root_->validate());
+        } else {
+            assert(allocs == n_root_->validate());
+        }
     }
 
     void print(bool internal_only) const {

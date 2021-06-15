@@ -973,7 +973,7 @@ void node_insert_node_split_test(uint64_t b) {
         n->template insert<alloc>(i, true);
     }
 
-    ASSERT_EQ(4u, n->child_count());
+    ASSERT_EQ(3u, n->child_count());
     ASSERT_EQ(4u * 128 * b, n->size());
     ASSERT_EQ(2u * 128 * b, n->p_sum());
 
