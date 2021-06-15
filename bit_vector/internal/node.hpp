@@ -20,8 +20,8 @@ class simple_node {
     void* children_[branches];  // pointers to leaf_type or simple_node elements
     void* allocator_;           // This will be the allocator
 
-    static_assert((leaf_size & (leaf_size - 1)) == 0,
-                  "leaf size needs to be a power of 2");
+    static_assert(leaf_size >= 256,
+                  "leaf size needs to be a at least 256");
     static_assert((leaf_size % 64) == 0,
                   "leaf size needs to be divisible by 64");
     static_assert(leaf_size < 0xffffff, "leaf size must fit in 24 bits");
