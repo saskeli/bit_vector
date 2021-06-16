@@ -12,17 +12,20 @@
 
 #define SIZE 16384
 #define BRANCH 16
+#define BUFFER_SIZE 8
 
 using namespace bv;
 
 typedef malloc_alloc ma;
-typedef simple_leaf<8> sl;
-typedef simple_leaf<0> ubl;
-typedef simple_node<sl, uint64_t, SIZE, BRANCH> nd;
+typedef leaf<BUFFER_SIZE> sl;
+typedef leaf<0> ubl;
+typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH> test_bv;
 
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8>, ma>(8); }
 
 TEST(SimpleLeaf, Remove) { leaf_remove_test<sl, ma>(10000); }
 

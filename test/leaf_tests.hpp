@@ -56,6 +56,28 @@ void leaf_insert_test(uint64_t n) {
 }
 
 template <class leaf, class alloc>
+void leaf_append_test(uint8_t buffer_size) {
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>(4);
+    for (uint64_t i = 0; i < 4 * 64; i++) {
+        l->insert(i, i % 2);
+    }
+    ASSERT_TRUE(l->need_realloc());
+    for (uint64_t i = 0; i < buffer_size / 2; i++) {
+        l->remove(64);
+    }
+    ASSERT_FALSE(l->need_realloc());
+    ASSERT_EQ(l->size(), 4u * 64 - buffer_size / 2);
+    for (uint64_t i = l->size(); i < 4 * 64; i++) {
+        l->insert(i, i % 2);
+    }
+    ASSERT_TRUE(l->need_realloc()) << l->size() << " < " << (l->capacity() * 64);
+    for (uint64_t i = 0; i < 4 * 64; i++) {
+        ASSERT_EQ(i % 2, l->at(i));
+    }
+}
+
+template <class leaf, class alloc>
 void leaf_remove_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);

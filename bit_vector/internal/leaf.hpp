@@ -1,5 +1,5 @@
-#ifndef BV_SIMPLE_LEAF_HPP
-#define BV_SIMPLE_LEAF_HPP
+#ifndef BV_LEAF_HPP
+#define BV_LEAF_HPP
 
 #include <immintrin.h>
 
@@ -14,7 +14,7 @@ namespace bv {
 #define WORD_BITS 64
 
 template <uint8_t buffer_size>
-class simple_leaf {
+class leaf {
    protected:
     uint8_t buffer_count_;
     uint16_t capacity_;
@@ -30,7 +30,7 @@ class simple_leaf {
     static_assert(buffer_size < 64);
 
    public:
-    simple_leaf(uint64_t capacity, uint64_t* data) {
+    leaf(uint64_t capacity, uint64_t* data) {
         buffer_count_ = 0;
         capacity_ = capacity;
         size_ = 0;
@@ -379,7 +379,7 @@ class simple_leaf {
         }
     }
 
-    void transfer_prepend(simple_leaf* other, uint64_t elems) {
+    void transfer_prepend(leaf* other, uint64_t elems) {
         commit();
         other->commit();
         uint64_t* o_data = other->data();
@@ -594,7 +594,6 @@ class simple_leaf {
     }
 
     void print(bool internal_only) const {
-        if (internal_only) return;
         std::cout << "{\n\"type\": \"leaf\",\n"
                   << "\"size\": " << size_ << ",\n"
                   << "\"capacity\": " << capacity_ << ",\n"
@@ -612,16 +611,19 @@ class simple_leaf {
                 std::cout << ",\n";
             }
         }
-        std::cout << "],\n"
-                  << "\"data\": [\n";
-        for (uint64_t i = 0; i < capacity_; i++) {
-            std::bitset<64> b(data_[i]);
-            std::cout << "\"" << b << "\"";
-            if (i != uint64_t(capacity_ - 1)) {
-                std::cout << ",\n";
+        if (internal_only) {
+            std::cout << "]\n\"data\": [\n";
+            for (uint64_t i = 0; i < capacity_; i++) {
+                std::bitset<64> b(data_[i]);
+                std::cout << "\"" << b << "\"";
+                if (i != uint64_t(capacity_ - 1)) {
+                    std::cout << ",\n";
+                }
             }
+            std::cout << "]}";
+        } else {
+            std::cout << "]}";
         }
-        std::cout << "]}";
     }
 
    protected:

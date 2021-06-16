@@ -1,5 +1,5 @@
-#ifndef BV_SIMPLE_NODE_HPP
-#define BV_SIMPLE_NODE_HPP
+#ifndef BV_NODE_HPP
+#define BV_NODE_HPP
 
 #include <cassert>
 #include <cstdint>
@@ -12,12 +12,12 @@
 namespace bv {
 
 template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches>
-class simple_node {
+class node {
    protected:
     uint8_t meta_data_;  // meta_data_ & 0x80 if children are leaves
     dtype child_sizes_[branches];
     dtype child_sums_[branches];
-    void* children_[branches];  // pointers to leaf_type or simple_node elements
+    void* children_[branches];  // pointers to leaf_type or node elements
     void* allocator_;           // This will be the allocator
 
     static_assert(leaf_size >= 256,
@@ -30,7 +30,7 @@ class simple_node {
                   "branching factor needs to be a reasonable power of 2");
 
    public:
-    simple_node(void* allocator) {
+    node(void* allocator) {
         meta_data_ = 0;
         allocator_ = allocator;
         for (uint8_t i = 0; i < branches; i++) {
@@ -53,7 +53,7 @@ class simple_node {
                 children_[child_index])
                 ->at(index);
         } else {
-            return reinterpret_cast<simple_node*>(children_[child_index])
+            return reinterpret_cast<node*>(children_[child_index])
                 ->at(index);
         }
     }
@@ -67,8 +67,8 @@ class simple_node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] change = child->set(index, v);
         } else {
-            simple_node* child =
-                reinterpret_cast<simple_node*>(children_[child_index]);
+            node* child =
+                reinterpret_cast<node*>(children_[child_index]);
             change = child->set(index, v);
         }
         uint8_t c_count = child_count();
@@ -90,8 +90,8 @@ class simple_node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] return res + child->rank(index);
         } else {
-            simple_node* child =
-                reinterpret_cast<simple_node*>(children_[child_index]);
+            node* child =
+                reinterpret_cast<node*>(children_[child_index]);
             return res + child->rank(index);
         }
     }
@@ -108,8 +108,8 @@ class simple_node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] return res + child->select(count);
         } else {
-            simple_node* child =
-                reinterpret_cast<simple_node*>(children_[child_index]);
+            node* child =
+                reinterpret_cast<node*>(children_[child_index]);
             return res + child->select(count);
         }
     }
@@ -125,9 +125,9 @@ class simple_node {
                 a->deallocate_leaf(l);
             }
         } else {
-            simple_node** children = reinterpret_cast<simple_node**>(children_);
+            node** children = reinterpret_cast<node**>(children_);
             for (uint8_t i = 0; i < c_count; i++) {
-                simple_node* n = children[i];
+                node* n = children[i];
                 n->template deallocate<allocator>();
                 a->deallocate_node(n);
             }
@@ -203,7 +203,7 @@ class simple_node {
         meta_data_ -= elems;
     }
 
-    void transfer_append(simple_node* other, uint8_t elems) {
+    void transfer_append(node* other, uint8_t elems) {
         void** o_children = other->children();
         dtype* o_sizes = other->child_sizes();
         dtype* o_sums = other->child_sums();
@@ -229,7 +229,7 @@ class simple_node {
         meta_data_ -= elems;
     }
 
-    void transfer_prepend(simple_node* other, uint8_t elems) {
+    void transfer_prepend(node* other, uint8_t elems) {
         void** o_children = other->children();
         dtype* o_sizes = other->child_sizes();
         dtype* o_sums = other->child_sums();
@@ -253,7 +253,7 @@ class simple_node {
         other->clear_last(elems);
     }
 
-    void append_all(simple_node* other) {
+    void append_all(node* other) {
         void** o_children = other->children();
         dtype* o_sizes = other->child_sizes();
         dtype* o_sums = other->child_sums();
@@ -268,7 +268,7 @@ class simple_node {
     }
 
     uint64_t bits_size() const {
-        uint64_t ret = sizeof(simple_node) * 8;
+        uint64_t ret = sizeof(node) * 8;
         if (has_leaves()) {
             leaf_type* const* children =
                 reinterpret_cast<leaf_type* const*>(children_);
@@ -276,8 +276,8 @@ class simple_node {
                 ret += children[i]->bits_size();
             }
         } else {
-            simple_node* const* children =
-                reinterpret_cast<simple_node* const*>(children_);
+            node* const* children =
+                reinterpret_cast<node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 ret += children[i]->bits_size();
             }
@@ -302,8 +302,8 @@ class simple_node {
                 ret += children[i]->validate();
             }
         } else {
-            simple_node* const* children =
-                reinterpret_cast<simple_node* const*>(children_);
+            node* const* children =
+                reinterpret_cast<node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 child_s_sum += children[i]->size();
                 assert(child_sizes_[i] == child_s_sum);
@@ -351,8 +351,8 @@ class simple_node {
                 }
             }
         } else {
-            simple_node* const* children =
-                reinterpret_cast<simple_node* const*>(children_);
+            node* const* children =
+                reinterpret_cast<node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 children[i]->print(internal_only);
                 if (i != child_count() - 1) {
@@ -628,28 +628,28 @@ class simple_node {
         uint32_t l_cap = 0;
         if (index > 0) {
             [[likely]] l_cap =
-                branches - reinterpret_cast<simple_node*>(children_[index - 1])
+                branches - reinterpret_cast<node*>(children_[index - 1])
                                ->child_count();
         }
         uint32_t r_cap = 0;
         if (index < child_count() - 1) {
             [[likely]] r_cap =
-                branches - reinterpret_cast<simple_node*>(children_[index + 1])
+                branches - reinterpret_cast<node*>(children_[index + 1])
                                ->child_count();
         }
         allocator* a = reinterpret_cast<allocator*>(allocator_);
-        simple_node* a_node;
-        simple_node* b_node;
+        node* a_node;
+        node* b_node;
         if (l_cap <= 1 && r_cap <= 1) {
             if (index == 0) {
-                a_node = reinterpret_cast<simple_node*>(children_[0]);
-                b_node = reinterpret_cast<simple_node*>(children_[1]);
+                a_node = reinterpret_cast<node*>(children_[0]);
+                b_node = reinterpret_cast<node*>(children_[1]);
                 [[unlikely]] index++;
             } else {
-                a_node = reinterpret_cast<simple_node*>(children_[index - 1]);
-                b_node = reinterpret_cast<simple_node*>(children_[index]);
+                a_node = reinterpret_cast<node*>(children_[index - 1]);
+                b_node = reinterpret_cast<node*>(children_[index]);
             }
-            simple_node* new_child = a->template allocate_node<simple_node>();
+            node* new_child = a->template allocate_node<node>();
             new_child->has_leaves(a_node->has_leaves());
             new_child->transfer_append(b_node, branches / 3);
             new_child->transfer_prepend(a_node, branches / 3);
@@ -673,13 +673,13 @@ class simple_node {
             meta_data_++;
             [[unlikely]] return;
         } else if (l_cap > r_cap) {
-            a_node = reinterpret_cast<simple_node*>(children_[index - 1]);
-            b_node = reinterpret_cast<simple_node*>(children_[index]);
+            a_node = reinterpret_cast<node*>(children_[index - 1]);
+            b_node = reinterpret_cast<node*>(children_[index]);
             a_node->transfer_append(b_node, l_cap / 2);
             index--;
         } else {
-            a_node = reinterpret_cast<simple_node*>(children_[index]);
-            b_node = reinterpret_cast<simple_node*>(children_[index + 1]);
+            a_node = reinterpret_cast<node*>(children_[index]);
+            b_node = reinterpret_cast<node*>(children_[index + 1]);
             b_node->transfer_prepend(a_node, r_cap / 2);
         }
         if (index == 0) {
@@ -694,8 +694,8 @@ class simple_node {
     template <class allocator>
     void node_insert(dtype index, bool value) {
         uint8_t child_index = find_size(index);
-        simple_node* child =
-            reinterpret_cast<simple_node*>(children_[child_index]);
+        node* child =
+            reinterpret_cast<node*>(children_[child_index]);
 #ifdef DEBUG
         if (child_index >= child_count()) {
             std::cout << int(child_index) << " >= " << int(child_count())
@@ -707,7 +707,7 @@ class simple_node {
             rebalance_node<allocator>(child_index);
             child_index = find_size(index);
             [[unlikely]] child =
-                reinterpret_cast<simple_node*>(children_[child_index]);
+                reinterpret_cast<node*>(children_[child_index]);
         }
         if (child_index != 0) {
             [[likely]] index -= child_sizes_[child_index - 1];
@@ -823,13 +823,13 @@ class simple_node {
         return value;
     }
 
-    void rebalance_nodes_right(simple_node* a, simple_node* b, uint8_t idx) {
+    void rebalance_nodes_right(node* a, node* b, uint8_t idx) {
         a->transfer_append(b, (b->child_count() - branches / 3) / 2);
         child_sizes_[idx] = a->size();
         [[unlikely]] child_sums_[idx] = a->p_sum();
     }
 
-    void rebalance_nodes_left(simple_node* a, simple_node* b, uint8_t idx) {
+    void rebalance_nodes_left(node* a, node* b, uint8_t idx) {
         b->transfer_prepend(a, (a->child_count() - branches / 3) / 2);
         if (idx == 0) {
             child_sizes_[0] = a->size();
@@ -841,7 +841,7 @@ class simple_node {
     }
 
     template <class allocator>
-    void merge_nodes(simple_node* a, simple_node* b, uint8_t idx) {
+    void merge_nodes(node* a, node* b, uint8_t idx) {
         a->append_all(b);
         reinterpret_cast<allocator*>(allocator_)->deallocate_node(b);
         uint8_t count = child_count();
@@ -859,12 +859,12 @@ class simple_node {
     template <class allocator>
     bool node_remove(dtype index) {
         uint8_t child_index = find_size(index + 1);
-        simple_node* child =
-            reinterpret_cast<simple_node*>(children_[child_index]);
+        node* child =
+            reinterpret_cast<node*>(children_[child_index]);
         if (child->child_count() <= branches / 3) {
             if (child_index == 0) {
-                simple_node* sibling =
-                    reinterpret_cast<simple_node*>(children_[1]);
+                node* sibling =
+                    reinterpret_cast<node*>(children_[1]);
                 if (sibling->child_count() > branches * 5 / 9) {
                     rebalance_nodes_right(child, sibling, 0);
                 } else {
@@ -872,8 +872,8 @@ class simple_node {
                 }
                 [[unlikely]] ((void)0);
             } else {
-                simple_node* sibling =
-                    reinterpret_cast<simple_node*>(children_[child_index - 1]);
+                node* sibling =
+                    reinterpret_cast<node*>(children_[child_index - 1]);
                 if (sibling->child_count() > branches * 5 / 9) {
                     rebalance_nodes_left(sibling, child, child_index - 1);
                 } else {
@@ -882,7 +882,7 @@ class simple_node {
             }
             child_index = find_size(index + 1);
             [[unlikely]] child =
-                reinterpret_cast<simple_node*>(children_[child_index]);
+                reinterpret_cast<node*>(children_[child_index]);
         }
         if (child_index != 0) {
             [[likely]] index -= child_sizes_[child_index - 1];

@@ -49,6 +49,9 @@ test/*.gcov
 index.info
 target/
 
+# API documentation
+html/
+
 #benchmark results
 *.tsv
 

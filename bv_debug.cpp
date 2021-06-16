@@ -9,8 +9,8 @@
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
 //typedef bv::malloc_alloc alloc;
-//typedef bv::simple_leaf<8> leaf;
-//typedef bv::simple_node<leaf, uint64_t, 16384, 64> node;
+//typedef bv::leaf<8> leaf;
+//typedef bv::node<leaf, uint64_t, 16384, 64> node;
 typedef bv::simple_bv<8, 16384, 64> bit_vector;
 
 template <class bva, class bvb>
