@@ -20,7 +20,7 @@ namespace bv {
  *
  * Practical performance depends on node and leaf implementations.
  *
- * @tparam leaf      type for leaves. Some kind of bv::leaf.
+ * @tparam leaf      Type for leaves. Some kind of bv::leaf.
  * @tparam node      Type for internal nodes. Some kind of bv::node.
  * @tparam allocator Allocator type. For example bv::malloc_alloc.
  * @tparam leaf_size Maximum number of elements in leaf.
@@ -114,12 +114,15 @@ class bit_vector {
      * @brief Insert "value" into position "index".
      *
      * The bit vector container ensures that there is sufficient space in the
-     * b-tree increasing the tree height as necessary.
+     * b-tree, splitting nodes and increasing the tree height as necessary.
      *
-     * Insert operations take \f$\approx \log_2(b)\log_b(n / l) + l\f$ amortized
-     * time, where \f$b\f$ is the branching factor, \f$l\f$ is the leaf size and
-     * \f$n\f$ is the data structure size.
-     * 
+     * Insert operations take \f$\mathcal{O}\left(b\log_b(n / l) + l\right)\f$
+     * amortized time when using bv::node and bv::leaf elements for data
+     * storage, where \f$b\f$ is the branching factor, \f$l\f$ is the leaf size
+     * and \f$n\f$ is the data structure size. The branching overhead compared
+     * to the access operation is due to updating cumulative sums and sizes in
+     * the internal nodes.
+     *
      * @param index Where should `value` be inserted.
      * @param value What should be inserted at `index`.
      */
@@ -153,11 +156,33 @@ class bit_vector {
         }
     }
 
-    void remove(uint64_t index) {
+    /**
+     * @brief Remove element at "index".
+     *
+     * Removes a bit from the underlying data structure, decreasing the tree
+     * height as appropriate. Tree height is decreased if `n_roor_` is the
+     * active root and has exactly one child.
+     *
+     * Remove operations take \f$\mathcal{O}\left(b\log_b(n / l) + l\right)\f$
+     * amortized time when using bv::node and bv::leaf elements for data
+     * storage, where \f$b\f$ is the branching factor, \f$l\f$ is the leaf size
+     * and \f$n\f$ is the data structure size. The branching overhead compared
+     * to the access operation is due to updating cumulative sums and sizes in
+     * the internal nodes.
+     *
+     * The value of the removed bit needs to be bubbled up the data structure to
+     * update cumulative sums. This makes returning the removed value here a
+     * 0-cost "side effect".
+     *
+     * @param index Position of element to remove.
+     *
+     * @return Value of the removed bit.
+     */
+    bool remove(uint64_t index) {
         if (root_is_leaf_) {
-            [[unlikely]] l_root_->remove(index);
+            [[unlikely]] return l_root_->remove(index);
         } else {
-            n_root_->template remove<allocator>(index);
+            bool v = n_root_->template remove<allocator>(index);
             if (n_root_->child_count() == 1) {
                 if (n_root_->has_leaves()) {
                     l_root_ = reinterpret_cast<leaf*>(n_root_->child(0));
@@ -170,49 +195,163 @@ class bit_vector {
                 }
                 [[unlikely]] (void(0));
             }
+            return v;
         }
     }
 
-    uint64_t sum() {
+    /**
+     * @brief Number of 1-bits in the data structure.
+     *
+     * Cumulative partial sums are maintained as the data structure changes. As
+     * such this is a constant time lookup operation.
+     *
+     * @return \f$\sum_{i = 0}^{n - 1} \mathrm{bv}[i]\f$ for \f$n\f$
+     * element bit vector.
+     */
+    uint64_t sum() const {
         return !root_is_leaf_ ? n_root_->p_sum() : l_root_->p_sum();
     }
 
+    /**
+     * @brief Number of elements stored in the data structure
+     *
+     * Cumulative sizes are maintained as the data structure changes. As such
+     * this is a constant time lookup operation.
+     *
+     * @return \f$n\f$.
+     */
     uint64_t size() const {
         return !root_is_leaf_ ? n_root_->size() : l_root_->size();
     }
 
+    /**
+     * @brief Retrieves the value of the index<sup>th</sup> element in the data
+     * structure.
+     *
+     * Performs an at-query on either `n_root_` or `l_root_` based on tree
+     * status.
+     *
+     * When using bv::node and bv::leaf element for the internal data structure,
+     * access operations take
+     * \f$\mathcal{O}\left(\log_2(b)\log_b(n / l)\right)\f$ time,
+     * where \f$b\f$ is the branching factor, \f$l\f$ is the leaf size and
+     * \f$n\f$ is the data structure size.
+     *
+     * @param index Index to access
+     *
+     * @return Boolean value indicating if the index<sup>th</sup> element is
+     * set.
+     */
     bool at(uint64_t index) const {
         return !root_is_leaf_ ? n_root_->at(index) : l_root_->at(index);
     }
 
+    /**
+     * @brief Number of 1-bits up to position index.
+     *
+     * Counts the number of bits set in the first index bits.
+     *
+     * When using bv::node and bv::leaf elements for the internal data
+     * structure, rank operations take \f$\mathcal{O}\left(\log_2(b)\log_b(n /
+     * l) + l\right)\f$ time, where \f$b\f$ is the branching factor, \f$l\f$ is
+     * the leaf size and \f$n\f$ is the data structure size.
+     *
+     * @param index Number of elements to include in the "summation".
+     *
+     * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
+     */
     uint64_t rank(uint64_t index) const {
         return !root_is_leaf_ ? n_root_->rank(index) : l_root_->rank(index);
     }
 
+    /**
+     * @brief Index of the count<sup>th</sup> 1-bit in the data structure
+     *
+     * When using bv::node and bv::leaf for internal strucutres, finds the
+     * position of the count<sup>th</sup> 1-bit is found in
+     * \f$\mathcal{O}\left(\log_2(b)\log_b(n / l) + l\right) \f$ time, where
+     * \f$b\f$ is the branching factor, \f$l\f$ is the leaf size and \f$n\f$ is
+     * the data structure size.
+     *
+     * @param count Selection target.
+     *
+     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) =  \f$ count.
+     */
     uint64_t select(uint64_t count) const {
         return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
     }
 
+    /**
+     * @brief Sets the bit at "index" to "value"
+     *
+     * When using bv::node and bv::leaf for internal strucutres, sets the value
+     * of the index<sup>th</sup> bit in \f$\mathcal{O}\left(b\log_b(n /
+     * l)\right) \f$ time, where \f$b\f$ is the branching factor, \f$l\f$ is the
+     * leaf size and \f$n\f$ is the data structure size. As with insertion and
+     * removal there is overhead in updating internal nodes.
+     *
+     * @param index Index to set.
+     * @param value value to set the index<sup>th</sup> bit to.
+     */
     void set(uint64_t index, bool value) {
         !root_is_leaf_ ? n_root_->set(index, value)
                        : l_root_->set(index, value);
     }
 
+    /**
+     * @brief Total size of data structure allocations in bits.
+     *
+     * Calculates the total size of "this", allocated nodes and allocated leaves
+     * in bits.
+     *
+     * Size of the allocator is not included, and no consideration is made on
+     * the effects of memory fragmentation.
+     *
+     * @return `8 * sizeof(bit_vector) + tree_size`
+     */
     uint64_t bit_size() const {
         uint64_t tree_size =
             root_is_leaf_ ? l_root_->bits_size() : n_root_->bits_size();
         return 8 * sizeof(bit_vector) + tree_size;
     }
 
+    /**
+     * @brief Asserts that the data structure is internally consistent.
+     *
+     * Walks through the entire data structure and ensures that invariants and
+     * cumulative sums and sizes are valid for a data structure of the specified
+     * type.
+     *
+     * This does not guarantee that the data structure is correct given the
+     * preceding query sequence, simply checks that a valid data structure seems
+     * to be correctly defined.
+     *
+     * If the `-DNDEBUG` compiler flag is given, this function will do nothing
+     * since assertions will be `(void(0))`ed out.
+     */
     void validate() const {
-        uint64_t allocs = allocator_->live_allocations();
-        if (root_is_leaf_) {
-            assert(allocs == l_root_->validate());
+        if (owned_allocator_) {
+            uint64_t allocs = allocator_->live_allocations();
+            if (root_is_leaf_) {
+                assert(allocs == l_root_->validate());
+            } else {
+                assert(allocs == n_root_->validate());
+            }
         } else {
-            assert(allocs == n_root_->validate());
+            if (root_is_leaf_)
+                l_root_->validate();
+            else
+                n_root_->validate();
         }
     }
 
+    /**
+     * @brief Output data structure to standard out as json.
+     *
+     * @param internal_only If true, actual bit vector data will not be output
+     * to save space.
+     */
     void print(bool internal_only) const {
         root_is_leaf_ ? l_root_->print(internal_only)
                       : n_root_->print(internal_only);

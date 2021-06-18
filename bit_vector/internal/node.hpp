@@ -6,30 +6,97 @@
 #include <cstring>
 
 #ifndef CACHE_LINE
+// Apparently the most common cache line size is 64.
 #define CACHE_LINE 64
 #endif
 
 namespace bv {
 
+/**
+ * @brief Internal node for use with bit vector b-tree structures.
+ *
+ * Intended for use with bv::bit_vector and bv::leaf, to support the dynamic
+ * b-tree bit vector structure.
+ *
+ * ### Practical limitations
+ *
+ * The maximum logical size of the bit vector is \f$2^{b - 1} - 1\f$ where b is
+ * the number of bits available in dtype. This is due to the "sign bit" being
+ * used to speed up branching. So for 64-bit words the maximum data structure
+ * size is 9223372036854775807 and for 32-bot words the limit is 2147483647.
+ *
+ * The internal nodes need to keep track of leaf sizes, since splitting, merging
+ * and balancing is done based on a top-down approach, where an insertion or
+ * removal already submitted to a leaf **cannot** cause any rebalancing.
+ *
+ * The maximum leaf size practically needs to be divisible by 128 due to the
+ * practical allocation scheme allocating an even amount of 64-bit integers for
+ * leaf storage. In addition a minimum size of 128 causes edge cases in
+ * balancing that can result in undefined behaviour. Thus a minimum leaf size of
+ * 256 and divisibility of maximum leaf size by 128 is enforced by static
+ * assertions.
+ *
+ * Buffered bv::leaf instances can not be bigger than \f$2^{24} - 1\f$.
+ *
+ * The branching factor for the internal nodes need to be 8, 16, 32, 64 or 128
+ * due to how the branchless binary search is written. Further limited by the 7
+ * bits available in the child counter.
+ *
+ * ### Cache line size
+ *
+ * Branch selection uses binary search, which significantly benefits from
+ * agressive cache prefetching. It is suggested that a definition of
+ * `CACHLE_LINE` is given with the value of the cache line size for the
+ * (running) architecture. Make attempts to retrieve this information and
+ * passing the correct value to the compiler with the `-DCACHE_LINE` flag.
+ *
+ * If the prefetching fails significantly due to prefetching being unavailable
+ * or the wrong cache line size, the current binary search based branch
+ * selection will likely be noticeably slower than a naive linear search.
+ *
+ * @tparam leaf_type Type of leaf to use in the tree structure (E.g. bv::leaf).
+ * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
+ * @tparam leaf_size Maximum size of a leaf node.
+ * @tparam branches  Maximum branching factor of internal nodes.
+ */
 template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches>
 class node {
    protected:
-    uint8_t meta_data_;  // meta_data_ & 0x80 if children are leaves
+    /**
+     * @brief Number of children in the 7 least significant bits and a bit
+     * indicating whether the nodes children are laves or nodes.
+     */
+    uint8_t meta_data_;
+    /**
+     * @brief Cumulative child sizes and `(~0) >> 1` for non-existing children.
+     */
     dtype child_sizes_[branches];
+    /**
+     * @brief Cumulative child sums and `(~0) >> 1` for non-existint
+     * children.
+     */
     dtype child_sums_[branches];
-    void* children_[branches];  // pointers to leaf_type or node elements
-    void* allocator_;           // This will be the allocator
+    void* children_[branches];  ///< pointers to leaf_type or node children.
+    /**
+     * @brief Pointer to an allocator instance. Sadly this must be a void
+     * pointere due to otherwise generating a circular template reference.
+     */
+    void* allocator_;
 
-    static_assert(leaf_size >= 256,
-                  "leaf size needs to be a at least 256");
-    static_assert((leaf_size % 64) == 0,
-                  "leaf size needs to be divisible by 64");
+    static_assert(leaf_size >= 256, "leaf size needs to be a at least 256");
+    static_assert((leaf_size % 128) == 0,
+                  "leaf size needs to be divisible by 128");
     static_assert(leaf_size < 0xffffff, "leaf size must fit in 24 bits");
     static_assert((branches == 8) || (branches == 16) || (branches == 32) ||
                       (branches == 64) || (branches == 128),
                   "branching factor needs to be a reasonable power of 2");
 
    public:
+    /**
+     * @brief Constructor
+     *
+     * @param allocator Pointer to an allocator instance.
+     */
     node(void* allocator) {
         meta_data_ = 0;
         allocator_ = allocator;
@@ -39,12 +106,34 @@ class node {
         }
     }
 
+    /**
+     * @brief Set whether the children of the node are leaves or internal nodes
+     *
+     * Intended to be set according to the status of siblings following
+     * allocation of the node.
+     *
+     * @param leaves Boolean value indicating if the children of this node are
+     * leaves.
+     */
     void has_leaves(bool leaves) {
         meta_data_ = leaves ? meta_data_ | 0b10000000 : meta_data_ & 0b01111111;
     }
 
+    /**
+     * @brief Get the type of children for the node.
+     *
+     * @return True if the children of this node are leaves.
+     */
     bool has_leaves() const { return meta_data_ >> 7; }
 
+    /**
+     * @brief Access the value of the index<sup>th</sup> element of the logical
+     * structure.
+     *
+     * Recurses to children based on cumulative sizes.
+     *
+     * @param index Index to access.
+     */
     bool at(dtype index) const {
         uint8_t child_index = find_size(index + 1);
         index -= child_index != 0 ? child_sizes_[child_index - 1] : 0;
@@ -53,12 +142,23 @@ class node {
                 children_[child_index])
                 ->at(index);
         } else {
-            return reinterpret_cast<node*>(children_[child_index])
-                ->at(index);
+            return reinterpret_cast<node*>(children_[child_index])->at(index);
         }
     }
 
-    dtype set(dtype index, bool v) {
+    /**
+     * @brief Set the value of the logical index<sup>th</sup> element to v.
+     *
+     * Recurses to children based on cumulative sizes and updates partial sums
+     * based on return value. Change is returned so parents can update partial
+     * sums as well.
+     *
+     * @param index Index of element to set value of
+     * @param v     Value to set element to.
+     *
+     * @return Change to data structure sum triggered by the set operation.
+     */
+    int set(dtype index, bool v) {
         uint8_t child_index = find_size(index + 1);
         index -= child_index == 0 ? 0 : child_sizes_[child_index - 1];
         dtype change = 0;
@@ -67,8 +167,7 @@ class node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] change = child->set(index, v);
         } else {
-            node* child =
-                reinterpret_cast<node*>(children_[child_index]);
+            node* child = reinterpret_cast<node*>(children_[child_index]);
             change = child->set(index, v);
         }
         uint8_t c_count = child_count();
@@ -78,6 +177,17 @@ class node {
         return change;
     }
 
+    /**
+     * @brief Counts number of one bits up to the index<sup>th</sup> logical
+     * element.
+     *
+     * Recurses to children based on cumulative sizes and returns subtree rank
+     * based on the result of the recurrence and local cumulative sums.
+     *
+     * @param index Number of elements to sum.
+     *
+     * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
+     */
     dtype rank(dtype index) const {
         uint8_t child_index = find_size(index);
         dtype res = 0;
@@ -90,12 +200,22 @@ class node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] return res + child->rank(index);
         } else {
-            node* child =
-                reinterpret_cast<node*>(children_[child_index]);
+            node* child = reinterpret_cast<node*>(children_[child_index]);
             return res + child->rank(index);
         }
     }
 
+    /**
+     * @brief Calculates the index of the count<sup>tu</sup> 1-bit
+     *
+     * Recurses to children based on cumulative sums and returns subtree Select
+     * based on the results of the recurrence and local cumulative sizes.
+     *
+     * @param count Number to sum up to
+     *
+     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) =  \f$ count.
+     */
     dtype select(dtype count) const {
         uint8_t child_index = find_sum(count);
         dtype res = 0;
@@ -108,12 +228,20 @@ class node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] return res + child->select(count);
         } else {
-            node* child =
-                reinterpret_cast<node*>(children_[child_index]);
+            node* child = reinterpret_cast<node*>(children_[child_index]);
             return res + child->select(count);
         }
     }
 
+    /**
+     * @brief Recursively deallocates all children.
+     *
+     * A separate allocator is needed in addition to `~node()` since binding
+     * deallocation of children to the default destructor could lead to
+     * deallocation of nodes that are still in use with other nodes.
+     *
+     * @tparam allocator Type of allocator_
+     */
     template <class allocator>
     void deallocate() {
         uint8_t c_count = child_count();
@@ -134,22 +262,67 @@ class node {
         }
     }
 
+    /**
+     * @brief Get the number of children of this node.
+     *
+     * @return Number of children.
+     */
     uint8_t child_count() const { return meta_data_ & 0b01111111; }
 
+    /**
+     * @brief Get pointer to the children of this node.
+     *
+     * Intended for efficient acces when balancing nodes.
+     *
+     * @returns Address to the array of children of this node.
+     */
     void** children() { return children_; }
 
+    /**
+     * @brief Get pointer to the cumulative child sizes.
+     *
+     * Intended for efficient acces when balancing nodes.
+     *
+     * @returns Address of the array of cumulative child sizes.
+     */
     dtype* child_sizes() { return child_sizes_; }
 
+    /**
+     * @brief Get pointer to the cumulative child sums.
+     *
+     * Intended for efficient acces when balancing nodes.
+     *
+     * @return Address of the array of cumulative child sums.
+     */
     dtype* child_sums() { return child_sums_; }
 
+    /**
+     * @brief Logical number of elements stored in the subtree.
+     *
+     * @return Number of elements in subtree.
+     */
     dtype size() const {
         return child_count() > 0 ? child_sizes_[child_count() - 1] : 0;
     }
 
+    /**
+     * @brief Logical number of 1-bits stored in the subtree.
+     *
+     * @return Number of 1-bits in subtree.
+     */
     dtype p_sum() const {
         return child_count() > 0 ? child_sums_[child_count() - 1] : 0;
     }
 
+    /**
+     * @brief Add child to the subtree.
+     *
+     * Mainly intended for use by bv::bit_vector for splitting root nodes.
+     *
+     * @tparam child Type of child (node or leaf_type).
+     *
+     * @param new_child Child to append.
+     */
     template <class child>
     void append_child(child* new_child) {
         if (child_count() == 0) {
@@ -165,6 +338,15 @@ class node {
         meta_data_++;
     }
 
+    /**
+     * @brief Get i<sup>th</sup> child of the node.
+     * 
+     * Mainly intended for use by bv::bit_vector for decreasing tree height.
+     * 
+     * @param i Index of child to return.
+     * 
+     * @return Pointer to the i<sup>th</sup> child.
+     */
     void* child(uint8_t i) { return children_[i]; }
 
     template <class allocator>
@@ -276,8 +458,7 @@ class node {
                 ret += children[i]->bits_size();
             }
         } else {
-            node* const* children =
-                reinterpret_cast<node* const*>(children_);
+            node* const* children = reinterpret_cast<node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 ret += children[i]->bits_size();
             }
@@ -293,7 +474,9 @@ class node {
             leaf_type* const* children =
                 reinterpret_cast<leaf_type* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
-                child_s_sum += children[i]->size();
+                uint64_t child_size = children[i]->size();
+                assert(child_size >= leaf_size / 3);
+                child_s_sum += child_size;
                 assert(child_sizes_[i] == child_s_sum);
                 child_p_sum += children[i]->p_sum();
                 assert(child_sums_[i] == child_p_sum);
@@ -302,10 +485,11 @@ class node {
                 ret += children[i]->validate();
             }
         } else {
-            node* const* children =
-                reinterpret_cast<node* const*>(children_);
+            node* const* children = reinterpret_cast<node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
-                child_s_sum += children[i]->size();
+                uint64_t child_size = children[i]->size();
+                assert(child_size >= branches / 3);
+                child_s_sum += child_size;
                 assert(child_sizes_[i] == child_s_sum);
                 child_p_sum += children[i]->p_sum();
                 assert(child_sums_[i] == child_p_sum);
@@ -351,8 +535,7 @@ class node {
                 }
             }
         } else {
-            node* const* children =
-                reinterpret_cast<node* const*>(children_);
+            node* const* children = reinterpret_cast<node* const*>(children_);
             for (uint8_t i = 0; i < child_count(); i++) {
                 children[i]->print(internal_only);
                 if (i != child_count() - 1) {
@@ -628,14 +811,14 @@ class node {
         uint32_t l_cap = 0;
         if (index > 0) {
             [[likely]] l_cap =
-                branches - reinterpret_cast<node*>(children_[index - 1])
-                               ->child_count();
+                branches -
+                reinterpret_cast<node*>(children_[index - 1])->child_count();
         }
         uint32_t r_cap = 0;
         if (index < child_count() - 1) {
             [[likely]] r_cap =
-                branches - reinterpret_cast<node*>(children_[index + 1])
-                               ->child_count();
+                branches -
+                reinterpret_cast<node*>(children_[index + 1])->child_count();
         }
         allocator* a = reinterpret_cast<allocator*>(allocator_);
         node* a_node;
@@ -694,8 +877,7 @@ class node {
     template <class allocator>
     void node_insert(dtype index, bool value) {
         uint8_t child_index = find_size(index);
-        node* child =
-            reinterpret_cast<node*>(children_[child_index]);
+        node* child = reinterpret_cast<node*>(children_[child_index]);
 #ifdef DEBUG
         if (child_index >= child_count()) {
             std::cout << int(child_index) << " >= " << int(child_count())
@@ -859,12 +1041,10 @@ class node {
     template <class allocator>
     bool node_remove(dtype index) {
         uint8_t child_index = find_size(index + 1);
-        node* child =
-            reinterpret_cast<node*>(children_[child_index]);
+        node* child = reinterpret_cast<node*>(children_[child_index]);
         if (child->child_count() <= branches / 3) {
             if (child_index == 0) {
-                node* sibling =
-                    reinterpret_cast<node*>(children_[1]);
+                node* sibling = reinterpret_cast<node*>(children_[1]);
                 if (sibling->child_count() > branches * 5 / 9) {
                     rebalance_nodes_right(child, sibling, 0);
                 } else {

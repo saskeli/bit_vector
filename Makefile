@@ -1,6 +1,6 @@
 CL = $(shell getconf LEVEL1_DCACHE_LINESIZE)
 
-CFLAGS = -std=c++2a -Wall -Wextra -DCACHE_LINE=$(CL) -march=native
+CFLAGS = -std=c++2a -Wall -Wextra -pedantic -DCACHE_LINE=$(CL) -march=native
 
 HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
           bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \
@@ -24,13 +24,10 @@ COVERAGE = -g
 
 cover: COVERAGE = --coverage -O0 -g
 
-all: bv_debug bench
+all: bv_debug bench brute
 
 bv_debug: bv_debug.cpp $(HEADERS)
-	g++ $(CFLAGS) -DNDEBUG -Ofast -o bv_debug bv_debug.cpp
-
-debug: bench.cpp bv_debug.cpp $(HEADERS)
-	g++ $(CFLAGS) -DDEBUG -O0 -g -o bv_debug bv_debug.cpp
+	g++ $(CFLAGS) -DDEBUG -Ofast -g -o bv_debug bv_debug.cpp
 
 bench: bench.cpp $(HEADERS)
 	g++ $(CFLAGS) -DNDEBUG -Ofast -o bench bench.cpp

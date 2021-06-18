@@ -4,8 +4,8 @@
 #include <immintrin.h>
 
 #include <bitset>
-#include <cstdint>
 #include <cassert>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 
@@ -13,23 +13,73 @@ namespace bv {
 
 #define WORD_BITS 64
 
+/**
+ * @brief Simple flat dynamic bit vector for use as a leaf for a dynamic b-tree
+ * bit vector.
+ *
+ * The leaf is not usable as fully featured bit vector by itself since the leaf
+ * cannot reallocate itself when full. The leaf requires a parent structure
+ * (like bv::bit_vector or bv::node) to manage reallocations and rebalancing.
+ *
+ * ### Practical limitations
+ *
+ * The maximum leaf size for a buffered leaf without risking undefined behaviour
+ * is \f$2^{24} - 1\f$ due to buffer elements storing reference indexes in
+ * 24-bits of 32-bit integers. The practical upper limit of leaf size due to
+ * performance concerns is no more than \f$2^{20}\f$ and optimal leaf size is
+ * likely to be closer to the \f$2^{12}\f$ to \f$2^{15}\f$ range.
+ *
+ * Maximum leaf size can't in effect be non-divisible by 64, since 64-bit
+ * integers are used for storage and a leaf "will use" all available words fully
+ * before indicating that a reallocation is necessary, triggering limit checks.
+ *
+ * The maximum buffer size is 63 due to storing the information on buffer usage
+ * with 6 bits of an 8-bit word, with 2 bits reserved for other purposes. This
+ * could easily be "fixed", but testing indicates that bigger buffer sizes are
+ * unlikely to be of practical use.
+ * 
+ * @tparam Size of insertion/removal buffer.
+ */
 template <uint8_t buffer_size>
 class leaf {
    protected:
-    uint8_t buffer_count_;
-    uint16_t capacity_;
-    uint32_t size_;
-    uint32_t buffer_[buffer_size];
-    uint32_t p_sum_;  // Should this just be recalculated when needed? Currently
-                      // causes branching.
-    uint64_t* data_;
-    static constexpr uint64_t MASK = 1;
-    static constexpr uint32_t VALUE_MASK = 1;
-    static constexpr uint32_t TYPE_MASK = 8;
-    static constexpr uint32_t INDEX_MASK = ((uint32_t(1) << 8) - 1);
+    uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
+    uint16_t capacity_;     ///< Number of 64-bit integers available in data.
+    uint32_t size_;         ///< Logical number of bits stored.
+    uint32_t p_sum_;  ///< Logical number of 1-bits stored.
+#pragma GCC diagnostic ignored "-Wpedantic"
+    uint32_t buffer_[buffer_size];  ///< Insert/remove buffer.
+#pragma GCC diagnostic pop
+    uint64_t* data_;  ///< Pointer to data storage.
+    /** @brief 0x1 to be used in  bit operations. */
+    static const constexpr uint64_t MASK = 1;
+    /** @brief Mask for accessing buffer value. */
+    static const constexpr uint32_t VALUE_MASK = 1;
+    /** @brief Mask for accessing buffer type. */
+    static const constexpr uint32_t TYPE_MASK = 8;
+    /** @brief Mask for accessing buffer index value. */
+    static const constexpr uint32_t INDEX_MASK = ((uint32_t(1) << 8) - 1);
+
+    // The buffer fill rate is stored in part of an 8-bit word
+    // where the rest is reserved for future meta-data use.
+    // This could be resolved with using 16 bits instead (without increasing the
+    // sizeof(leaf) value but there does not really appear to be any reason to
+    // do so.
     static_assert(buffer_size < 64);
 
    public:
+    /**
+     * @brief Leaf constructor
+     *
+     * The intention of this constructor is to enable either allocation of a
+     * larger consecutive memory block where the leaf struct can be placed at
+     * the start followed by the "data" section, or the data section can be
+     * allocated separately.
+     *
+     * @param capacity Number of 64-bit integers available for use in data.
+     * @param cata     Pointer to a contiguous memory area available for
+     * storage.
+     */
     leaf(uint64_t capacity, uint64_t* data) {
         buffer_count_ = 0;
         capacity_ = capacity;
@@ -38,6 +88,13 @@ class leaf {
         data_ = data;
     }
 
+    /**
+     * @brief Get the value of the i<sup>th</sup> element in the leaf.
+     *
+     * @param i Index to check
+     *
+     * @return Value of bit at index i.
+     */
     bool at(const uint32_t i) const {
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
@@ -60,9 +117,25 @@ class leaf {
         return MASK & (data_[i / WORD_BITS] >> (i % WORD_BITS));
     }
 
+    /** @brief Getter for p_sum_ */
     uint64_t p_sum() const { return p_sum_; }
+    /** @brief Getter for size_ */
     uint64_t size() const { return size_; }
 
+    /**
+     * @brief Insert x into position i
+     *
+     * The leaf **cannot reallocate** so inserting into a full leaf is undefined
+     * behaviour.
+     *
+     * If the the buffer is not full or the insertion is appending a new
+     * element, the operation can be considered constant time. If the buffer is
+     * full and the insertion is not appending, the operations will be linear in
+     * the leaf size.
+     *
+     * @param i Insertion index
+     * @param x Value to insert
+     */
     void insert(const uint64_t i, const bool x) {
 #ifdef DEBUG
         if (size_ >= capacity_ * WORD_BITS) {
@@ -73,6 +146,7 @@ class leaf {
         }
 #endif
         if (i == size_) {
+            // Convert to append if applicable.
             push_back(x);
             [[unlikely]] return;
         }
@@ -99,6 +173,8 @@ class leaf {
             if (buffer_count_ >= buffer_size) [[unlikely]]
                 commit();
         } else {
+            // If there is no buffer, a simple linear time insertion is done
+            // instead.
             size_++;
             auto target_word = i / WORD_BITS;
             auto target_offset = i % WORD_BITS;
@@ -113,6 +189,20 @@ class leaf {
         }
     }
 
+    /**
+     * @brief Remove the i<sup>th</sup> bit from the leaf.
+     *
+     * No implicit balancing is possible in leaves without a managing parent
+     * (bv::bit_vector or bv::node).
+     *
+     * If the the buffer is not full the operation can be considered constant
+     * time. If the buffer is full, the operations will be linear in the leaf
+     * size.
+     *
+     * @param i Index to remove
+     *
+     * @return Value of removed element.
+     */
     bool remove(const uint64_t i) {
         if constexpr (buffer_size != 0) {
             bool x = this->at(i);
@@ -145,6 +235,8 @@ class leaf {
                 commit();
             return x;
         } else {
+            // If buffer does not exits. A simple linear time removal is done
+            // instead.
             uint64_t target_word = i / WORD_BITS;
             uint64_t target_offset = i % WORD_BITS;
             bool x = MASK & (data_[target_word] >> target_offset);
@@ -166,9 +258,24 @@ class leaf {
         }
     }
 
-    uint64_t set(const uint64_t i, const bool x) {
+    /**
+     * @brief Set the i<sup>th</sup> bit to x.
+     *
+     * The value is changed in constant time (if buffer size is considered a
+     * constant). The change in data structure sum is returned for updateing
+     * cumulative sums in ancestor objects.
+     *
+     * @param i Index of bit to modify
+     * @param x New value for the i<sup>th</sup> element.
+     *
+     * @return \f$x - \mathrm{bv}[i]\f$
+     */
+    int set(const uint64_t i, const bool x) {
         uint64_t idx = i;
         if constexpr (buffer_size != 0) {
+            // If buffer exists, the index needs for the underlying structure
+            // needs to be modified. And if there exists an insertion to this
+            // location in the buffer, the insertion can simply be amended.
             for (uint8_t j = 0; j < buffer_count_; j++) {
                 uint64_t b = buffer_index(buffer_[j]);
                 if (b < i) {
@@ -176,7 +283,7 @@ class leaf {
                 } else if (b == i) {
                     if (buffer_is_insertion(buffer_[j])) {
                         if (buffer_value(buffer_[j]) != x) {
-                            uint64_t change = x ? 1 : -1;
+                            int change = x ? 1 : -1;
                             p_sum_ += change;
                             buffer_[j] ^= VALUE_MASK;
                             [[likely]] return change;
@@ -193,7 +300,7 @@ class leaf {
         uint64_t pos = idx % WORD_BITS;
 
         if ((data_[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)) {
-            uint64_t change = x ? 1 : -1;
+            int change = x ? 1 : -1;
             p_sum_ += change;
             data_[word_nr] ^= MASK << pos;
             [[likely]] return change;
@@ -201,6 +308,17 @@ class leaf {
         return 0;
     }
 
+    /**
+     * @brief Number of 1-bits up to position n.
+     *
+     * Counts the number of bits set in the first n bits.
+     *
+     * This is a simple linear operations of population counting.
+     *
+     * @param n Number of elements to include in the "summation".
+     *
+     * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
+     */
     uint64_t rank(const uint64_t n) const {
         uint64_t count = 0;
 
@@ -210,6 +328,8 @@ class leaf {
                 if (buffer_index(buffer_[i]) >= n) {
                     [[unlikely]] break;
                 }
+                // Location of the n<sup>th</sup> element needs to be amended
+                // base on buffer contents.
                 if (buffer_is_insertion(buffer_[i])) {
                     idx--;
                     count += buffer_value(buffer_[i]);
@@ -231,12 +351,23 @@ class leaf {
         return count;
     }
 
+    /**
+     * @brief Index of the x<sup>th</sup> 1-bit in the data structure
+     *
+     * Select is a simple (if somewhat slow) linear time operation.
+     *
+     * @param x Selection target.
+     *
+     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) = x\f$.
+     */
     uint32_t select(const uint32_t x) const {
         uint32_t pop = 0;
         uint32_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
 
+        // Step one 64-bit word at a time considering the buffer until pop >= x
         for (uint64_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += 64;
@@ -266,7 +397,11 @@ class leaf {
                 break;
         }
 
+        // Make sure we have not overshot the logical end of the structure.
         pos = size_ < pos ? size_ : pos;
+
+        // Decrement one bit at a time until we can't anymore without going
+        // under x.
         pos--;
         while (pop >= x && pos < capacity_ * 64) {
             pop -= at(pos);
@@ -275,25 +410,86 @@ class leaf {
         return ++pos;
     }
 
+    /**
+     * @brief Size of the leaf and associated data in bits.
+     */
     uint64_t bits_size() const {
         return 8 * (sizeof(*this) + capacity_ * sizeof(uint64_t));
     }
 
+    /**
+     * @brief Determine if reallocation / splitting is required prior to
+     * additional insertion of new elements.
+     *
+     * @return True if there is no guarantee that an insertion can be completed
+     *         without undefined behaviour.
+     */
     bool need_realloc() const { return size_ >= capacity_ * WORD_BITS; }
 
+    /**
+     * @brief Size of the leaf-associated data storage in 64-bit words.
+     *
+     * Primarily intended for debugging and validation.
+     *
+     * @return Size of internal data storage in 64-bit words.
+     */
     uint32_t capacity() const { return capacity_; }
-    
+
+    /**
+     * @brief Set the size of the leaf-associated data storage.
+     *
+     * Intended only to be set by an allocator after allocating additional
+     * storage for the leaf. Setting the capacity carelessly easily leads to
+     * undefined behaviour.
+     *
+     * @param cap New size for `data_`
+     */
     void capacity(uint32_t cap) { capacity_ = cap; }
 
+    /**
+     * @brief Sets the pointer to the leaf-associated data storage.
+     *
+     * Intended only to be set by an allocator after allocating additional
+     * storage for the leaf. Setting the the pointer carelessly easily leads to
+     * undefined behaviour.
+     *
+     * @param ptr Pointer to data storage.
+     */
     void set_data_ptr(uint64_t* ptr) { data_ = ptr; }
 
+    /**
+     * @brief Provides access to raw leaf-associated data
+     *
+     * Intended for use when rebalancing and splitting leaves.
+     *
+     * It is generally a very good idea to make sure the leaf buffer is
+     * committed before accessing the raw leaf data.
+     *
+     * @return Pointer to raw leaf data.
+     */
     uint64_t* data() { return data_; }
 
+    /**
+     * @brief Remove the fist "elems" elements from the leaf.
+     *
+     * Intended for removing elements that have been copied to a neighbouring
+     * leaf. Assumes that buffer has been committed before calling.
+     *
+     * Will update size and p_sum.
+     *
+     * @param elems number of elements to remove.
+     */
     void clear_first(uint64_t elems) {
+        // Important to ensure that all trailing data gets zeroed out to not
+        // cause undefined behaviour for select or copy operations.
         uint64_t ones = rank(elems);
         uint64_t words = elems / WORD_BITS;
 
         if (elems % WORD_BITS == 0) {
+            // If the data to remove happens to align with 64-bit words the
+            // removal can be done by simply shuffling elements. This could be
+            // memmove instead but testing indicates that it's not actually
+            // faster in this case.
             for (uint64_t i = 0; i < capacity_ - words; i++) {
                 data_[i] = data_[i + words];
             }
@@ -321,37 +517,54 @@ class leaf {
             }
             [[unlikely]] (void(0));
         }
-
         size_ -= elems;
         p_sum_ -= ones;
     }
 
-    template <class sibling_type>
-    void transfer_append(sibling_type* other, uint64_t elems) {
+    /**
+     * @brief Move "elems" elements from the start of "other" to the end of
+     * "this".
+     *
+     * **Will not** ensure sufficient capacity for the copy target.
+     *
+     * The operation will ensure that the buffers of both leaves are cleared
+     * before transferring elements. Elements are first copied, after which,
+     * elements are cleared from the sibling with `other->clear_first(elems)`.
+     *
+     * @param other Pointer to the next sibling.
+     * @param elems Number of elements to transfer.
+     */
+    void transfer_append(leaf* other, uint64_t elems) {
         commit();
         other->commit();
+
         uint64_t* o_data = other->data();
         uint64_t split_point = size_ % WORD_BITS;
         uint64_t target_word = size_ / WORD_BITS;
         uint64_t copy_words = elems / WORD_BITS;
         uint64_t overhang = elems % WORD_BITS;
+        // Branching depending on word alignment of source and target.
         if (split_point == 0) {
+            // Copy target is word aligned
             for (size_t i = 0; i < copy_words; i++) {
                 data_[target_word++] = o_data[i];
                 p_sum_ += __builtin_popcountll(o_data[i]);
             }
             if (overhang != 0) {
+                // Copy source is not word aligned
                 data_[target_word] =
                     o_data[copy_words] & ((MASK << overhang) - 1);
                 [[unlikely]] p_sum_ += __builtin_popcountll(data_[target_word]);
             }
         } else {
+            // Copy target is not word aligned
             for (size_t i = 0; i < copy_words; i++) {
                 data_[target_word++] |= o_data[i] << split_point;
                 data_[target_word] |= o_data[i] >> (WORD_BITS - split_point);
                 p_sum_ += __builtin_popcountll(o_data[i]);
             }
-            if (elems % 64 != 0) {
+            if (elems % WORD_BITS != 0) {
+                // Copy source is not word aligned.
                 uint64_t to_write =
                     o_data[copy_words] & ((MASK << overhang) - 1);
                 p_sum_ += __builtin_popcountll(to_write);
@@ -366,11 +579,23 @@ class leaf {
         other->clear_first(elems);
     }
 
+    /**
+     * @brief Remove the last "elems" elements from the leaf.
+     *
+     * Intended for removing elements that have been copied to a neighbouring
+     * leaf. Assumes that buffer has been committed before calling.
+     *
+     * Will update size and p_sum.
+     *
+     * @param elems number of elements to remove.
+     */
     void clear_last(uint64_t elems) {
         size_ -= elems;
         p_sum_ = rank(size_);
         uint64_t offset = size_ % 64;
         uint64_t words = size_ / 64;
+        // Important to ensure that all trailing data gets zeroed out to not
+        // cause undefined behaviour for select or copy operations.
         if (offset != 0) {
             [[likely]] data_[words++] &= (MASK << offset) - 1;
         }
@@ -379,6 +604,19 @@ class leaf {
         }
     }
 
+    /**
+     * @brief Move "elems" elements from the end of "other" to the start of
+     * "this".
+     *
+     * **Will not** ensure sufficient capacity for the copy target.
+     *
+     * The operation will ensure that the buffers of both leaves are cleared
+     * before transferring elements. Elements are first copied, after which,
+     * elements are cleared from the sibling with `other->clear_last(elems)`.
+     *
+     * @param other Pointer to the previous sibling.
+     * @param elems Number of elements to transfer.
+     */
     void transfer_prepend(leaf* other, uint64_t elems) {
         commit();
         other->commit();
@@ -405,13 +643,20 @@ class leaf {
         uint64_t source_word = other->size();
         uint64_t source_offset = source_word % 64;
         source_word /= 64;
+        // Somewhat complicated case handling based on target and source word
+        // alignment. Additional complications compared to transfer append is
+        // due to the both the start point and end point for the copy source not
+        // being word aligned.
         if (source_offset == 0) {
+            // Source is word aligned.
             if (overflow == 0) {
+                // Target is word aligned.
                 for (uint64_t i = words - 1; i < words; i--) {
                     data_[i] = o_data[--source_word];
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
             } else {
+                // Target is not word aligned.
                 source_word--;
                 for (uint64_t i = words; i > 0; i--) {
                     p_sum_ += __builtin_popcountll(o_data[source_word]);
@@ -424,13 +669,16 @@ class leaf {
             }
             [[unlikely]] (void(0));
         } else {
+            // Source is not word aligned
             if (overflow == 0) {
+                // Target is word aligned
                 for (uint64_t i = words - 1; i < words; i--) {
                     data_[i] = o_data[source_word] << (64 - source_offset);
                     data_[i] |= o_data[--source_word] >> source_offset;
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
             } else {
+                // Target is not word aligned
                 uint64_t w;
                 for (uint64_t i = words; i > 0; i--) {
                     w = o_data[source_word] << (64 - source_offset);
@@ -450,8 +698,22 @@ class leaf {
         other->clear_last(elems);
     }
 
-    template <class sibling_type>
-    void append_all(sibling_type* other) {
+    /**
+     * @brief Copy all elements from (the start of) "other" to the end of
+     * "this".
+     *
+     * Intended for merging leaves.
+     *
+     * **Will not** ensure sufficient capacity for merge.
+     *
+     * Will ensure that the buffers are empty for both leaves.
+     *
+     * Will now clear elements from "other" as it is assumed that "other" will
+     * be deallocated .
+     *
+     * @param other Pointer to next leaf.
+     */
+    void append_all(leaf* other) {
         commit();
         other->commit();
         uint64_t* o_data = other->data();
@@ -461,12 +723,16 @@ class leaf {
         uint64_t o_p_sum = other->p_sum();
         uint64_t o_words = o_size / 64;
         o_words += o_size % 64 == 0 ? 0 : 1;
+        // Elements are guaranteed to be fully word aligned in practice so
+        // branching is only required for word alignment of the target leaf.
         if (offset == 0) {
+            // Target is word aligned.
             for (uint64_t i = 0; i < o_words; i++) {
                 data_[word++] = o_data[i];
             }
             [[unlikely]] (void(0));
         } else {
+            // Target is not word aligned.
             for (uint64_t i = 0; i < o_words; i++) {
                 data_[word++] |= o_data[i] << offset;
                 data_[word] |= o_data[i] >> (64 - offset);
@@ -476,7 +742,18 @@ class leaf {
         p_sum_ += o_p_sum;
     }
 
+    /**
+     * @brief Commit and clear the Insert/Remove buffer for the leaf.
+     *
+     * Intended for clearing a full buffer before insertion or removal, and for
+     * ensuring an empty buffer before transfer operations.
+     *
+     * Slightly complicated but linear time function for committing all buffered
+     * operations to the underlying data.
+     */
     void commit() {
+        // Complicated bit manipulation but whacha gonna do. Hopefully won't
+        // need to debug this anymore.
         if constexpr (buffer_size == 0) return;
         if (buffer_count_ == 0) [[unlikely]]
             return;
@@ -575,9 +852,23 @@ class leaf {
         buffer_count_ = 0;
     }
 
+    /**
+     * @brief Ensure that the leaf is in a valid state.
+     *
+     * Will use assertions to check that the actual stored data agrees with
+     * stored metadata. Will not in any way that the leaf is in the correct
+     * state given the preceding sequence of operations, just that the leaf is
+     * in a state that is valid for a leaf.
+     *
+     * If the compiler flag `-DNDEBUG` is given, this function will do nothing
+     * and may be completely optimized out by an optimizing compiler.
+     *
+     * @return 1 for calculating the number of nodes in the tree.
+     */
     uint64_t validate() const {
         assert(size_ <= capacity_ * WORD_BITS);
         assert(p_sum_ <= size_);
+        assert(p_sum_ == rank(size_));
         uint64_t last_word = size_ / WORD_BITS;
         uint64_t overflow = size_ % WORD_BITS;
         if (overflow != 0) {
@@ -593,6 +884,14 @@ class leaf {
         return 1;
     }
 
+    /**
+     * @brief Output data stored in the leaf as json.
+     *
+     * Will output valid json, but will not output a trailing newline since the
+     * call is expected to be part of a recursive tree traversal.
+     *
+     * @param internal_only Will not output raw data it true to save space.
+     */
     void print(bool internal_only) const {
         std::cout << "{\n\"type\": \"leaf\",\n"
                   << "\"size\": " << size_ << ",\n"
@@ -627,22 +926,83 @@ class leaf {
     }
 
    protected:
-    uint8_t buffer_count() const { return buffer_count_; }
+    /**
+     * @brief Extract the value of a buffer element
+     *
+     * The First bit (lsb) of a 23-bit buffer element contains the value of the
+     * element.
+     *
+     * I.e. if `bv[i]` is `1`, then the buffer created for `remove(i)` will have
+     * a lsb with value 1.
+     *
+     * @param e Buffer element to extract value from.
+     *
+     * @return Boolean value indicating the value of the element referred to by
+     * the buffer.
+     */
     bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
 
+    /**
+     * @brief Extract type information of a buffer element.
+     *
+     * The fourth least significant bit (`0b1000`), contains a 1 if the buffered
+     * operation is an insertion.
+     *
+     * @param e Buffer element to extract type from.
+     *
+     * @return Boolean value True if the buffer is related to an insert
+     * operations, and false if the buffer is related to a removal.
+     */
     bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
 
-    uint64_t buffer_index(uint32_t e) const { return (e) >> 8; }
+    /**
+     * @brief Extract index information from a butter element.
+     *
+     * The 24 most significant bits of the 32-bit buffer element contain index
+     * information on the insert/removal operation.
+     *
+     * @param e Buffer element to extract index from.
+     *
+     * @return Index information related to the buffer element.
+     */
+    uint32_t buffer_index(uint32_t e) const { return (e) >> 8; }
 
+    /**
+     * @brief Updates index information for a specified buffer element.
+     *
+     * Clears index information for the i<sup>th</sup> buffer element and
+     * replases it with v.
+     *
+     * @param v Value to set the buffer index to.
+     * @param i Index of buffer element in buffer.
+     */
     void set_buffer_index(uint32_t v, uint8_t i) {
         buffer_[i] = (v << 8) | (buffer_[i] & INDEX_MASK);
     }
 
+    /**
+     * @brief Creates a new 32-bit buffer element with the given parameters.
+     *
+     * A new buffer element is typically created for insertion into the buffer.
+     *
+     * @param idx Index value for the new buffer element.
+     * @param t   Type (Insert/Remove) of new buffer element.
+     * @param v   Value associated with the new buffer element.
+     */
     uint32_t create_buffer(uint32_t idx, bool t, bool v) {
         return ((idx << 8) | (t ? TYPE_MASK : uint32_t(0))) |
                (v ? VALUE_MASK : uint32_t(0));
     }
 
+    /**
+     * @brief Insert a new element into the buffer.
+     *
+     * Existing elements with index idx or greater gets shuffled forward and the
+     * new element will overwrite the buffer at index idx.
+     *
+     * @param idx Position of the new element in the buffer.
+     * @param buf Element to insert.
+     */
     void insert_buffer(uint8_t idx, uint32_t buf) {
         memmove(buffer_ + idx + 1, buffer_ + idx,
                 (buffer_count_ - idx) * sizeof(uint32_t));
@@ -650,6 +1010,14 @@ class leaf {
         buffer_count_++;
     }
 
+    /**
+     * @brief Remove an element from the buffer.
+     *
+     * Existing elements with index greater than idx get shuffled backwards and
+     * the old element at idx will be overwritten.
+     *
+     * @param idx Location of the element in the buffer
+     */
     void delete_buffer_element(uint8_t idx) {
         buffer_count_--;
         memmove(buffer_ + idx, buffer_ + idx + 1,
@@ -657,6 +1025,16 @@ class leaf {
         buffer_[buffer_count_] = 0;
     }
 
+    /**
+     * @brief Add an element to the end of the leaf data.
+     *
+     * If naively writing to the next available position would cause an
+     * overflow, the buffer will be committed and this will guarantee that the
+     * next available position will become valid assuming proper handling of the
+     * leaf by the parent element.
+     *
+     * @param x Value to be appended to the data.
+     */
     void push_back(const bool x) {
         assert(size_ < capacity_ * WORD_BITS);
         auto pb_size = size_;
@@ -666,6 +1044,11 @@ class leaf {
             }
         }
 
+        // If the leaf has at some point been full and has subsequently shrunk
+        // due to removals, the next available position to write to without
+        // committing the buffer may be beyond the end of the data_ array. In
+        // this case the buffer will need to be committed before appending the
+        // new element.
         if (pb_size >= capacity_ * WORD_BITS) {
             commit();
             [[unlikely]] data_[size_ / WORD_BITS] |= uint64_t(x)
