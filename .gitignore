@@ -1,0 +1,63 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+bv_debug
+test/test
+bench
+brute
+
+# IDE stuff
+.vscode/
+.idea/*
+
+#Gcov
+*.gcda 
+*.gcno 
+*.gcov 
+test/*.gcdna 
+test/*.gcno 
+test/*.gcov
+index.info
+target/
+
+# API documentation
+html/
+
+#benchmark results
+*.tsv
+
+#valgrind
+callgrind.out.*
+cachegrind.out.*
+
+#gtest stuff
+test/
