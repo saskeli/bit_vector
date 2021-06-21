@@ -77,7 +77,7 @@ class leaf {
      * allocated separately.
      *
      * @param capacity Number of 64-bit integers available for use in data.
-     * @param cata     Pointer to a contiguous memory area available for
+     * @param data     Pointer to a contiguous memory area available for
      * storage.
      */
     leaf(uint64_t capacity, uint64_t* data) {

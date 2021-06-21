@@ -102,7 +102,7 @@ class bit_vector {
         if (root_is_leaf_) {
             allocator_->deallocate_leaf(l_root_);
         } else {
-            n_root_->template deallocate<allocator>();
+            n_root_->deallocate(allocator_);
             allocator_->deallocate_node(n_root_);
         }
         if (owned_allocator_) {
@@ -138,7 +138,7 @@ class bit_vector {
                     n_root_->append_child(sibling);
                     n_root_->append_child(l_root_);
                     root_is_leaf_ = false;
-                    n_root_->template insert<allocator>(index, value);
+                    n_root_->insert(index, value, allocator_);
                 } else {
                     uint64_t cap = l_root_->capacity();
                     l_root_ =
@@ -152,7 +152,7 @@ class bit_vector {
             if (n_root_->child_count() == branches) {
                 [[unlikely]] split_root();
             }
-            [[likely]] n_root_->template insert<allocator>(index, value);
+            [[likely]] n_root_->insert(index, value, allocator_);
         }
     }
 
@@ -182,7 +182,7 @@ class bit_vector {
         if (root_is_leaf_) {
             [[unlikely]] return l_root_->remove(index);
         } else {
-            bool v = n_root_->template remove<allocator>(index);
+            bool v = n_root_->remove(index, allocator_);
             if (n_root_->child_count() == 1) {
                 if (n_root_->has_leaves()) {
                     l_root_ = reinterpret_cast<leaf*>(n_root_->child(0));

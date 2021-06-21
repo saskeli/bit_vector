@@ -35,7 +35,7 @@ class malloc_alloc {
     node_type* allocate_node() {
         allocations_++;
         void* nd = malloc(sizeof(node_type));
-        return new (nd) node_type(this);
+        return new (nd) node_type();
     }
 
     /**

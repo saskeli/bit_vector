@@ -66,7 +66,7 @@ class node {
      * @brief Number of children in the 7 least significant bits and a bit
      * indicating whether the nodes children are laves or nodes.
      */
-    uint8_t meta_data_;
+    uint8_t meta_data_;  // Bad word alignment. 56 dead bits...
     /**
      * @brief Cumulative child sizes and `(~0) >> 1` for non-existing children.
      */
@@ -77,11 +77,6 @@ class node {
      */
     dtype child_sums_[branches];
     void* children_[branches];  ///< pointers to leaf_type or node children.
-    /**
-     * @brief Pointer to an allocator instance. Sadly this must be a void
-     * pointere due to otherwise generating a circular template reference.
-     */
-    void* allocator_;
 
     static_assert(leaf_size >= 256, "leaf size needs to be a at least 256");
     static_assert((leaf_size % 128) == 0,
@@ -94,12 +89,9 @@ class node {
    public:
     /**
      * @brief Constructor
-     *
-     * @param allocator Pointer to an allocator instance.
      */
-    node(void* allocator) {
+    node() {
         meta_data_ = 0;
-        allocator_ = allocator;
         for (uint8_t i = 0; i < branches; i++) {
             child_sizes_[i] = (~dtype(0)) >> 1;
             child_sums_[i] = (~dtype(0)) >> 1;
@@ -240,24 +232,24 @@ class node {
      * deallocation of children to the default destructor could lead to
      * deallocation of nodes that are still in use with other nodes.
      *
-     * @tparam allocator Type of allocator_
+     * @tparam allocator Type of `alloc`.
+     * @param alloc Allocator instance to use for deallocation.
      */
     template <class allocator>
-    void deallocate() {
+    void deallocate(allocator* alloc) {
         uint8_t c_count = child_count();
-        allocator* a = reinterpret_cast<allocator*>(allocator_);
         if (has_leaves()) {
             leaf_type** children = reinterpret_cast<leaf_type**>(children_);
             for (uint8_t i = 0; i < c_count; i++) {
                 leaf_type* l = children[i];
-                a->deallocate_leaf(l);
+                alloc->deallocate_leaf(l);
             }
         } else {
             node** children = reinterpret_cast<node**>(children_);
             for (uint8_t i = 0; i < c_count; i++) {
                 node* n = children[i];
-                n->template deallocate<allocator>();
-                a->deallocate_node(n);
+                n->deallocate(alloc);
+                alloc->deallocate_node(n);
             }
         }
     }
@@ -340,35 +332,66 @@ class node {
 
     /**
      * @brief Get i<sup>th</sup> child of the node.
-     * 
+     *
      * Mainly intended for use by bv::bit_vector for decreasing tree height.
-     * 
+     *
      * @param i Index of child to return.
-     * 
+     *
      * @return Pointer to the i<sup>th</sup> child.
      */
     void* child(uint8_t i) { return children_[i]; }
 
+    /**
+     * @brief Insert "value" at "index".
+     *
+     * Inserts into the logical bit vector whlie ensuring that structural
+     * invariants hold. Children will be rebalanced or split as necessary.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Location for insertion.
+     * @param value Boolean indicating the value for the new element.
+     * @param alloc Instance of allocator to use for allocation and
+     * reallocation.
+     */
     template <class allocator>
-    void insert(dtype index, bool value) {
+    void insert(dtype index, bool value, allocator* alloc) {
         if (has_leaves()) {
-            // std::cout << "Then this" << std::endl;
-            leaf_insert<allocator>(index, value);
+            leaf_insert(index, value, alloc);
         } else {
-            // std::cout << "First this" << std::endl;
-            [[likely]] node_insert<allocator>(index, value);
+            [[likely]] node_insert(index, value, alloc);
         }
     }
 
+    /**
+     * @brief Remove the index<sup>th</sup> element.
+     *
+     * Removes element at "index" while ensuring that strctural invariants hold.
+     * Children will be rebalanced and merger as necessary.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Location for removal.
+     * @param alloc Allocator to use for reallocation and deallocation.
+     */
     template <class allocator>
-    bool remove(dtype index) {
+    bool remove(dtype index, allocator* alloc) {
         if (has_leaves()) {
-            return leaf_remove<allocator>(index);
+            return leaf_remove(index, alloc);
         } else {
-            [[likely]] return node_remove<allocator>(index);
+            [[likely]] return node_remove(index, alloc);
         }
     }
 
+    /**
+     * @brief Remove the first "elems" elements form this node.
+     *
+     * Internal cumulative sizes and sums will be updated, but removed nodes
+     * will not be deallocated, as it is assumed that this is triggered after
+     * copying elements to the "left" sibling.
+     *
+     * @param elems Number of elements to remove.
+     */
     void clear_first(uint8_t elems) {
         dtype o_size = child_sizes_[elems - 1];
         dtype o_sum = child_sums_[elems - 1];
@@ -385,6 +408,16 @@ class node {
         meta_data_ -= elems;
     }
 
+    /**
+     * @brief Moves the fist "elems" elements from "other" to the end of "this".
+     *
+     * Elements are first copied to this node, after which `clear_firs(elems)`
+     * will be called on "other". Cumulative sizes and sums will be updated
+     * accordingly.
+     *
+     * @param other Node to transfer elements from.
+     * @param elems Number of elements to transfer.
+     */
     void transfer_append(node* other, uint8_t elems) {
         void** o_children = other->children();
         dtype* o_sizes = other->child_sizes();
@@ -402,6 +435,15 @@ class node {
         other->clear_first(elems);
     }
 
+    /**
+     * @brief Remove the last "elems" elemets from the node.
+     *
+     * Internal cumulative sizes and sums will be updated, but removed nodes
+     * will not be deallocated, as it is assumed that this is triggered after
+     * copying elements to the "right" sibling.
+     *
+     * @param elems Number of elements to remove
+     */
     void clear_last(uint8_t elems) {
         uint8_t size = child_count();
         for (uint8_t i = size - elems; i < size; i++) {
@@ -411,6 +453,17 @@ class node {
         meta_data_ -= elems;
     }
 
+    /**
+     * @brief Moves the last "elems" elements from "other" to the start of
+     * "this".
+     *
+     * Elements are first copied to this node, after which `clear_firs(elems)`
+     * will be called on "other". Cumulative sizes and sums will be updated
+     * accordingly.
+     *
+     * @param other Node to transfer elements from.
+     * @param elems Number of elements to transfer.
+     */
     void transfer_prepend(node* other, uint8_t elems) {
         void** o_children = other->children();
         dtype* o_sizes = other->child_sizes();
@@ -435,6 +488,15 @@ class node {
         other->clear_last(elems);
     }
 
+    /**
+     * @brief Copies all children from "other" to the end of this node.
+     *
+     * Internal cumulative sizes and sums will be updated for this node but not
+     * for other. This is used when merging 2 nodes, where the "right" sibling
+     * will be deallocated after copying.
+     *
+     * @param other Node to copy elements from.
+     */
     void append_all(node* other) {
         void** o_children = other->children();
         dtype* o_sizes = other->child_sizes();
@@ -449,6 +511,14 @@ class node {
         meta_data_ += o_size;
     }
 
+    /**
+     * @brief Size of the subtree in "allocated" bits.
+     *
+     * Reports number of bits allocated for this subtree, Does not take into
+     * account any sort of memory fragmentation or similar.
+     *
+     * @return Number of allocated bits.
+     */
     uint64_t bits_size() const {
         uint64_t ret = sizeof(node) * 8;
         if (has_leaves()) {
@@ -466,6 +536,27 @@ class node {
         return ret;
     }
 
+    /**
+     * @brief Check that the subtree structure is internally consistent.
+     *
+     * Checks that cumulative sizes and sums agree with the reported sizes and
+     * sums of the children.
+     *
+     * If the children are leaves, also checks the validity of capacity for the
+     * child.
+     *
+     * If compiled with `NDEBUG` defined, this function will do essentially
+     * nothing since all checks are based on C assertions.
+     *
+     * Also does not say anything about the correctness of the subtree given the
+     * sequence of operations up to this point. Only guarantees that the
+     * structure is internally consistent and "could" be the result of some
+     * valid sequence of operations.
+     *
+     * Number of nodes are reported for verification of allocation counts.
+     *
+     * @return Number of nodes in this subtree.
+     */
     uint64_t validate() const {
         uint64_t ret = 1;
         uint64_t child_s_sum = 0;
@@ -499,6 +590,16 @@ class node {
         return ret;
     }
 
+    /**
+     * @brief Outputs this subtree as json.
+     *
+     * Prints this and all subtrees recursively. A final new line will not be
+     * output, since it is assumed that this is called from another internal
+     * node or a root element like bv::bit_vector.
+     *
+     * @param internal_only If true, leaves will not output their data arrays to
+     * save space
+     */
     void print(bool internal_only) const {
         std::cout << "{\n\"type\": \"node\",\n"
                   << "\"has_leaves\": " << has_leaves() << ",\n"
@@ -548,6 +649,34 @@ class node {
     }
 
    protected:
+    /**
+     * @brief Find the lowest child index s.t. the cumulative size at the index
+     * is at least q.
+     *
+     * This is implemented as a branchless binary search that uses the "sign
+     * bit" for index manipulations instead of conditional moves. This is the
+     * reason for limiting the maximum data structure size to `(~dtype(0)) >>
+     * 1`.
+     *
+     * If \f$q > \f$ `size()`, this will return either the index of the last
+     * child or the index following the last child. Either way, this will likely
+     * very quickly lead to undefined behaviour and segmentation fault.
+     *
+     * If `size() > (~(dtype(0)) >> 1`, querying is considered undefined
+     * behaviour.
+     *
+     * This conditionally compiles the binary search based on acceptable branch
+     * factors. For low branching factors this is expected to be slightly slower
+     * than efficient vectorized linear searches. For higher branchin factors
+     * this branchless binary search should be faster as long as cache
+     * performance is good. Agressibe prefetching is done in an attempt to
+     * ensure that cache misses don't occur during querying. See
+     * https://github.com/saskeli/search_microbench for a simple benchmark.
+     *
+     * @param q Query target
+     * @return \f$\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sizes}[i] \geq
+     * q)\f$.
+     */
     uint8_t find_size(dtype q) const {
         constexpr dtype SIGN_BIT = ~((~dtype(0)) >> 1);
         constexpr dtype num_bits = sizeof(dtype) * 8;
@@ -605,14 +734,35 @@ class node {
                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
     }
 
+    /**
+     * @brief Find the lowest child index s.t. the cumulative sum at the index
+     * is at least q.
+     *
+     * This is implemented as a branchless binary search that uses the "sign
+     * bit" for index manipulations instead of conditional moves. This is the
+     * reason for limiting the maximum data structure size to `(~dtype(0)) >>
+     * 1`.
+     *
+     * If \f$q > \f$ `p_sum()`, this will return either the index of the last
+     * child or the index following the last child. Either way, this will likely
+     * very quickly lead to undefined behaviour and segmentation fault.
+     *
+     * If `p_sum() > (~(dtype(0)) >> 1`, querying is considered undefined
+     * behaviour.
+     *
+     * This conditionally compiles the binary search based on acceptable branch
+     * factors. For low branching factors this is expected to be slightly slower
+     * than efficient vectorized linear searches. For higher branchin factors
+     * this branchless binary search should be faster as long as cache
+     * performance is good. Agressibe prefetching is done in an attempt to
+     * ensure that cache misses don't occur during querying. See
+     * https://github.com/saskeli/search_microbench for a simple benchmark.
+     *
+     * @param q Query target
+     * @return \f$\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sums}[i] \geq
+     * q)\f$.
+     */
     uint8_t find_sum(dtype q) const {
-#ifdef DEBUG
-        if (q > child_sums_[child_count() - 1]) {
-            std::cerr << "Invalid select " << q << " > "
-                      << child_sums_[child_count() - 1] << std::endl;
-            assert(q <= child_sums_[child_count() - 1]);
-        }
-#endif
         constexpr dtype SIGN_BIT = ~((~dtype(0)) >> 1);
         constexpr dtype num_bits = sizeof(dtype) * 8;
         constexpr dtype lines = CACHE_LINE / sizeof(dtype);
@@ -669,47 +819,75 @@ class node {
                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
     }
 
+    /**
+     * @brief Ensure that there is space for insertion in the child leaves.
+     *
+     * If there is sufficient space in either sibling, elements will be
+     * transferred to the sibling with more room. If there is insufficient space
+     * in the siblings, a new leaf is allocated and elements are transferred
+     * from the target leaf to one of the siblings.
+     *
+     * Generally delays allocation of a new leaf as long as posisble, and when
+     * reallocating, generates a new leaf that is \f$\approx \frac{2}{3}\f$
+     * full.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Location of the full leaf.
+     * @param leaf Pointer to the full leaf.
+     * @param alloc Instance of allocator to use for reallocation.
+     */
     template <class allocator>
-    void rebalance_leaf(uint8_t index, leaf_type* leaf) {
+    void rebalance_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
+        // Number of leaves that can fit in the "left" sibling (with potential
+        // reallocation).
         uint32_t l_cap = 0;
         if (index > 0) {
             l_cap = child_sizes_[index - 1];
             l_cap -= index > 1 ? child_sizes_[index - 2] : 0;
             [[likely]] l_cap = leaf_size - l_cap;
         }
+        // Number of leaves that can fir in the "right" sibling (with potential
+        // reallocation).
         uint32_t r_cap = 0;
         if (index < child_count() - 1) {
             r_cap = child_sizes_[index + 1];
             r_cap -= child_sizes_[index];
             [[likely]] r_cap = leaf_size - r_cap;
         }
-        allocator* a = reinterpret_cast<allocator*>(allocator_);
         if (l_cap < 2 * leaf_size / 9 && r_cap < 2 * leaf_size / 9) {
+            // Rebalancing without creating a new leaf is impossible
+            // (impracitcal).
             leaf_type* a_child;
             leaf_type* b_child;
             leaf_type* new_child;
             if (index == 0) {
+                // If the full leaf is the first child, a new leaf is created
+                // between indexes 0 and 1.
                 dtype n_elem = child_sizes_[1] / 3;
                 dtype n_cap = (n_elem + 128) / 64;
                 n_cap += n_cap % 2;
                 n_cap = n_cap * 64 > leaf_size ? leaf_size / 64 : n_cap;
                 a_child = reinterpret_cast<leaf_type*>(children_[0]);
-                new_child = a->template allocate_leaf<leaf_type>(n_cap);
+                new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 b_child = reinterpret_cast<leaf_type*>(children_[1]);
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
                 [[unlikely]] index++;
             } else {
+                // If the full leaf is not the first child, a new leaf is
+                // created to the left of the full leaf.
                 a_child = reinterpret_cast<leaf_type*>(children_[index - 1]);
                 b_child = reinterpret_cast<leaf_type*>(children_[index]);
                 dtype n_elem = (a_child->size() + b_child->size()) / 3;
                 dtype n_cap = (n_elem + 128) / 64;
                 n_cap += n_cap % 2;
                 n_cap = n_cap * 64 > leaf_size ? leaf_size / 64 : n_cap;
-                new_child = a->template allocate_leaf<leaf_type>(n_cap);
+                new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
             }
+            // Update cumulative sizes and sums.
             for (uint8_t i = child_count(); i > index; i--) {
                 child_sizes_[i] = child_sizes_[i - 1];
                 child_sums_[i] = child_sums_[i - 1];
@@ -729,6 +907,8 @@ class node {
             children_[index] = new_child;
             [[unlikely]] meta_data_++;
         } else if (r_cap > l_cap) {
+            // Right sibling has more space than the left sibling. Move elements
+            // to right sibling
             leaf_type* sibling =
                 reinterpret_cast<leaf_type*>(children_[index + 1]);
             uint32_t n_size = sibling->size() + r_cap / 2;
@@ -738,7 +918,7 @@ class node {
                 n_size = n_size * WORD_BITS <= leaf_size
                              ? n_size
                              : leaf_size / WORD_BITS;
-                children_[index + 1] = a->template reallocate_leaf(
+                children_[index + 1] = alloc->reallocate_leaf(
                     sibling, sibling->capacity(), n_size);
                 sibling = reinterpret_cast<leaf_type*>(children_[index + 1]);
             }
@@ -750,6 +930,8 @@ class node {
                                      ? child_sums_[index - 1] + leaf->p_sum()
                                      : leaf->p_sum();
         } else {
+            // Left sibling has more space than the right sibling. Move elements
+            // to the left sibling.
             leaf_type* sibling =
                 reinterpret_cast<leaf_type*>(children_[index - 1]);
             uint32_t n_size = sibling->size() + l_cap / 2;
@@ -759,7 +941,7 @@ class node {
                 n_size = n_size * WORD_BITS <= leaf_size
                              ? n_size
                              : leaf_size / WORD_BITS;
-                children_[index - 1] = a->template reallocate_leaf(
+                children_[index - 1] = alloc->reallocate_leaf(
                     sibling, sibling->capacity(), n_size);
                 sibling = reinterpret_cast<leaf_type*>(children_[index - 1]);
             }
@@ -774,8 +956,19 @@ class node {
         }
     }
 
+    /**
+     * @brief Insertion operation if the children are leaves.
+     *
+     * Reallocation and rebalancing will take place as necessary.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Location of insertion.
+     * @param value Value to insert.
+     * @param alloc Instance of alloctor to use for allocation and reallocation.
+     */
     template <class allocator>
-    void leaf_insert(dtype index, bool value) {
+    void leaf_insert(dtype index, bool value, allocator* alloc) {
         uint8_t child_index = find_size(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
 #ifdef DEBUG
@@ -787,14 +980,13 @@ class node {
 #endif
         if (child->need_realloc()) {
             if (child->size() >= leaf_size) {
-                rebalance_leaf<allocator>(child_index, child);
+                rebalance_leaf(child_index, child, alloc);
             } else {
                 dtype cap = child->capacity();
                 children_[child_index] =
-                    reinterpret_cast<allocator*>(allocator_)
-                        ->reallocate_leaf(child, cap, cap + 2);
+                    alloc->reallocate_leaf(child, cap, cap + 2);
             }
-            return leaf_insert<allocator>(index, value);
+            return leaf_insert(index, value, alloc);
         }
         if (child_index != 0) {
             [[likely]] index -= child_sizes_[child_index - 1];
@@ -806,24 +998,43 @@ class node {
         child->insert(index, value);
     }
 
+    /**
+     * @brief Ensure that there is space for insertion in the child nodes.
+     *
+     * If there is sufficient space in either sibling, elements will be
+     * transferred to the sibling with more room. If there is insufficient space
+     * in the siblings, a new node is allocated and elements are transferred
+     * from the target node to one of the siblings.
+     *
+     * Generally delays allocation of a new node as long as posisble, and when
+     * reallocating, generates a new node that is \f$\approx \frac{2}{3}\f$
+     * full.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Location of the full node.
+     * @param alloc Allocator instance to use for allocation.
+     */
     template <class allocator>
-    void rebalance_node(uint8_t index) {
+    void rebalance_node(uint8_t index, allocator* alloc) {
+        // Number of elements that can be added to the left sibling.
         uint32_t l_cap = 0;
         if (index > 0) {
             [[likely]] l_cap =
                 branches -
                 reinterpret_cast<node*>(children_[index - 1])->child_count();
         }
+        // Number of elements that can be aded to the right sibling.
         uint32_t r_cap = 0;
         if (index < child_count() - 1) {
             [[likely]] r_cap =
                 branches -
                 reinterpret_cast<node*>(children_[index + 1])->child_count();
         }
-        allocator* a = reinterpret_cast<allocator*>(allocator_);
         node* a_node;
         node* b_node;
         if (l_cap <= 1 && r_cap <= 1) {
+            // There is no room in either sibling.
             if (index == 0) {
                 a_node = reinterpret_cast<node*>(children_[0]);
                 b_node = reinterpret_cast<node*>(children_[1]);
@@ -832,7 +1043,7 @@ class node {
                 a_node = reinterpret_cast<node*>(children_[index - 1]);
                 b_node = reinterpret_cast<node*>(children_[index]);
             }
-            node* new_child = a->template allocate_node<node>();
+            node* new_child = alloc->template allocate_node<node>();
             new_child->has_leaves(a_node->has_leaves());
             new_child->transfer_append(b_node, branches / 3);
             new_child->transfer_prepend(a_node, branches / 3);
@@ -856,15 +1067,18 @@ class node {
             meta_data_++;
             [[unlikely]] return;
         } else if (l_cap > r_cap) {
+            // There is more room in the left sibling.
             a_node = reinterpret_cast<node*>(children_[index - 1]);
             b_node = reinterpret_cast<node*>(children_[index]);
             a_node->transfer_append(b_node, l_cap / 2);
             index--;
         } else {
+            // There is more room in the right sibling.
             a_node = reinterpret_cast<node*>(children_[index]);
             b_node = reinterpret_cast<node*>(children_[index + 1]);
             b_node->transfer_prepend(a_node, r_cap / 2);
         }
+        // Fix cumulative sums and sizes.
         if (index == 0) {
             child_sizes_[0] = a_node->size();
             [[unlikely]] child_sums_[0] = a_node->p_sum();
@@ -874,8 +1088,19 @@ class node {
         }
     }
 
+    /**
+     * @brief Insertion operation if the children are internal nodes.
+     *
+     * Reallocation and rebalancing will take place as necessary.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Location of insertion.
+     * @param value Value to insert.
+     * @param alloc Allocator instance to use for allocation and reallocation.
+     */
     template <class allocator>
-    void node_insert(dtype index, bool value) {
+    void node_insert(dtype index, bool value, allocator* alloc) {
         uint8_t child_index = find_size(index);
         node* child = reinterpret_cast<node*>(children_[child_index]);
 #ifdef DEBUG
@@ -886,7 +1111,7 @@ class node {
         }
 #endif
         if (child->child_count() == branches) {
-            rebalance_node<allocator>(child_index);
+            rebalance_node(child_index, alloc);
             child_index = find_size(index);
             [[unlikely]] child =
                 reinterpret_cast<node*>(children_[child_index]);
@@ -898,11 +1123,26 @@ class node {
             child_sizes_[i]++;
             child_sums_[i] += value;
         }
-        child->template insert<allocator>(index, value);
+        child->insert(index, value, alloc);
     }
 
+    /**
+     * @brief Transfer elements from the "right" leaf to the "left" leaf.
+     *
+     * Intended for rebalancing when a removal targets the "left" leaf but
+     * there are too few elements in the leaf to maintain structural invariants.
+     *
+     * Only called when the "left" leaf has index 0. Thus no need for the
+     * target indexes for reallocation.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param a "Left" leaf.
+     * @param b "Right" leaf.
+     * @param alloc Allocator to use for allocation and reallocation.
+     */
     template <class allocator>
-    void rebalance_leaves_right(leaf_type* a, leaf_type* b) {
+    void rebalance_leaves_right(leaf_type* a, leaf_type* b, allocator* alloc) {
         dtype a_cap = a->capacity();
         dtype addition = (b->size() - leaf_size / 3) / 2;
         if (a_cap * 64 < a->size() + addition) {
@@ -910,8 +1150,7 @@ class node {
             n_cap += n_cap % 2;
             n_cap =
                 n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
-            a = reinterpret_cast<allocator*>(allocator_)
-                    ->reallocate_leaf(a, a_cap, n_cap);
+            a = alloc->reallocate_leaf(a, a_cap, n_cap);
             children_[0] = a;
         }
         a->transfer_append(b, addition);
@@ -919,8 +1158,22 @@ class node {
         child_sums_[0] = a->p_sum();
     }
 
+    /**
+     * @brief Transfer elements from the "left" leaf to the "right" leaf.
+     *
+     * Intended for rebalancing when a removal targets the "right" leaf but
+     * there are too few elements in the leaf to maintain structural invariants.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param a "Left" leaf.
+     * @param b "Right" leaf.
+     * @param idx Index of the "left" leaf for use when reallocating.
+     * @param alloc Allocator instance to use for allocation and reallocation.
+     */
     template <class allocator>
-    void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx) {
+    void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx,
+                               allocator* alloc) {
         dtype b_cap = b->capacity();
         dtype addition = (a->size() - leaf_size / 3) / 2;
         if (b_cap * 64 < b->size() + addition) {
@@ -928,8 +1181,7 @@ class node {
             n_cap += n_cap % 2;
             n_cap =
                 n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
-            b = reinterpret_cast<allocator*>(allocator_)
-                    ->reallocate_leaf(b, b_cap, n_cap);
+            b = alloc->reallocate_leaf(b, b_cap, n_cap);
             children_[idx + 1] = b;
         }
         b->transfer_prepend(a, addition);
@@ -942,19 +1194,33 @@ class node {
         }
     }
 
+    /**
+     * @brief Merge the right leaf into the left leaf.
+     *
+     * Intended for when a removal would break structural invariant and there
+     * are not enough elements in siblings to transfer elements wilhe
+     * maintaining invariants.
+     *
+     * @tparam allocator Type of `alloc`
+     *
+     * @param a "Left" leaf.
+     * @param b "Right" leaf.
+     * @param idx Index of left leaf for reallocation.
+     * @param alloc Allocator instance to use for reallocation and deallocation.
+     */
     template <class allocator>
-    void merge_leaves(leaf_type* a, leaf_type* b, uint8_t idx) {
+    void merge_leaves(leaf_type* a, leaf_type* b, uint8_t idx,
+                      allocator* alloc) {
         dtype a_cap = a->capacity();
         if (a_cap * 64 < a->size() + b->size()) {
             dtype n_cap = 1 + (a->size() + b->size()) / 64;
             n_cap += n_cap % 2;
             n_cap =
                 n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
-            a = reinterpret_cast<allocator*>(allocator_)
-                    ->reallocate_leaf(a, a_cap, n_cap);
+            a = alloc->reallocate_leaf(a, a_cap, n_cap);
         }
         a->append_all(b);
-        reinterpret_cast<allocator*>(allocator_)->deallocate_leaf(b);
+        alloc->deallocate_leaf(b);
         uint8_t count = child_count();
         for (uint8_t i = idx; i < count - 1; i++) {
             child_sums_[i] = child_sums_[i + 1];
@@ -967,27 +1233,40 @@ class node {
         meta_data_--;
     }
 
+    /**
+     * @brief Removal used when the children are leaves.
+     *
+     * Will maintain structural invarians by, reallocating and rebalancing as
+     * necessary.
+     *
+     * @tparam Allocator Type of `alloc`.
+     *
+     * @param index Index of element to remove.
+     * @param alloc Allocator instance to use for reallocation and deallocation.
+     *
+     * @return Value of removed element.
+     */
     template <class allocator>
-    bool leaf_remove(dtype index) {
+    bool leaf_remove(dtype index, allocator* alloc) {
         uint8_t child_index = find_size(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->size() <= leaf_size / 3) {
             if (child_index == 0) {
                 leaf_type* sibling = reinterpret_cast<leaf_type*>(children_[1]);
                 if (sibling->size() > leaf_size * 5 / 9) {
-                    rebalance_leaves_right<allocator>(child, sibling);
+                    rebalance_leaves_right(child, sibling, alloc);
                 } else {
-                    merge_leaves<allocator>(child, sibling, 0);
+                    merge_leaves(child, sibling, 0, alloc);
                 }
                 [[unlikely]] ((void)0);
             } else {
                 leaf_type* sibling =
                     reinterpret_cast<leaf_type*>(children_[child_index - 1]);
                 if (sibling->size() > leaf_size * 5 / 9) {
-                    rebalance_leaves_left<allocator>(sibling, child,
-                                                     child_index - 1);
+                    rebalance_leaves_left(sibling, child, child_index - 1,
+                                          alloc);
                 } else {
-                    merge_leaves<allocator>(sibling, child, child_index - 1);
+                    merge_leaves(sibling, child, child_index - 1, alloc);
                 }
             }
             child_index = find_size(index);
@@ -1005,12 +1284,42 @@ class node {
         return value;
     }
 
+    /**
+     * @brief Transfer elements from the "right" node to the "left" node.
+     *
+     * Intended for rebalancing when a removal targets the "left" node but
+     * there are too few elements in the node to ensure that structural
+     * invariants are maintained.
+     *
+     * Only called when the "left" node has index 0. Thus no need for the
+     * target indexes for reallocation.
+     *
+     * @tparam allocator Type of `allocator_`.
+     *
+     * @param a "Left" node.
+     * @param b "Right" node.
+     * @param idx Index of "left" node for updating cumulative sizes and sums.
+     */
     void rebalance_nodes_right(node* a, node* b, uint8_t idx) {
         a->transfer_append(b, (b->child_count() - branches / 3) / 2);
         child_sizes_[idx] = a->size();
         [[unlikely]] child_sums_[idx] = a->p_sum();
     }
 
+    /**
+     * @brief Transfer elements from the "lef" node to the "right" node.
+     *
+     * Intended for rebalancing when a removal targets the "right" node but
+     * there are too few elements in the node to ensure that structural
+     * invariants are maintained.
+     *
+     * @tparam allocator Type of `allocator_`.
+     *
+     * @param a "Left" leaf.
+     * @param b "Right" leaf.
+     * @param idx Index of the Left node for use when updating cumulative sizes
+     * and sums.
+     */
     void rebalance_nodes_left(node* a, node* b, uint8_t idx) {
         b->transfer_prepend(a, (a->child_count() - branches / 3) / 2);
         if (idx == 0) {
@@ -1022,10 +1331,25 @@ class node {
         }
     }
 
+    /**
+     * @brief Transfer all from the "right" node to the "left" node.
+     *
+     * Intended for rebalancing when a removal may break structural invariants
+     * but rebalancing is impractical due to fill rate of siblings being
+     * \f$\approx \frac{1}{3}\f$. Nodes will be merged instead.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param a "Left" leaf.
+     * @param b "Right" leaf.
+     * @param idx Index of the "left" node for updating cumulative sums and
+     * sizes.
+     * @param alloc Allocator instance to use for deallocation.
+     */
     template <class allocator>
-    void merge_nodes(node* a, node* b, uint8_t idx) {
+    void merge_nodes(node* a, node* b, uint8_t idx, allocator* alloc) {
         a->append_all(b);
-        reinterpret_cast<allocator*>(allocator_)->deallocate_node(b);
+        alloc->deallocate_node(b);
         uint8_t count = child_count();
         for (uint8_t i = idx; i < count - 1; i++) {
             child_sums_[i] = child_sums_[i + 1];
@@ -1038,8 +1362,21 @@ class node {
         meta_data_--;
     }
 
+    /**
+     * @brief Removal operation when children are internal nodes.
+     *
+     * Recursively call the removal to children that are internal nodes.
+     * Maintains structural invariants by rebalancing and merging nodes as
+     * necessary.
+     *
+     * @tparam allocator Type of `alloc`.
+     *
+     * @param index Index of element to be removed.
+     * @param alloc Allocator instanve for eallocation and deallocatioin
+     * @return Value of removed element.
+     */
     template <class allocator>
-    bool node_remove(dtype index) {
+    bool node_remove(dtype index, allocator* alloc) {
         uint8_t child_index = find_size(index + 1);
         node* child = reinterpret_cast<node*>(children_[child_index]);
         if (child->child_count() <= branches / 3) {
@@ -1048,7 +1385,7 @@ class node {
                 if (sibling->child_count() > branches * 5 / 9) {
                     rebalance_nodes_right(child, sibling, 0);
                 } else {
-                    merge_nodes<allocator>(child, sibling, 0);
+                    merge_nodes(child, sibling, 0, alloc);
                 }
                 [[unlikely]] ((void)0);
             } else {
@@ -1057,7 +1394,7 @@ class node {
                 if (sibling->child_count() > branches * 5 / 9) {
                     rebalance_nodes_left(sibling, child, child_index - 1);
                 } else {
-                    merge_nodes<allocator>(sibling, child, child_index - 1);
+                    merge_nodes(sibling, child, child_index - 1, alloc);
                 }
             }
             child_index = find_size(index + 1);
@@ -1067,7 +1404,7 @@ class node {
         if (child_index != 0) {
             [[likely]] index -= child_sizes_[child_index - 1];
         }
-        bool value = child->template remove<allocator>(index);
+        bool value = child->remove(index, alloc);
         uint8_t c_count = child_count();
         for (uint8_t i = child_index; i < c_count; i++) {
             child_sizes_[i]--;
