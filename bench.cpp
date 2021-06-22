@@ -50,7 +50,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
     std::vector<uint64_t> loc, val;
 
-    std::cout << "type\tbuffer\tbranch\tleaf_size\tsize\tremove\tinsert\tset\t"
+    std::cout << "type\tbuffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\t"
               << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
@@ -73,7 +73,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
             std::cout << "uint64_t\t";
         }
         std::cout << int(buffer) << "\t" << int(branch) << "\t" << leaf_size << "\t"
-                  << target << "\t";
+                  << seed << "\t" << target << "\t";
 
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
@@ -204,7 +204,7 @@ int main(int argc, char const *argv[]) {
             test<dyn::ub_suc_bv, 0, 1, 0, 16, 8192>(size, steps, seed);
             break;
         case 3:
-            std::cerr << "2: leaf, 16, 0, 4096" << std::endl;
+            std::cerr << "3: leaf, 16, 0, 4096" << std::endl;
             test<dyn::b_suc_bv, 0, 1, 8, 16, 8192>(size, steps, seed);
             break;
         case 4:
