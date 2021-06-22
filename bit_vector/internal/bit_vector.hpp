@@ -1,6 +1,10 @@
 #ifndef BV_BIT_VECTOR_HPP
 #define BV_BIT_VECTOR_HPP
 
+#ifndef WORD_BITS
+#define WORD_BITS 64
+#endif
+
 #include <cassert>
 #include <cstdint>
 
@@ -74,7 +78,7 @@ class bit_vector {
     bit_vector(allocator* alloc) {
         allocator_ = alloc;
         l_root_ =
-            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
+            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * WORD_BITS));
     }
 
     /**
@@ -87,7 +91,7 @@ class bit_vector {
         allocator_ = new allocator();
         owned_allocator_ = true;
         l_root_ =
-            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * 64));
+            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * WORD_BITS));
     }
 
     /**
@@ -127,11 +131,18 @@ class bit_vector {
      * @param value What should be inserted at `index`.
      */
     void insert(uint64_t index, bool value) {
+#ifdef DEBUG
+        if (index > size()) {
+            std::cerr << "Invalid insertion to index " << index << " for "
+                      << size() << " element bit vector." << std::endl;
+            assert(index <= size());
+        }
+#endif
         if (root_is_leaf_) {
             if (l_root_->need_realloc()) {
                 if (l_root_->size() >= leaf_size) {
                     leaf* sibling = allocator_->template allocate_leaf<leaf>(
-                        leaf_size / (2 * 64));
+                        leaf_size / (2 * WORD_BITS));
                     sibling->transfer_append(l_root_, leaf_size / 2);
                     n_root_ = allocator_->template allocate_node<node>();
                     n_root_->has_leaves(true);

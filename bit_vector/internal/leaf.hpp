@@ -900,12 +900,14 @@ class leaf {
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
                   << "\"buffer\": [\n";
         for (uint8_t i = 0; i < buffer_count_; i++) {
+#pragma GCC diagnostic ignored "-Warray-bounds"
             std::cout << "{\"is_insertion\": "
                       << buffer_is_insertion(buffer_[i]) << ", "
                       << "\"buffer_value\": " << buffer_value(buffer_[i])
                       << ", "
                       << "\"buffer_index\": " << buffer_index(buffer_[i])
                       << "}";
+#pragma GCC diagnostic pop
             if (i != buffer_count_ - 1) {
                 std::cout << ",\n";
             }
