@@ -75,13 +75,13 @@ test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
 test: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(CFLAGS) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
+	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE_DYN) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 
 cover: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
+	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE_DYN) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 	gcov test/test.cpp
 	lcov -c -d . -o index.info
