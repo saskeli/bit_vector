@@ -93,18 +93,21 @@ Include dependency graph for bv.hpp:</div>
 <div class="center"><img src="bv_8hpp__incl.png" border="0" usemap="#bit__vector_2bv_8hpp" alt=""/></div>
 <map name="bit__vector_2bv_8hpp" id="bit__vector_2bv_8hpp">
 <area shape="rect" title="Type defintions for dynamic bit vectors." alt="" coords="251,5,371,32"/>
-<area shape="rect" href="allocator_8hpp_source.html" title=" " alt="" coords="471,80,612,107"/>
+<area shape="rect" href="allocator_8hpp_source.html" title=" " alt="" coords="528,80,669,107"/>
 <area shape="rect" href="bit__vector_8hpp_source.html" title=" " alt="" coords="5,80,155,107"/>
 <area shape="rect" href="leaf_8hpp_source.html" title=" " alt="" coords="325,80,440,107"/>
 <area shape="rect" href="node_8hpp_source.html" title=" " alt="" coords="179,80,301,107"/>
-<area shape="rect" title=" " alt="" coords="152,155,213,181"/>
-<area shape="rect" title=" " alt="" coords="610,155,670,181"/>
-<area shape="rect" title=" " alt="" coords="237,155,299,181"/>
-<area shape="rect" title=" " alt="" coords="513,155,585,181"/>
-<area shape="rect" title=" " alt="" coords="694,155,741,181"/>
-<area shape="rect" title=" " alt="" coords="62,155,127,181"/>
-<area shape="rect" title=" " alt="" coords="323,155,410,181"/>
-<area shape="rect" title=" " alt="" coords="434,155,489,181"/>
+<area shape="rect" title=" " alt="" coords="137,155,199,181"/>
+<area shape="rect" title=" " alt="" coords="775,155,835,181"/>
+<area shape="rect" title=" " alt="" coords="523,155,584,181"/>
+<area shape="rect" title=" " alt="" coords="608,155,680,181"/>
+<area shape="rect" title=" " alt="" coords="705,155,751,181"/>
+<area shape="rect" title=" " alt="" coords="47,155,113,181"/>
+<area shape="rect" title=" " alt="" coords="333,155,419,181"/>
+<area shape="rect" title=" " alt="" coords="443,155,498,181"/>
+<area shape="rect" href="libpopcnt_8h_source.html" title=" " alt="" coords="223,155,308,181"/>
+<area shape="rect" title=" " alt="" coords="187,229,253,256"/>
+<area shape="rect" title=" " alt="" coords="277,229,342,256"/>
 </map>
 </div>
 </div>
@@ -112,14 +115,14 @@ Include dependency graph for bv.hpp:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:acdb04427ddbfe8e99b483f1d89138efa"><td class="memTemplParams" colspan="2">template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt; </td></tr>
-<tr class="memitem:acdb04427ddbfe8e99b483f1d89138efa"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bv_8hpp.html#acdb04427ddbfe8e99b483f1d89138efa">bv::simple_bv</a> = bit_vector&lt; leaf&lt; buffer_size &gt;, node&lt; leaf&lt; buffer_size &gt;, uint64_t, leaf_size, branching_factor &gt;, malloc_alloc, leaf_size, branching_factor &gt;</td></tr>
-<tr class="memdesc:acdb04427ddbfe8e99b483f1d89138efa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper type definition template for bit vector with at most 2^63 elements.  <a href="bv_8hpp.html#acdb04427ddbfe8e99b483f1d89138efa">More...</a><br /></td></tr>
-<tr class="separator:acdb04427ddbfe8e99b483f1d89138efa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4d872b3d9e34d95706dfec0ebdb32a93"><td class="memTemplParams" colspan="2">template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt; </td></tr>
-<tr class="memitem:a4d872b3d9e34d95706dfec0ebdb32a93"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bv_8hpp.html#a4d872b3d9e34d95706dfec0ebdb32a93">bv::small_bv</a> = bit_vector&lt; leaf&lt; buffer_size &gt;, node&lt; leaf&lt; buffer_size &gt;, uint32_t, leaf_size, branching_factor &gt;, malloc_alloc, leaf_size, branching_factor &gt;</td></tr>
-<tr class="memdesc:a4d872b3d9e34d95706dfec0ebdb32a93"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper type definition template for bit vector with at most 2^31 elements.  <a href="bv_8hpp.html#a4d872b3d9e34d95706dfec0ebdb32a93">More...</a><br /></td></tr>
-<tr class="separator:a4d872b3d9e34d95706dfec0ebdb32a93"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7cd44cd9e01cde493f5c7301c1dc1071"><td class="memTemplParams" colspan="2">template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor, bool avx = true&gt; </td></tr>
+<tr class="memitem:a7cd44cd9e01cde493f5c7301c1dc1071"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bv_8hpp.html#a7cd44cd9e01cde493f5c7301c1dc1071">bv::simple_bv</a> = bit_vector&lt; leaf&lt; buffer_size, avx &gt;, node&lt; leaf&lt; buffer_size &gt;, uint64_t, leaf_size, branching_factor &gt;, malloc_alloc, leaf_size, branching_factor &gt;</td></tr>
+<tr class="memdesc:a7cd44cd9e01cde493f5c7301c1dc1071"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper type definition template for bit vector with at most 2^63 elements.  <a href="bv_8hpp.html#a7cd44cd9e01cde493f5c7301c1dc1071">More...</a><br /></td></tr>
+<tr class="separator:a7cd44cd9e01cde493f5c7301c1dc1071"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa53571a222e32ce04cd11546c29d9e33"><td class="memTemplParams" colspan="2">template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor, bool avx = true&gt; </td></tr>
+<tr class="memitem:aa53571a222e32ce04cd11546c29d9e33"><td class="memTemplItemLeft" align="right" valign="top">using&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="bv_8hpp.html#aa53571a222e32ce04cd11546c29d9e33">bv::small_bv</a> = bit_vector&lt; leaf&lt; buffer_size, avx &gt;, node&lt; leaf&lt; buffer_size &gt;, uint32_t, leaf_size, branching_factor &gt;, malloc_alloc, leaf_size, branching_factor &gt;</td></tr>
+<tr class="memdesc:aa53571a222e32ce04cd11546c29d9e33"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper type definition template for bit vector with at most 2^31 elements.  <a href="bv_8hpp.html#aa53571a222e32ce04cd11546c29d9e33">More...</a><br /></td></tr>
+<tr class="separator:aa53571a222e32ce04cd11546c29d9e33"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4b92c0a07b306636aec9f18892e47447"><td class="memItemLeft" align="right" valign="top">typedef simple_bv&lt; 8, 16384, 64 &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">bv::bv</a></td></tr>
 <tr class="memdesc:a4b92c0a07b306636aec9f18892e47447"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default dynamic bit vector type.  <a href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">More...</a><br /></td></tr>
 <tr class="separator:a4b92c0a07b306636aec9f18892e47447"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -156,16 +159,16 @@ Typedefs</h2></td></tr>
 
 </div>
 </div>
-<a id="acdb04427ddbfe8e99b483f1d89138efa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acdb04427ddbfe8e99b483f1d89138efa">&#9670;&nbsp;</a></span>simple_bv</h2>
+<a id="a7cd44cd9e01cde493f5c7301c1dc1071"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7cd44cd9e01cde493f5c7301c1dc1071">&#9670;&nbsp;</a></span>simple_bv</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt; </div>
+template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor, bool avx = true&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">using <a class="el" href="bv_8hpp.html#acdb04427ddbfe8e99b483f1d89138efa">bv::simple_bv</a> = typedef bit_vector&lt;leaf&lt;buffer_size&gt;, node&lt;leaf&lt;buffer_size&gt;, uint64_t, leaf_size, branching_factor&gt;, malloc_alloc, leaf_size, branching_factor&gt;</td>
+          <td class="memname">using <a class="el" href="bv_8hpp.html#a7cd44cd9e01cde493f5c7301c1dc1071">bv::simple_bv</a> = typedef bit_vector&lt;leaf&lt;buffer_size, avx&gt;, node&lt;leaf&lt;buffer_size&gt;, uint64_t, leaf_size, branching_factor&gt;, malloc_alloc, leaf_size, branching_factor&gt;</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -180,22 +183,23 @@ template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt
  Needs to be divisible by 64 and in the [265, 16777215) range. </td></tr>
     <tr><td class="paramname">branching_factor</td><td>Maximum number of children for an internal node.<br  />
  Needs to be one of {8, 16, 32, 64, 128}. </td></tr>
+    <tr><td class="paramname">avx</td><td>Should avx population counting be used for rank. </td></tr>
   </table>
   </dd>
 </dl>
 
 </div>
 </div>
-<a id="a4d872b3d9e34d95706dfec0ebdb32a93"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4d872b3d9e34d95706dfec0ebdb32a93">&#9670;&nbsp;</a></span>small_bv</h2>
+<a id="aa53571a222e32ce04cd11546c29d9e33"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa53571a222e32ce04cd11546c29d9e33">&#9670;&nbsp;</a></span>small_bv</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt; </div>
+template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor, bool avx = true&gt; </div>
       <table class="memname">
         <tr>
-          <td class="memname">using <a class="el" href="bv_8hpp.html#a4d872b3d9e34d95706dfec0ebdb32a93">bv::small_bv</a> = typedef bit_vector&lt;leaf&lt;buffer_size&gt;, node&lt;leaf&lt;buffer_size&gt;, uint32_t, leaf_size, branching_factor&gt;, malloc_alloc, leaf_size, branching_factor&gt;</td>
+          <td class="memname">using <a class="el" href="bv_8hpp.html#aa53571a222e32ce04cd11546c29d9e33">bv::small_bv</a> = typedef bit_vector&lt;leaf&lt;buffer_size, avx&gt;, node&lt;leaf&lt;buffer_size&gt;, uint32_t, leaf_size, branching_factor&gt;, malloc_alloc, leaf_size, branching_factor&gt;</td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -211,6 +215,7 @@ template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt
  265 &lt;= <code>leaf_size</code> &lt; 16777215. </td></tr>
     <tr><td class="paramname">branching_factor</td><td>Maximum number of children for an internal node.<br  />
  Needs to be one 8, 16, 32, 64 or 128. </td></tr>
+    <tr><td class="paramname">avx</td><td>Should avx population counting be used for rank. </td></tr>
   </table>
   </dd>
 </dl>
@@ -220,7 +225,7 @@ template&lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor&gt
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jun 21 2021 12:43:47 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.17"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Bit vector: bv::leaf&lt; buffer_size &gt; Class Template Reference</title>
+<title>Bit vector: bv::leaf&lt; buffer_size, avx &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -81,7 +81,7 @@ $(function() {
 <a href="#pro-static-attribs">Static Protected Attributes</a> &#124;
 <a href="classbv_1_1leaf-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">bv::leaf&lt; buffer_size &gt; Class Template Reference</div>  </div>
+<div class="title">bv::leaf&lt; buffer_size, avx &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
@@ -92,155 +92,155 @@ $(function() {
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:afa1aa7c18f68b590e57b8cdab51313ae"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#afa1aa7c18f68b590e57b8cdab51313ae">leaf</a> (uint64_t <a class="el" href="classbv_1_1leaf.html#ae19f59b4c4d82bf340f1017c495210d3">capacity</a>, uint64_t *<a class="el" href="classbv_1_1leaf.html#a36c5bca47724f5c4d722f691c684faf2">data</a>)</td></tr>
-<tr class="memdesc:afa1aa7c18f68b590e57b8cdab51313ae"><td class="mdescLeft">&#160;</td><td class="mdescRight">Leaf constructor.  <a href="classbv_1_1leaf.html#afa1aa7c18f68b590e57b8cdab51313ae">More...</a><br /></td></tr>
-<tr class="separator:afa1aa7c18f68b590e57b8cdab51313ae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab1ab33c5336d7b6c784716c9bc0f66b9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ab1ab33c5336d7b6c784716c9bc0f66b9">at</a> (const uint32_t i) const</td></tr>
-<tr class="memdesc:ab1ab33c5336d7b6c784716c9bc0f66b9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of the i<sup>th</sup> element in the leaf.  <a href="classbv_1_1leaf.html#ab1ab33c5336d7b6c784716c9bc0f66b9">More...</a><br /></td></tr>
-<tr class="separator:ab1ab33c5336d7b6c784716c9bc0f66b9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7f7b31baf97f7ba37699562f21a49a72"><td class="memItemLeft" align="right" valign="top"><a id="a7f7b31baf97f7ba37699562f21a49a72"></a>
-uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a7f7b31baf97f7ba37699562f21a49a72">p_sum</a> () const</td></tr>
-<tr class="memdesc:a7f7b31baf97f7ba37699562f21a49a72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for p_sum_. <br /></td></tr>
-<tr class="separator:a7f7b31baf97f7ba37699562f21a49a72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af9cd59051a2407cf0819e173330ef454"><td class="memItemLeft" align="right" valign="top"><a id="af9cd59051a2407cf0819e173330ef454"></a>
-uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#af9cd59051a2407cf0819e173330ef454">size</a> () const</td></tr>
-<tr class="memdesc:af9cd59051a2407cf0819e173330ef454"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for size_. <br /></td></tr>
-<tr class="separator:af9cd59051a2407cf0819e173330ef454"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a04c1d2ca11a6c3e87261281dfe099bec"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a04c1d2ca11a6c3e87261281dfe099bec">insert</a> (const uint64_t i, const bool x)</td></tr>
-<tr class="memdesc:a04c1d2ca11a6c3e87261281dfe099bec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert x into position i.  <a href="classbv_1_1leaf.html#a04c1d2ca11a6c3e87261281dfe099bec">More...</a><br /></td></tr>
-<tr class="separator:a04c1d2ca11a6c3e87261281dfe099bec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af25fd0a5c70f33a708b7839db260d6b1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#af25fd0a5c70f33a708b7839db260d6b1">remove</a> (const uint64_t i)</td></tr>
-<tr class="memdesc:af25fd0a5c70f33a708b7839db260d6b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the i<sup>th</sup> bit from the leaf.  <a href="classbv_1_1leaf.html#af25fd0a5c70f33a708b7839db260d6b1">More...</a><br /></td></tr>
-<tr class="separator:af25fd0a5c70f33a708b7839db260d6b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7ae62354aec3dd1de65f12ef6fca8ed4"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a7ae62354aec3dd1de65f12ef6fca8ed4">set</a> (const uint64_t i, const bool x)</td></tr>
-<tr class="memdesc:a7ae62354aec3dd1de65f12ef6fca8ed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the i<sup>th</sup> bit to x.  <a href="classbv_1_1leaf.html#a7ae62354aec3dd1de65f12ef6fca8ed4">More...</a><br /></td></tr>
-<tr class="separator:a7ae62354aec3dd1de65f12ef6fca8ed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9b604509592d006fb29b62a3d4d88d55"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a9b604509592d006fb29b62a3d4d88d55">rank</a> (const uint64_t n) const</td></tr>
-<tr class="memdesc:a9b604509592d006fb29b62a3d4d88d55"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits up to position n.  <a href="classbv_1_1leaf.html#a9b604509592d006fb29b62a3d4d88d55">More...</a><br /></td></tr>
-<tr class="separator:a9b604509592d006fb29b62a3d4d88d55"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48f21996454baac946f8892641daa761"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a48f21996454baac946f8892641daa761">select</a> (const uint32_t x) const</td></tr>
-<tr class="memdesc:a48f21996454baac946f8892641daa761"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the x<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1leaf.html#a48f21996454baac946f8892641daa761">More...</a><br /></td></tr>
-<tr class="separator:a48f21996454baac946f8892641daa761"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4b4e687c7cb342610968a68fd5a1402c"><td class="memItemLeft" align="right" valign="top"><a id="a4b4e687c7cb342610968a68fd5a1402c"></a>
-uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a4b4e687c7cb342610968a68fd5a1402c">bits_size</a> () const</td></tr>
-<tr class="memdesc:a4b4e687c7cb342610968a68fd5a1402c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the leaf and associated data in bits. <br /></td></tr>
-<tr class="separator:a4b4e687c7cb342610968a68fd5a1402c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab8bed66889767b7a5426946d83523785"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ab8bed66889767b7a5426946d83523785">need_realloc</a> () const</td></tr>
-<tr class="memdesc:ab8bed66889767b7a5426946d83523785"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determine if reallocation / splitting is required prior to additional insertion of new elements.  <a href="classbv_1_1leaf.html#ab8bed66889767b7a5426946d83523785">More...</a><br /></td></tr>
-<tr class="separator:ab8bed66889767b7a5426946d83523785"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae19f59b4c4d82bf340f1017c495210d3"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ae19f59b4c4d82bf340f1017c495210d3">capacity</a> () const</td></tr>
-<tr class="memdesc:ae19f59b4c4d82bf340f1017c495210d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the leaf-associated data storage in 64-bit words.  <a href="classbv_1_1leaf.html#ae19f59b4c4d82bf340f1017c495210d3">More...</a><br /></td></tr>
-<tr class="separator:ae19f59b4c4d82bf340f1017c495210d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acd6a28a3d90b1e952e2bf94df92fe506"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#acd6a28a3d90b1e952e2bf94df92fe506">capacity</a> (uint32_t cap)</td></tr>
-<tr class="memdesc:acd6a28a3d90b1e952e2bf94df92fe506"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the size of the leaf-associated data storage.  <a href="classbv_1_1leaf.html#acd6a28a3d90b1e952e2bf94df92fe506">More...</a><br /></td></tr>
-<tr class="separator:acd6a28a3d90b1e952e2bf94df92fe506"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a50daa927a8829e4865c1e2833932d3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a4a50daa927a8829e4865c1e2833932d3">set_data_ptr</a> (uint64_t *ptr)</td></tr>
-<tr class="memdesc:a4a50daa927a8829e4865c1e2833932d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the pointer to the leaf-associated data storage.  <a href="classbv_1_1leaf.html#a4a50daa927a8829e4865c1e2833932d3">More...</a><br /></td></tr>
-<tr class="separator:a4a50daa927a8829e4865c1e2833932d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a36c5bca47724f5c4d722f691c684faf2"><td class="memItemLeft" align="right" valign="top">uint64_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a36c5bca47724f5c4d722f691c684faf2">data</a> ()</td></tr>
-<tr class="memdesc:a36c5bca47724f5c4d722f691c684faf2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provides access to raw leaf-associated data.  <a href="classbv_1_1leaf.html#a36c5bca47724f5c4d722f691c684faf2">More...</a><br /></td></tr>
-<tr class="separator:a36c5bca47724f5c4d722f691c684faf2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae2a0cebcfa36de7c2b7549a6e7b31a7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ae2a0cebcfa36de7c2b7549a6e7b31a7e">clear_first</a> (uint64_t elems)</td></tr>
-<tr class="memdesc:ae2a0cebcfa36de7c2b7549a6e7b31a7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the fist "elems" elements from the leaf.  <a href="classbv_1_1leaf.html#ae2a0cebcfa36de7c2b7549a6e7b31a7e">More...</a><br /></td></tr>
-<tr class="separator:ae2a0cebcfa36de7c2b7549a6e7b31a7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a87c399d344010aa5863e4f4a58af06df"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a87c399d344010aa5863e4f4a58af06df">transfer_append</a> (<a class="el" href="classbv_1_1leaf.html">leaf</a> *other, uint64_t elems)</td></tr>
-<tr class="memdesc:a87c399d344010aa5863e4f4a58af06df"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move "elems" elements from the start of "other" to the end of "this".  <a href="classbv_1_1leaf.html#a87c399d344010aa5863e4f4a58af06df">More...</a><br /></td></tr>
-<tr class="separator:a87c399d344010aa5863e4f4a58af06df"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af263a755ab8e9186ffcae6118155f2d2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#af263a755ab8e9186ffcae6118155f2d2">clear_last</a> (uint64_t elems)</td></tr>
-<tr class="memdesc:af263a755ab8e9186ffcae6118155f2d2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the last "elems" elements from the leaf.  <a href="classbv_1_1leaf.html#af263a755ab8e9186ffcae6118155f2d2">More...</a><br /></td></tr>
-<tr class="separator:af263a755ab8e9186ffcae6118155f2d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0d023c637404e682342e2045b935f7e9"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a0d023c637404e682342e2045b935f7e9">transfer_prepend</a> (<a class="el" href="classbv_1_1leaf.html">leaf</a> *other, uint64_t elems)</td></tr>
-<tr class="memdesc:a0d023c637404e682342e2045b935f7e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move "elems" elements from the end of "other" to the start of "this".  <a href="classbv_1_1leaf.html#a0d023c637404e682342e2045b935f7e9">More...</a><br /></td></tr>
-<tr class="separator:a0d023c637404e682342e2045b935f7e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7a709a204c3e18e0cdc0019e2844eb9f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a7a709a204c3e18e0cdc0019e2844eb9f">append_all</a> (<a class="el" href="classbv_1_1leaf.html">leaf</a> *other)</td></tr>
-<tr class="memdesc:a7a709a204c3e18e0cdc0019e2844eb9f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy all elements from (the start of) "other" to the end of "this".  <a href="classbv_1_1leaf.html#a7a709a204c3e18e0cdc0019e2844eb9f">More...</a><br /></td></tr>
-<tr class="separator:a7a709a204c3e18e0cdc0019e2844eb9f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae2f6716aaa9086a0185d8bc3ee9728d8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ae2f6716aaa9086a0185d8bc3ee9728d8">commit</a> ()</td></tr>
-<tr class="memdesc:ae2f6716aaa9086a0185d8bc3ee9728d8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Commit and clear the Insert/Remove buffer for the leaf.  <a href="classbv_1_1leaf.html#ae2f6716aaa9086a0185d8bc3ee9728d8">More...</a><br /></td></tr>
-<tr class="separator:ae2f6716aaa9086a0185d8bc3ee9728d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8c9145913be613a62c19b544a28affcb"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a8c9145913be613a62c19b544a28affcb">validate</a> () const</td></tr>
-<tr class="memdesc:a8c9145913be613a62c19b544a28affcb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ensure that the leaf is in a valid state.  <a href="classbv_1_1leaf.html#a8c9145913be613a62c19b544a28affcb">More...</a><br /></td></tr>
-<tr class="separator:a8c9145913be613a62c19b544a28affcb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4b68b23ab8bdc8483d9af0044f8a1afa"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a4b68b23ab8bdc8483d9af0044f8a1afa">print</a> (bool internal_only) const</td></tr>
-<tr class="memdesc:a4b68b23ab8bdc8483d9af0044f8a1afa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output data stored in the leaf as json.  <a href="classbv_1_1leaf.html#a4b68b23ab8bdc8483d9af0044f8a1afa">More...</a><br /></td></tr>
-<tr class="separator:a4b68b23ab8bdc8483d9af0044f8a1afa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3d053d183a6cc9b268675dab349ed291"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a3d053d183a6cc9b268675dab349ed291">leaf</a> (uint64_t <a class="el" href="classbv_1_1leaf.html#ad9eafe86e48fe7ba0f0381520ac30531">capacity</a>, uint64_t *<a class="el" href="classbv_1_1leaf.html#ae74d60f6c55e096e8632bef23471620d">data</a>)</td></tr>
+<tr class="memdesc:a3d053d183a6cc9b268675dab349ed291"><td class="mdescLeft">&#160;</td><td class="mdescRight">Leaf constructor.  <a href="classbv_1_1leaf.html#a3d053d183a6cc9b268675dab349ed291">More...</a><br /></td></tr>
+<tr class="separator:a3d053d183a6cc9b268675dab349ed291"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af308d5eeb5d80e924ed180db52bb0ee2"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#af308d5eeb5d80e924ed180db52bb0ee2">at</a> (const uint32_t i) const</td></tr>
+<tr class="memdesc:af308d5eeb5d80e924ed180db52bb0ee2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the value of the i<sup>th</sup> element in the leaf.  <a href="classbv_1_1leaf.html#af308d5eeb5d80e924ed180db52bb0ee2">More...</a><br /></td></tr>
+<tr class="separator:af308d5eeb5d80e924ed180db52bb0ee2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9f695cd17f566190c4478da07e489b45"><td class="memItemLeft" align="right" valign="top"><a id="a9f695cd17f566190c4478da07e489b45"></a>
+uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a9f695cd17f566190c4478da07e489b45">p_sum</a> () const</td></tr>
+<tr class="memdesc:a9f695cd17f566190c4478da07e489b45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for p_sum_. <br /></td></tr>
+<tr class="separator:a9f695cd17f566190c4478da07e489b45"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a80c498945e9cad87668936a6f23c71e8"><td class="memItemLeft" align="right" valign="top"><a id="a80c498945e9cad87668936a6f23c71e8"></a>
+uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a80c498945e9cad87668936a6f23c71e8">size</a> () const</td></tr>
+<tr class="memdesc:a80c498945e9cad87668936a6f23c71e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Getter for size_. <br /></td></tr>
+<tr class="separator:a80c498945e9cad87668936a6f23c71e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a381923edd5cf825653e30b47455d995d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a381923edd5cf825653e30b47455d995d">insert</a> (const uint64_t i, const bool x)</td></tr>
+<tr class="memdesc:a381923edd5cf825653e30b47455d995d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert x into position i.  <a href="classbv_1_1leaf.html#a381923edd5cf825653e30b47455d995d">More...</a><br /></td></tr>
+<tr class="separator:a381923edd5cf825653e30b47455d995d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70cac3c8e3fd04423245e6619d9c5fcc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a70cac3c8e3fd04423245e6619d9c5fcc">remove</a> (const uint64_t i)</td></tr>
+<tr class="memdesc:a70cac3c8e3fd04423245e6619d9c5fcc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the i<sup>th</sup> bit from the leaf.  <a href="classbv_1_1leaf.html#a70cac3c8e3fd04423245e6619d9c5fcc">More...</a><br /></td></tr>
+<tr class="separator:a70cac3c8e3fd04423245e6619d9c5fcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a19d80e6c67137a30ab9c31d5b3021101"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a19d80e6c67137a30ab9c31d5b3021101">set</a> (const uint64_t i, const bool x)</td></tr>
+<tr class="memdesc:a19d80e6c67137a30ab9c31d5b3021101"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the i<sup>th</sup> bit to x.  <a href="classbv_1_1leaf.html#a19d80e6c67137a30ab9c31d5b3021101">More...</a><br /></td></tr>
+<tr class="separator:a19d80e6c67137a30ab9c31d5b3021101"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abbffbd888e260cc0ec52ba7821294b09"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#abbffbd888e260cc0ec52ba7821294b09">rank</a> (const uint64_t n) const</td></tr>
+<tr class="memdesc:abbffbd888e260cc0ec52ba7821294b09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits up to position n.  <a href="classbv_1_1leaf.html#abbffbd888e260cc0ec52ba7821294b09">More...</a><br /></td></tr>
+<tr class="separator:abbffbd888e260cc0ec52ba7821294b09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae36d25acec747b82fb12da32c347661"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#aae36d25acec747b82fb12da32c347661">select</a> (const uint32_t x) const</td></tr>
+<tr class="memdesc:aae36d25acec747b82fb12da32c347661"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the x<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1leaf.html#aae36d25acec747b82fb12da32c347661">More...</a><br /></td></tr>
+<tr class="separator:aae36d25acec747b82fb12da32c347661"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7104583e1fed9975f0313b771cf78d07"><td class="memItemLeft" align="right" valign="top"><a id="a7104583e1fed9975f0313b771cf78d07"></a>
+uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a7104583e1fed9975f0313b771cf78d07">bits_size</a> () const</td></tr>
+<tr class="memdesc:a7104583e1fed9975f0313b771cf78d07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the leaf and associated data in bits. <br /></td></tr>
+<tr class="separator:a7104583e1fed9975f0313b771cf78d07"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a72b6cbe028c84fa34c1bbecec8adf56a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a72b6cbe028c84fa34c1bbecec8adf56a">need_realloc</a> () const</td></tr>
+<tr class="memdesc:a72b6cbe028c84fa34c1bbecec8adf56a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Determine if reallocation / splitting is required prior to additional insertion of new elements.  <a href="classbv_1_1leaf.html#a72b6cbe028c84fa34c1bbecec8adf56a">More...</a><br /></td></tr>
+<tr class="separator:a72b6cbe028c84fa34c1bbecec8adf56a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9eafe86e48fe7ba0f0381520ac30531"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ad9eafe86e48fe7ba0f0381520ac30531">capacity</a> () const</td></tr>
+<tr class="memdesc:ad9eafe86e48fe7ba0f0381520ac30531"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the leaf-associated data storage in 64-bit words.  <a href="classbv_1_1leaf.html#ad9eafe86e48fe7ba0f0381520ac30531">More...</a><br /></td></tr>
+<tr class="separator:ad9eafe86e48fe7ba0f0381520ac30531"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aebae604de04ce152280edb611bc83bc2"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#aebae604de04ce152280edb611bc83bc2">capacity</a> (uint32_t cap)</td></tr>
+<tr class="memdesc:aebae604de04ce152280edb611bc83bc2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set the size of the leaf-associated data storage.  <a href="classbv_1_1leaf.html#aebae604de04ce152280edb611bc83bc2">More...</a><br /></td></tr>
+<tr class="separator:aebae604de04ce152280edb611bc83bc2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab1e3b8778a102033d5c9c3b419fa997d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ab1e3b8778a102033d5c9c3b419fa997d">set_data_ptr</a> (uint64_t *ptr)</td></tr>
+<tr class="memdesc:ab1e3b8778a102033d5c9c3b419fa997d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the pointer to the leaf-associated data storage.  <a href="classbv_1_1leaf.html#ab1e3b8778a102033d5c9c3b419fa997d">More...</a><br /></td></tr>
+<tr class="separator:ab1e3b8778a102033d5c9c3b419fa997d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae74d60f6c55e096e8632bef23471620d"><td class="memItemLeft" align="right" valign="top">uint64_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ae74d60f6c55e096e8632bef23471620d">data</a> ()</td></tr>
+<tr class="memdesc:ae74d60f6c55e096e8632bef23471620d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Provides access to raw leaf-associated data.  <a href="classbv_1_1leaf.html#ae74d60f6c55e096e8632bef23471620d">More...</a><br /></td></tr>
+<tr class="separator:ae74d60f6c55e096e8632bef23471620d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ce4dfe392785421e602354485df46a4"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a1ce4dfe392785421e602354485df46a4">clear_first</a> (uint64_t elems)</td></tr>
+<tr class="memdesc:a1ce4dfe392785421e602354485df46a4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the fist "elems" elements from the leaf.  <a href="classbv_1_1leaf.html#a1ce4dfe392785421e602354485df46a4">More...</a><br /></td></tr>
+<tr class="separator:a1ce4dfe392785421e602354485df46a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:affaa678c11098f7b1df0ce42132a4cc8"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#affaa678c11098f7b1df0ce42132a4cc8">transfer_append</a> (<a class="el" href="classbv_1_1leaf.html">leaf</a> *other, uint64_t elems)</td></tr>
+<tr class="memdesc:affaa678c11098f7b1df0ce42132a4cc8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move "elems" elements from the start of "other" to the end of "this".  <a href="classbv_1_1leaf.html#affaa678c11098f7b1df0ce42132a4cc8">More...</a><br /></td></tr>
+<tr class="separator:affaa678c11098f7b1df0ce42132a4cc8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae902140cfd3665c9acd85039a25af8e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#aae902140cfd3665c9acd85039a25af8e">clear_last</a> (uint64_t elems)</td></tr>
+<tr class="memdesc:aae902140cfd3665c9acd85039a25af8e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove the last "elems" elements from the leaf.  <a href="classbv_1_1leaf.html#aae902140cfd3665c9acd85039a25af8e">More...</a><br /></td></tr>
+<tr class="separator:aae902140cfd3665c9acd85039a25af8e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c926af47de5c7569844b76fe6e73433"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a5c926af47de5c7569844b76fe6e73433">transfer_prepend</a> (<a class="el" href="classbv_1_1leaf.html">leaf</a> *other, uint64_t elems)</td></tr>
+<tr class="memdesc:a5c926af47de5c7569844b76fe6e73433"><td class="mdescLeft">&#160;</td><td class="mdescRight">Move "elems" elements from the end of "other" to the start of "this".  <a href="classbv_1_1leaf.html#a5c926af47de5c7569844b76fe6e73433">More...</a><br /></td></tr>
+<tr class="separator:a5c926af47de5c7569844b76fe6e73433"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abe59292eb12f672767516224cdee5752"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#abe59292eb12f672767516224cdee5752">append_all</a> (<a class="el" href="classbv_1_1leaf.html">leaf</a> *other)</td></tr>
+<tr class="memdesc:abe59292eb12f672767516224cdee5752"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copy all elements from (the start of) "other" to the end of "this".  <a href="classbv_1_1leaf.html#abe59292eb12f672767516224cdee5752">More...</a><br /></td></tr>
+<tr class="separator:abe59292eb12f672767516224cdee5752"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acce27752df1df5ebe6b1fd6c17e79c55"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#acce27752df1df5ebe6b1fd6c17e79c55">commit</a> ()</td></tr>
+<tr class="memdesc:acce27752df1df5ebe6b1fd6c17e79c55"><td class="mdescLeft">&#160;</td><td class="mdescRight">Commit and clear the Insert/Remove buffer for the leaf.  <a href="classbv_1_1leaf.html#acce27752df1df5ebe6b1fd6c17e79c55">More...</a><br /></td></tr>
+<tr class="separator:acce27752df1df5ebe6b1fd6c17e79c55"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa8a8696df9bdda57a46e824c79e24dcc"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#aa8a8696df9bdda57a46e824c79e24dcc">validate</a> () const</td></tr>
+<tr class="memdesc:aa8a8696df9bdda57a46e824c79e24dcc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ensure that the leaf is in a valid state.  <a href="classbv_1_1leaf.html#aa8a8696df9bdda57a46e824c79e24dcc">More...</a><br /></td></tr>
+<tr class="separator:aa8a8696df9bdda57a46e824c79e24dcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1f1766922dc590897519b4fb1c851430"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a1f1766922dc590897519b4fb1c851430">print</a> (bool internal_only) const</td></tr>
+<tr class="memdesc:a1f1766922dc590897519b4fb1c851430"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output data stored in the leaf as json.  <a href="classbv_1_1leaf.html#a1f1766922dc590897519b4fb1c851430">More...</a><br /></td></tr>
+<tr class="separator:a1f1766922dc590897519b4fb1c851430"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:a449cec591f56ab7d0209057b4ff9ce96"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a449cec591f56ab7d0209057b4ff9ce96">buffer_value</a> (uint32_t e) const</td></tr>
-<tr class="memdesc:a449cec591f56ab7d0209057b4ff9ce96"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract the value of a buffer element.  <a href="classbv_1_1leaf.html#a449cec591f56ab7d0209057b4ff9ce96">More...</a><br /></td></tr>
-<tr class="separator:a449cec591f56ab7d0209057b4ff9ce96"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a28b7a5536965837fa5659cdcd345f5a6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a28b7a5536965837fa5659cdcd345f5a6">buffer_is_insertion</a> (uint32_t e) const</td></tr>
-<tr class="memdesc:a28b7a5536965837fa5659cdcd345f5a6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract type information of a buffer element.  <a href="classbv_1_1leaf.html#a28b7a5536965837fa5659cdcd345f5a6">More...</a><br /></td></tr>
-<tr class="separator:a28b7a5536965837fa5659cdcd345f5a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2719efadd078c3362df871e899beaf1d"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a2719efadd078c3362df871e899beaf1d">buffer_index</a> (uint32_t e) const</td></tr>
-<tr class="memdesc:a2719efadd078c3362df871e899beaf1d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract index information from a butter element.  <a href="classbv_1_1leaf.html#a2719efadd078c3362df871e899beaf1d">More...</a><br /></td></tr>
-<tr class="separator:a2719efadd078c3362df871e899beaf1d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5241806c5c7e92bd8ec664cbd294255d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a5241806c5c7e92bd8ec664cbd294255d">set_buffer_index</a> (uint32_t v, uint8_t i)</td></tr>
-<tr class="memdesc:a5241806c5c7e92bd8ec664cbd294255d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates index information for a specified buffer element.  <a href="classbv_1_1leaf.html#a5241806c5c7e92bd8ec664cbd294255d">More...</a><br /></td></tr>
-<tr class="separator:a5241806c5c7e92bd8ec664cbd294255d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1d293ca92d44b25fe988222721989f94"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a1d293ca92d44b25fe988222721989f94">create_buffer</a> (uint32_t idx, bool t, bool v)</td></tr>
-<tr class="memdesc:a1d293ca92d44b25fe988222721989f94"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new 32-bit buffer element with the given parameters.  <a href="classbv_1_1leaf.html#a1d293ca92d44b25fe988222721989f94">More...</a><br /></td></tr>
-<tr class="separator:a1d293ca92d44b25fe988222721989f94"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab98df20d4dabc10b1ef68be684235594"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ab98df20d4dabc10b1ef68be684235594">insert_buffer</a> (uint8_t idx, uint32_t buf)</td></tr>
-<tr class="memdesc:ab98df20d4dabc10b1ef68be684235594"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert a new element into the buffer.  <a href="classbv_1_1leaf.html#ab98df20d4dabc10b1ef68be684235594">More...</a><br /></td></tr>
-<tr class="separator:ab98df20d4dabc10b1ef68be684235594"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adfddb70c16209a0c451aa35f4b401237"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#adfddb70c16209a0c451aa35f4b401237">delete_buffer_element</a> (uint8_t idx)</td></tr>
-<tr class="memdesc:adfddb70c16209a0c451aa35f4b401237"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove an element from the buffer.  <a href="classbv_1_1leaf.html#adfddb70c16209a0c451aa35f4b401237">More...</a><br /></td></tr>
-<tr class="separator:adfddb70c16209a0c451aa35f4b401237"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3fe0103ec96644a5e2d4152b2d150d7e"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a3fe0103ec96644a5e2d4152b2d150d7e">push_back</a> (const bool x)</td></tr>
-<tr class="memdesc:a3fe0103ec96644a5e2d4152b2d150d7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an element to the end of the leaf data.  <a href="classbv_1_1leaf.html#a3fe0103ec96644a5e2d4152b2d150d7e">More...</a><br /></td></tr>
-<tr class="separator:a3fe0103ec96644a5e2d4152b2d150d7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a347d4d845f2b3a922c9787d2b120506a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a347d4d845f2b3a922c9787d2b120506a">buffer_value</a> (uint32_t e) const</td></tr>
+<tr class="memdesc:a347d4d845f2b3a922c9787d2b120506a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract the value of a buffer element.  <a href="classbv_1_1leaf.html#a347d4d845f2b3a922c9787d2b120506a">More...</a><br /></td></tr>
+<tr class="separator:a347d4d845f2b3a922c9787d2b120506a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a97782dcb0cbb0a75943a5358ff74b40c"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a97782dcb0cbb0a75943a5358ff74b40c">buffer_is_insertion</a> (uint32_t e) const</td></tr>
+<tr class="memdesc:a97782dcb0cbb0a75943a5358ff74b40c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract type information of a buffer element.  <a href="classbv_1_1leaf.html#a97782dcb0cbb0a75943a5358ff74b40c">More...</a><br /></td></tr>
+<tr class="separator:a97782dcb0cbb0a75943a5358ff74b40c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a20bda2ec1e0cfca8a4ed8e5c22754a3e"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a20bda2ec1e0cfca8a4ed8e5c22754a3e">buffer_index</a> (uint32_t e) const</td></tr>
+<tr class="memdesc:a20bda2ec1e0cfca8a4ed8e5c22754a3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Extract index information from a butter element.  <a href="classbv_1_1leaf.html#a20bda2ec1e0cfca8a4ed8e5c22754a3e">More...</a><br /></td></tr>
+<tr class="separator:a20bda2ec1e0cfca8a4ed8e5c22754a3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7fc207b79bac43eb153e4242257dc475"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a7fc207b79bac43eb153e4242257dc475">set_buffer_index</a> (uint32_t v, uint8_t i)</td></tr>
+<tr class="memdesc:a7fc207b79bac43eb153e4242257dc475"><td class="mdescLeft">&#160;</td><td class="mdescRight">Updates index information for a specified buffer element.  <a href="classbv_1_1leaf.html#a7fc207b79bac43eb153e4242257dc475">More...</a><br /></td></tr>
+<tr class="separator:a7fc207b79bac43eb153e4242257dc475"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a375b037ab1fa48cd7916989fb57da1ff"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a375b037ab1fa48cd7916989fb57da1ff">create_buffer</a> (uint32_t idx, bool t, bool v)</td></tr>
+<tr class="memdesc:a375b037ab1fa48cd7916989fb57da1ff"><td class="mdescLeft">&#160;</td><td class="mdescRight">Creates a new 32-bit buffer element with the given parameters.  <a href="classbv_1_1leaf.html#a375b037ab1fa48cd7916989fb57da1ff">More...</a><br /></td></tr>
+<tr class="separator:a375b037ab1fa48cd7916989fb57da1ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c1d38ed8c9721890c57a211c9d3f860"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a6c1d38ed8c9721890c57a211c9d3f860">insert_buffer</a> (uint8_t idx, uint32_t buf)</td></tr>
+<tr class="memdesc:a6c1d38ed8c9721890c57a211c9d3f860"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert a new element into the buffer.  <a href="classbv_1_1leaf.html#a6c1d38ed8c9721890c57a211c9d3f860">More...</a><br /></td></tr>
+<tr class="separator:a6c1d38ed8c9721890c57a211c9d3f860"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af12d257292df493f4f38aa78e037a8af"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#af12d257292df493f4f38aa78e037a8af">delete_buffer_element</a> (uint8_t idx)</td></tr>
+<tr class="memdesc:af12d257292df493f4f38aa78e037a8af"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove an element from the buffer.  <a href="classbv_1_1leaf.html#af12d257292df493f4f38aa78e037a8af">More...</a><br /></td></tr>
+<tr class="separator:af12d257292df493f4f38aa78e037a8af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3a3203c6025d5272ea52a560720ee23a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a3a3203c6025d5272ea52a560720ee23a">push_back</a> (const bool x)</td></tr>
+<tr class="memdesc:a3a3203c6025d5272ea52a560720ee23a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an element to the end of the leaf data.  <a href="classbv_1_1leaf.html#a3a3203c6025d5272ea52a560720ee23a">More...</a><br /></td></tr>
+<tr class="separator:a3a3203c6025d5272ea52a560720ee23a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
-<tr class="memitem:a015a71fc8c5eaefe14f7f7b7d7fdf9f5"><td class="memItemLeft" align="right" valign="top"><a id="a015a71fc8c5eaefe14f7f7b7d7fdf9f5"></a>
-uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a015a71fc8c5eaefe14f7f7b7d7fdf9f5">buffer_count_</a></td></tr>
-<tr class="memdesc:a015a71fc8c5eaefe14f7f7b7d7fdf9f5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of elements in insert/remove buffer. <br /></td></tr>
-<tr class="separator:a015a71fc8c5eaefe14f7f7b7d7fdf9f5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab7d09411709930afa60303d25a95f20e"><td class="memItemLeft" align="right" valign="top"><a id="ab7d09411709930afa60303d25a95f20e"></a>
-uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ab7d09411709930afa60303d25a95f20e">capacity_</a></td></tr>
-<tr class="memdesc:ab7d09411709930afa60303d25a95f20e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 64-bit integers available in data. <br /></td></tr>
-<tr class="separator:ab7d09411709930afa60303d25a95f20e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6ce0170f3a30c7b2daeb5afc1d6ad17a"><td class="memItemLeft" align="right" valign="top"><a id="a6ce0170f3a30c7b2daeb5afc1d6ad17a"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a6ce0170f3a30c7b2daeb5afc1d6ad17a">size_</a></td></tr>
-<tr class="memdesc:a6ce0170f3a30c7b2daeb5afc1d6ad17a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Logical number of bits stored. <br /></td></tr>
-<tr class="separator:a6ce0170f3a30c7b2daeb5afc1d6ad17a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0ed1be26743068c589f059528a6dbb10"><td class="memItemLeft" align="right" valign="top"><a id="a0ed1be26743068c589f059528a6dbb10"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a0ed1be26743068c589f059528a6dbb10">p_sum_</a></td></tr>
-<tr class="memdesc:a0ed1be26743068c589f059528a6dbb10"><td class="mdescLeft">&#160;</td><td class="mdescRight">Logical number of 1-bits stored. <br /></td></tr>
-<tr class="separator:a0ed1be26743068c589f059528a6dbb10"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a19eee6b3583e209e3e7f5ef713981b90"><td class="memItemLeft" align="right" valign="top"><a id="a19eee6b3583e209e3e7f5ef713981b90"></a>
-uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a19eee6b3583e209e3e7f5ef713981b90">buffer_</a> [buffer_size]</td></tr>
-<tr class="memdesc:a19eee6b3583e209e3e7f5ef713981b90"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert/remove buffer. <br /></td></tr>
-<tr class="separator:a19eee6b3583e209e3e7f5ef713981b90"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af19adb2e303132a186c33d3cce13a221"><td class="memItemLeft" align="right" valign="top"><a id="af19adb2e303132a186c33d3cce13a221"></a>
-uint64_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#af19adb2e303132a186c33d3cce13a221">data_</a></td></tr>
-<tr class="memdesc:af19adb2e303132a186c33d3cce13a221"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to data storage. <br /></td></tr>
-<tr class="separator:af19adb2e303132a186c33d3cce13a221"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:abf9a66b34ff5479b3fb7f4cc98d40386"><td class="memItemLeft" align="right" valign="top"><a id="abf9a66b34ff5479b3fb7f4cc98d40386"></a>
+uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#abf9a66b34ff5479b3fb7f4cc98d40386">buffer_count_</a></td></tr>
+<tr class="memdesc:abf9a66b34ff5479b3fb7f4cc98d40386"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of elements in insert/remove buffer. <br /></td></tr>
+<tr class="separator:abf9a66b34ff5479b3fb7f4cc98d40386"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb7c9d64aaebed4278aeda426910fa22"><td class="memItemLeft" align="right" valign="top"><a id="aeb7c9d64aaebed4278aeda426910fa22"></a>
+uint16_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#aeb7c9d64aaebed4278aeda426910fa22">capacity_</a></td></tr>
+<tr class="memdesc:aeb7c9d64aaebed4278aeda426910fa22"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 64-bit integers available in data. <br /></td></tr>
+<tr class="separator:aeb7c9d64aaebed4278aeda426910fa22"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a79a1fc0fd0857a6060a871d6d2f1e167"><td class="memItemLeft" align="right" valign="top"><a id="a79a1fc0fd0857a6060a871d6d2f1e167"></a>
+uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a79a1fc0fd0857a6060a871d6d2f1e167">size_</a></td></tr>
+<tr class="memdesc:a79a1fc0fd0857a6060a871d6d2f1e167"><td class="mdescLeft">&#160;</td><td class="mdescRight">Logical number of bits stored. <br /></td></tr>
+<tr class="separator:a79a1fc0fd0857a6060a871d6d2f1e167"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a70be1cf26ce90465197624b710ebe13a"><td class="memItemLeft" align="right" valign="top"><a id="a70be1cf26ce90465197624b710ebe13a"></a>
+uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a70be1cf26ce90465197624b710ebe13a">p_sum_</a></td></tr>
+<tr class="memdesc:a70be1cf26ce90465197624b710ebe13a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Logical number of 1-bits stored. <br /></td></tr>
+<tr class="separator:a70be1cf26ce90465197624b710ebe13a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0e677d3bcb1435ea0b9a8c4fe6daa793"><td class="memItemLeft" align="right" valign="top"><a id="a0e677d3bcb1435ea0b9a8c4fe6daa793"></a>
+uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a0e677d3bcb1435ea0b9a8c4fe6daa793">buffer_</a> [buffer_size]</td></tr>
+<tr class="memdesc:a0e677d3bcb1435ea0b9a8c4fe6daa793"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert/remove buffer. <br /></td></tr>
+<tr class="separator:a0e677d3bcb1435ea0b9a8c4fe6daa793"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5538dd6fe3f924c98ccbed4965dae198"><td class="memItemLeft" align="right" valign="top"><a id="a5538dd6fe3f924c98ccbed4965dae198"></a>
+uint64_t *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a5538dd6fe3f924c98ccbed4965dae198">data_</a></td></tr>
+<tr class="memdesc:a5538dd6fe3f924c98ccbed4965dae198"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to data storage. <br /></td></tr>
+<tr class="separator:a5538dd6fe3f924c98ccbed4965dae198"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-static-attribs"></a>
 Static Protected Attributes</h2></td></tr>
-<tr class="memitem:a5cfd98d3a58115aaf313860f4338d972"><td class="memItemLeft" align="right" valign="top"><a id="a5cfd98d3a58115aaf313860f4338d972"></a>
-static const constexpr uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a5cfd98d3a58115aaf313860f4338d972">MASK</a> = 1</td></tr>
-<tr class="memdesc:a5cfd98d3a58115aaf313860f4338d972"><td class="mdescLeft">&#160;</td><td class="mdescRight">0x1 to be used in bit operations. <br /></td></tr>
-<tr class="separator:a5cfd98d3a58115aaf313860f4338d972"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad0ede561405469041e8db0b5fae33c07"><td class="memItemLeft" align="right" valign="top"><a id="ad0ede561405469041e8db0b5fae33c07"></a>
-static const constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ad0ede561405469041e8db0b5fae33c07">VALUE_MASK</a> = 1</td></tr>
-<tr class="memdesc:ad0ede561405469041e8db0b5fae33c07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mask for accessing buffer value. <br /></td></tr>
-<tr class="separator:ad0ede561405469041e8db0b5fae33c07"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac382422f48a944d0ddb7e27e686a77e9"><td class="memItemLeft" align="right" valign="top"><a id="ac382422f48a944d0ddb7e27e686a77e9"></a>
-static const constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#ac382422f48a944d0ddb7e27e686a77e9">TYPE_MASK</a> = 8</td></tr>
-<tr class="memdesc:ac382422f48a944d0ddb7e27e686a77e9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mask for accessing buffer type. <br /></td></tr>
-<tr class="separator:ac382422f48a944d0ddb7e27e686a77e9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8ac2ff5d4f4ccca477338dfb3884db14"><td class="memItemLeft" align="right" valign="top"><a id="a8ac2ff5d4f4ccca477338dfb3884db14"></a>
-static const constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a8ac2ff5d4f4ccca477338dfb3884db14">INDEX_MASK</a> = ((uint32_t(1) &lt;&lt; 8) - 1)</td></tr>
-<tr class="memdesc:a8ac2ff5d4f4ccca477338dfb3884db14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mask for accessing buffer index value. <br /></td></tr>
-<tr class="separator:a8ac2ff5d4f4ccca477338dfb3884db14"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3962e2bf7e50e9ce67414167528a0c76"><td class="memItemLeft" align="right" valign="top"><a id="a3962e2bf7e50e9ce67414167528a0c76"></a>
+static const constexpr uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a3962e2bf7e50e9ce67414167528a0c76">MASK</a> = 1</td></tr>
+<tr class="memdesc:a3962e2bf7e50e9ce67414167528a0c76"><td class="mdescLeft">&#160;</td><td class="mdescRight">0x1 to be used in bit operations. <br /></td></tr>
+<tr class="separator:a3962e2bf7e50e9ce67414167528a0c76"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a36d3c62a8530665493c136bc07843786"><td class="memItemLeft" align="right" valign="top"><a id="a36d3c62a8530665493c136bc07843786"></a>
+static const constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a36d3c62a8530665493c136bc07843786">VALUE_MASK</a> = 1</td></tr>
+<tr class="memdesc:a36d3c62a8530665493c136bc07843786"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mask for accessing buffer value. <br /></td></tr>
+<tr class="separator:a36d3c62a8530665493c136bc07843786"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6657881af0792dc107ef309238355cda"><td class="memItemLeft" align="right" valign="top"><a id="a6657881af0792dc107ef309238355cda"></a>
+static const constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a6657881af0792dc107ef309238355cda">TYPE_MASK</a> = 8</td></tr>
+<tr class="memdesc:a6657881af0792dc107ef309238355cda"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mask for accessing buffer type. <br /></td></tr>
+<tr class="separator:a6657881af0792dc107ef309238355cda"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2cdd146d046d36c83c77dec7a2ffca46"><td class="memItemLeft" align="right" valign="top"><a id="a2cdd146d046d36c83c77dec7a2ffca46"></a>
+static const constexpr uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a2cdd146d046d36c83c77dec7a2ffca46">INDEX_MASK</a> = ((uint32_t(1) &lt;&lt; 8) - 1)</td></tr>
+<tr class="memdesc:a2cdd146d046d36c83c77dec7a2ffca46"><td class="mdescLeft">&#160;</td><td class="mdescRight">Mask for accessing buffer index value. <br /></td></tr>
+<tr class="separator:a2cdd146d046d36c83c77dec7a2ffca46"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><h3>template&lt;uint8_t buffer_size&gt;<br />
-class bv::leaf&lt; buffer_size &gt;</h3>
+<div class="textblock"><h3>template&lt;uint8_t buffer_size, bool avx = true&gt;<br />
+class bv::leaf&lt; buffer_size, avx &gt;</h3>
 
 <p>Simple flat dynamic bit vector for use as a leaf for a dynamic b-tree bit vector. </p>
 <p>The leaf is not usable as fully featured bit vector by itself since the leaf cannot reallocate itself when full. The leaf requires a parent structure (like <a class="el" href="classbv_1_1bit__vector.html" title="Container class for dynamic b-tree bit vector stuctures.">bv::bit_vector</a> or <a class="el" href="classbv_1_1node.html" title="Internal node for use with bit vector b-tree structures.">bv::node</a>) to manage reallocations and rebalancing.</p>
@@ -252,23 +252,24 @@ Practical limitations</h3>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">Size</td><td>of insertion/removal buffer. </td></tr>
+    <tr><td class="paramname">Use</td><td>avx population counts for rank operations. </td></tr>
   </table>
   </dd>
 </dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="afa1aa7c18f68b590e57b8cdab51313ae"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#afa1aa7c18f68b590e57b8cdab51313ae">&#9670;&nbsp;</a></span>leaf()</h2>
+<a id="a3d053d183a6cc9b268675dab349ed291"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3d053d183a6cc9b268675dab349ed291">&#9670;&nbsp;</a></span>leaf()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::<a class="el" href="classbv_1_1leaf.html">leaf</a> </td>
+          <td class="memname"><a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::<a class="el" href="classbv_1_1leaf.html">leaf</a> </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>capacity</em>, </td>
@@ -305,21 +306,21 @@ template&lt;uint8_t buffer_size&gt; </div>
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a7a709a204c3e18e0cdc0019e2844eb9f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7a709a204c3e18e0cdc0019e2844eb9f">&#9670;&nbsp;</a></span>append_all()</h2>
+<a id="abe59292eb12f672767516224cdee5752"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abe59292eb12f672767516224cdee5752">&#9670;&nbsp;</a></span>append_all()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::append_all </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::append_all </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classbv_1_1leaf.html">leaf</a>&lt; buffer_size &gt; *&#160;</td>
+          <td class="paramtype"><a class="el" href="classbv_1_1leaf.html">leaf</a>&lt; buffer_size, avx &gt; *&#160;</td>
           <td class="paramname"><em>other</em></td><td>)</td>
           <td></td>
         </tr>
@@ -345,19 +346,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="ab1ab33c5336d7b6c784716c9bc0f66b9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab1ab33c5336d7b6c784716c9bc0f66b9">&#9670;&nbsp;</a></span>at()</h2>
+<a id="af308d5eeb5d80e924ed180db52bb0ee2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af308d5eeb5d80e924ed180db52bb0ee2">&#9670;&nbsp;</a></span>at()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::at </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::at </td>
           <td>(</td>
           <td class="paramtype">const uint32_t&#160;</td>
           <td class="paramname"><em>i</em></td><td>)</td>
@@ -382,19 +383,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a2719efadd078c3362df871e899beaf1d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a2719efadd078c3362df871e899beaf1d">&#9670;&nbsp;</a></span>buffer_index()</h2>
+<a id="a20bda2ec1e0cfca8a4ed8e5c22754a3e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a20bda2ec1e0cfca8a4ed8e5c22754a3e">&#9670;&nbsp;</a></span>buffer_index()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::buffer_index </td>
+          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::buffer_index </td>
           <td>(</td>
           <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>e</em></td><td>)</td>
@@ -420,19 +421,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a28b7a5536965837fa5659cdcd345f5a6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a28b7a5536965837fa5659cdcd345f5a6">&#9670;&nbsp;</a></span>buffer_is_insertion()</h2>
+<a id="a97782dcb0cbb0a75943a5358ff74b40c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a97782dcb0cbb0a75943a5358ff74b40c">&#9670;&nbsp;</a></span>buffer_is_insertion()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::buffer_is_insertion </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::buffer_is_insertion </td>
           <td>(</td>
           <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>e</em></td><td>)</td>
@@ -458,19 +459,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a449cec591f56ab7d0209057b4ff9ce96"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a449cec591f56ab7d0209057b4ff9ce96">&#9670;&nbsp;</a></span>buffer_value()</h2>
+<a id="a347d4d845f2b3a922c9787d2b120506a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a347d4d845f2b3a922c9787d2b120506a">&#9670;&nbsp;</a></span>buffer_value()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::buffer_value </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::buffer_value </td>
           <td>(</td>
           <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>e</em></td><td>)</td>
@@ -497,19 +498,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="ae19f59b4c4d82bf340f1017c495210d3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae19f59b4c4d82bf340f1017c495210d3">&#9670;&nbsp;</a></span>capacity() <span class="overload">[1/2]</span></h2>
+<a id="ad9eafe86e48fe7ba0f0381520ac30531"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad9eafe86e48fe7ba0f0381520ac30531">&#9670;&nbsp;</a></span>capacity() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::capacity </td>
+          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::capacity </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -528,19 +529,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="acd6a28a3d90b1e952e2bf94df92fe506"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acd6a28a3d90b1e952e2bf94df92fe506">&#9670;&nbsp;</a></span>capacity() <span class="overload">[2/2]</span></h2>
+<a id="aebae604de04ce152280edb611bc83bc2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aebae604de04ce152280edb611bc83bc2">&#9670;&nbsp;</a></span>capacity() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::capacity </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::capacity </td>
           <td>(</td>
           <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>cap</em></td><td>)</td>
@@ -565,19 +566,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="ae2a0cebcfa36de7c2b7549a6e7b31a7e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae2a0cebcfa36de7c2b7549a6e7b31a7e">&#9670;&nbsp;</a></span>clear_first()</h2>
+<a id="a1ce4dfe392785421e602354485df46a4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1ce4dfe392785421e602354485df46a4">&#9670;&nbsp;</a></span>clear_first()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::clear_first </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::clear_first </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>elems</em></td><td>)</td>
@@ -603,19 +604,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="af263a755ab8e9186ffcae6118155f2d2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af263a755ab8e9186ffcae6118155f2d2">&#9670;&nbsp;</a></span>clear_last()</h2>
+<a id="aae902140cfd3665c9acd85039a25af8e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae902140cfd3665c9acd85039a25af8e">&#9670;&nbsp;</a></span>clear_last()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::clear_last </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::clear_last </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>elems</em></td><td>)</td>
@@ -641,19 +642,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="ae2f6716aaa9086a0185d8bc3ee9728d8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae2f6716aaa9086a0185d8bc3ee9728d8">&#9670;&nbsp;</a></span>commit()</h2>
+<a id="acce27752df1df5ebe6b1fd6c17e79c55"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acce27752df1df5ebe6b1fd6c17e79c55">&#9670;&nbsp;</a></span>commit()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::commit </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::commit </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -672,19 +673,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a1d293ca92d44b25fe988222721989f94"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1d293ca92d44b25fe988222721989f94">&#9670;&nbsp;</a></span>create_buffer()</h2>
+<a id="a375b037ab1fa48cd7916989fb57da1ff"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a375b037ab1fa48cd7916989fb57da1ff">&#9670;&nbsp;</a></span>create_buffer()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::create_buffer </td>
+          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::create_buffer </td>
           <td>(</td>
           <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>idx</em>, </td>
@@ -727,19 +728,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a36c5bca47724f5c4d722f691c684faf2"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a36c5bca47724f5c4d722f691c684faf2">&#9670;&nbsp;</a></span>data()</h2>
+<a id="ae74d60f6c55e096e8632bef23471620d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae74d60f6c55e096e8632bef23471620d">&#9670;&nbsp;</a></span>data()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t* <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::data </td>
+          <td class="memname">uint64_t* <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::data </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -759,19 +760,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="adfddb70c16209a0c451aa35f4b401237"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adfddb70c16209a0c451aa35f4b401237">&#9670;&nbsp;</a></span>delete_buffer_element()</h2>
+<a id="af12d257292df493f4f38aa78e037a8af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af12d257292df493f4f38aa78e037a8af">&#9670;&nbsp;</a></span>delete_buffer_element()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::delete_buffer_element </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::delete_buffer_element </td>
           <td>(</td>
           <td class="paramtype">uint8_t&#160;</td>
           <td class="paramname"><em>idx</em></td><td>)</td>
@@ -796,19 +797,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a04c1d2ca11a6c3e87261281dfe099bec"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a04c1d2ca11a6c3e87261281dfe099bec">&#9670;&nbsp;</a></span>insert()</h2>
+<a id="a381923edd5cf825653e30b47455d995d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a381923edd5cf825653e30b47455d995d">&#9670;&nbsp;</a></span>insert()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::insert </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::insert </td>
           <td>(</td>
           <td class="paramtype">const uint64_t&#160;</td>
           <td class="paramname"><em>i</em>, </td>
@@ -845,19 +846,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="ab98df20d4dabc10b1ef68be684235594"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab98df20d4dabc10b1ef68be684235594">&#9670;&nbsp;</a></span>insert_buffer()</h2>
+<a id="a6c1d38ed8c9721890c57a211c9d3f860"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c1d38ed8c9721890c57a211c9d3f860">&#9670;&nbsp;</a></span>insert_buffer()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::insert_buffer </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::insert_buffer </td>
           <td>(</td>
           <td class="paramtype">uint8_t&#160;</td>
           <td class="paramname"><em>idx</em>, </td>
@@ -893,19 +894,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="ab8bed66889767b7a5426946d83523785"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab8bed66889767b7a5426946d83523785">&#9670;&nbsp;</a></span>need_realloc()</h2>
+<a id="a72b6cbe028c84fa34c1bbecec8adf56a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a72b6cbe028c84fa34c1bbecec8adf56a">&#9670;&nbsp;</a></span>need_realloc()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::need_realloc </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::need_realloc </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -923,19 +924,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a4b68b23ab8bdc8483d9af0044f8a1afa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4b68b23ab8bdc8483d9af0044f8a1afa">&#9670;&nbsp;</a></span>print()</h2>
+<a id="a1f1766922dc590897519b4fb1c851430"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1f1766922dc590897519b4fb1c851430">&#9670;&nbsp;</a></span>print()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::print </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::print </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>internal_only</em></td><td>)</td>
@@ -960,19 +961,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a3fe0103ec96644a5e2d4152b2d150d7e"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3fe0103ec96644a5e2d4152b2d150d7e">&#9670;&nbsp;</a></span>push_back()</h2>
+<a id="a3a3203c6025d5272ea52a560720ee23a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a3a3203c6025d5272ea52a560720ee23a">&#9670;&nbsp;</a></span>push_back()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::push_back </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::push_back </td>
           <td>(</td>
           <td class="paramtype">const bool&#160;</td>
           <td class="paramname"><em>x</em></td><td>)</td>
@@ -997,19 +998,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a9b604509592d006fb29b62a3d4d88d55"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a9b604509592d006fb29b62a3d4d88d55">&#9670;&nbsp;</a></span>rank()</h2>
+<a id="abbffbd888e260cc0ec52ba7821294b09"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abbffbd888e260cc0ec52ba7821294b09">&#9670;&nbsp;</a></span>rank()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::rank </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::rank </td>
           <td>(</td>
           <td class="paramtype">const uint64_t&#160;</td>
           <td class="paramname"><em>n</em></td><td>)</td>
@@ -1036,19 +1037,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="af25fd0a5c70f33a708b7839db260d6b1"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af25fd0a5c70f33a708b7839db260d6b1">&#9670;&nbsp;</a></span>remove()</h2>
+<a id="a70cac3c8e3fd04423245e6619d9c5fcc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a70cac3c8e3fd04423245e6619d9c5fcc">&#9670;&nbsp;</a></span>remove()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::remove </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::remove </td>
           <td>(</td>
           <td class="paramtype">const uint64_t&#160;</td>
           <td class="paramname"><em>i</em></td><td>)</td>
@@ -1075,19 +1076,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a48f21996454baac946f8892641daa761"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a48f21996454baac946f8892641daa761">&#9670;&nbsp;</a></span>select()</h2>
+<a id="aae36d25acec747b82fb12da32c347661"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae36d25acec747b82fb12da32c347661">&#9670;&nbsp;</a></span>select()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::select </td>
+          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::select </td>
           <td>(</td>
           <td class="paramtype">const uint32_t&#160;</td>
           <td class="paramname"><em>x</em></td><td>)</td>
@@ -1113,19 +1114,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a7ae62354aec3dd1de65f12ef6fca8ed4"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7ae62354aec3dd1de65f12ef6fca8ed4">&#9670;&nbsp;</a></span>set()</h2>
+<a id="a19d80e6c67137a30ab9c31d5b3021101"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a19d80e6c67137a30ab9c31d5b3021101">&#9670;&nbsp;</a></span>set()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">int <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::set </td>
+          <td class="memname">int <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::set </td>
           <td>(</td>
           <td class="paramtype">const uint64_t&#160;</td>
           <td class="paramname"><em>i</em>, </td>
@@ -1162,19 +1163,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a5241806c5c7e92bd8ec664cbd294255d"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5241806c5c7e92bd8ec664cbd294255d">&#9670;&nbsp;</a></span>set_buffer_index()</h2>
+<a id="a7fc207b79bac43eb153e4242257dc475"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7fc207b79bac43eb153e4242257dc475">&#9670;&nbsp;</a></span>set_buffer_index()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::set_buffer_index </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::set_buffer_index </td>
           <td>(</td>
           <td class="paramtype">uint32_t&#160;</td>
           <td class="paramname"><em>v</em>, </td>
@@ -1210,19 +1211,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a4a50daa927a8829e4865c1e2833932d3"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a4a50daa927a8829e4865c1e2833932d3">&#9670;&nbsp;</a></span>set_data_ptr()</h2>
+<a id="ab1e3b8778a102033d5c9c3b419fa997d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab1e3b8778a102033d5c9c3b419fa997d">&#9670;&nbsp;</a></span>set_data_ptr()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::set_data_ptr </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::set_data_ptr </td>
           <td>(</td>
           <td class="paramtype">uint64_t *&#160;</td>
           <td class="paramname"><em>ptr</em></td><td>)</td>
@@ -1247,21 +1248,21 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a87c399d344010aa5863e4f4a58af06df"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a87c399d344010aa5863e4f4a58af06df">&#9670;&nbsp;</a></span>transfer_append()</h2>
+<a id="affaa678c11098f7b1df0ce42132a4cc8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#affaa678c11098f7b1df0ce42132a4cc8">&#9670;&nbsp;</a></span>transfer_append()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::transfer_append </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::transfer_append </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classbv_1_1leaf.html">leaf</a>&lt; buffer_size &gt; *&#160;</td>
+          <td class="paramtype"><a class="el" href="classbv_1_1leaf.html">leaf</a>&lt; buffer_size, avx &gt; *&#160;</td>
           <td class="paramname"><em>other</em>, </td>
         </tr>
         <tr>
@@ -1296,21 +1297,21 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a0d023c637404e682342e2045b935f7e9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a0d023c637404e682342e2045b935f7e9">&#9670;&nbsp;</a></span>transfer_prepend()</h2>
+<a id="a5c926af47de5c7569844b76fe6e73433"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c926af47de5c7569844b76fe6e73433">&#9670;&nbsp;</a></span>transfer_prepend()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::transfer_prepend </td>
+          <td class="memname">void <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::transfer_prepend </td>
           <td>(</td>
-          <td class="paramtype"><a class="el" href="classbv_1_1leaf.html">leaf</a>&lt; buffer_size &gt; *&#160;</td>
+          <td class="paramtype"><a class="el" href="classbv_1_1leaf.html">leaf</a>&lt; buffer_size, avx &gt; *&#160;</td>
           <td class="paramname"><em>other</em>, </td>
         </tr>
         <tr>
@@ -1345,19 +1346,19 @@ template&lt;uint8_t buffer_size&gt; </div>
 
 </div>
 </div>
-<a id="a8c9145913be613a62c19b544a28affcb"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8c9145913be613a62c19b544a28affcb">&#9670;&nbsp;</a></span>validate()</h2>
+<a id="aa8a8696df9bdda57a46e824c79e24dcc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa8a8696df9bdda57a46e824c79e24dcc">&#9670;&nbsp;</a></span>validate()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;uint8_t buffer_size&gt; </div>
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size &gt;::validate </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::validate </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -1383,7 +1384,7 @@ template&lt;uint8_t buffer_size&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jun 21 2021 12:43:47 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

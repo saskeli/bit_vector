@@ -88,31 +88,33 @@ $(function() {
 <div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160; </div>
 <div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="keyword">namespace </span><a class="code" href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">bv</a> {</div>
 <div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160; </div>
-<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="keyword">template</span> &lt;u<span class="keywordtype">int</span>8_t buffer_size, u<span class="keywordtype">int</span>64_t leaf_size, u<span class="keywordtype">int</span>8_t branching_factor&gt;</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keyword">using</span> <a class="code" href="bv_8hpp.html#acdb04427ddbfe8e99b483f1d89138efa">simple_bv</a> =</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;    bit_vector&lt;leaf&lt;buffer_size&gt;,</div>
-<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;               node&lt;leaf&lt;buffer_size&gt;, uint64_t, leaf_size, branching_factor&gt;,</div>
-<div class="line"><a name="l00055"></a><span class="lineno"><a class="line" href="bv_8hpp.html#acdb04427ddbfe8e99b483f1d89138efa">   55</a></span>&#160;               <a class="code" href="classbv_1_1malloc__alloc.html">malloc_alloc</a>, leaf_size, branching_factor&gt;;</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;<span class="keyword">template</span> &lt;u<span class="keywordtype">int</span>8_t buffer_size, u<span class="keywordtype">int</span>64_t leaf_size, u<span class="keywordtype">int</span>8_t branching_factor&gt;</div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;<span class="keyword">using</span> <a class="code" href="classbv_1_1bit__vector.html">small_bv</a> =</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    <a class="code" href="classbv_1_1bit__vector.html">bit_vector&lt;leaf&lt;buffer_size&gt;</a>,</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;               <a class="code" href="classbv_1_1node.html">node&lt;leaf&lt;buffer_size&gt;</a>, uint32_t, leaf_size, branching_factor&gt;,</div>
-<div class="line"><a name="l00080"></a><span class="lineno"><a class="line" href="bv_8hpp.html#a4d872b3d9e34d95706dfec0ebdb32a93">   80</a></span>&#160;               <a class="code" href="classbv_1_1malloc__alloc.html">malloc_alloc</a>, leaf_size, branching_factor&gt;;</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160; </div>
-<div class="line"><a name="l00089"></a><span class="lineno"><a class="line" href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">   89</a></span>&#160;<span class="keyword">typedef</span> <a class="code" href="classbv_1_1bit__vector.html">simple_bv&lt;8, 16384, 64&gt;</a> <a class="code" href="classbv_1_1bit__vector.html">bv</a>;</div>
-<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;}  <span class="comment">// namespace bv</span></div>
-<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160; </div>
-<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keyword">template</span> &lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;          <span class="keywordtype">bool</span> avx = <span class="keyword">true</span>&gt;</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;<span class="keyword">using</span> <a class="code" href="bv_8hpp.html#a7cd44cd9e01cde493f5c7301c1dc1071">simple_bv</a> =</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;    bit_vector&lt;leaf&lt;buffer_size, avx&gt;,</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;               node&lt;leaf&lt;buffer_size&gt;, uint64_t, leaf_size, branching_factor&gt;,</div>
+<div class="line"><a name="l00057"></a><span class="lineno"><a class="line" href="bv_8hpp.html#a7cd44cd9e01cde493f5c7301c1dc1071">   57</a></span>&#160;               <a class="code" href="classbv_1_1malloc__alloc.html">malloc_alloc</a>, leaf_size, branching_factor&gt;;</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;<span class="keyword">template</span> &lt;uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;          <span class="keywordtype">bool</span> avx = <span class="keyword">true</span>&gt;</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;<span class="keyword">using</span> <a class="code" href="classbv_1_1bit__vector.html">small_bv</a> =</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    <a class="code" href="classbv_1_1bit__vector.html">bit_vector&lt;leaf&lt;buffer_size, avx&gt;</a>,</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;               <a class="code" href="classbv_1_1node.html">node&lt;leaf&lt;buffer_size&gt;</a>, uint32_t, leaf_size, branching_factor&gt;,</div>
+<div class="line"><a name="l00084"></a><span class="lineno"><a class="line" href="bv_8hpp.html#aa53571a222e32ce04cd11546c29d9e33">   84</a></span>&#160;               <a class="code" href="classbv_1_1malloc__alloc.html">malloc_alloc</a>, leaf_size, branching_factor&gt;;</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160; </div>
+<div class="line"><a name="l00094"></a><span class="lineno"><a class="line" href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">   94</a></span>&#160;<span class="keyword">typedef</span> <a class="code" href="classbv_1_1bit__vector.html">simple_bv&lt;8, 16384, 64&gt;</a> <a class="code" href="classbv_1_1bit__vector.html">bv</a>;</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;}  <span class="comment">// namespace bv</span></div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160; </div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;<span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
-<div class="ttc" id="aclassbv_1_1bit__vector_html"><div class="ttname"><a href="classbv_1_1bit__vector.html">bv::bit_vector</a></div><div class="ttdoc">Container class for dynamic b-tree bit vector stuctures.</div><div class="ttdef"><b>Definition:</b> bit_vector.hpp:31</div></div>
-<div class="ttc" id="abv_8hpp_html_a4b92c0a07b306636aec9f18892e47447"><div class="ttname"><a href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">bv::bv</a></div><div class="ttdeci">simple_bv&lt; 8, 16384, 64 &gt; bv</div><div class="ttdoc">Default dynamic bit vector type.</div><div class="ttdef"><b>Definition:</b> bv.hpp:89</div></div>
+<div class="ttc" id="aclassbv_1_1bit__vector_html"><div class="ttname"><a href="classbv_1_1bit__vector.html">bv::bit_vector</a></div><div class="ttdoc">Container class for dynamic b-tree bit vector stuctures.</div><div class="ttdef"><b>Definition:</b> bit_vector.hpp:35</div></div>
+<div class="ttc" id="abv_8hpp_html_a4b92c0a07b306636aec9f18892e47447"><div class="ttname"><a href="bv_8hpp.html#a4b92c0a07b306636aec9f18892e47447">bv::bv</a></div><div class="ttdeci">simple_bv&lt; 8, 16384, 64 &gt; bv</div><div class="ttdoc">Default dynamic bit vector type.</div><div class="ttdef"><b>Definition:</b> bv.hpp:94</div></div>
 <div class="ttc" id="aclassbv_1_1malloc__alloc_html"><div class="ttname"><a href="classbv_1_1malloc__alloc.html">bv::malloc_alloc</a></div><div class="ttdoc">Simple malloc based allocation for internal nodes and leaves.</div><div class="ttdef"><b>Definition:</b> allocator.hpp:20</div></div>
 <div class="ttc" id="aclassbv_1_1node_html"><div class="ttname"><a href="classbv_1_1node.html">bv::node</a></div><div class="ttdoc">Internal node for use with bit vector b-tree structures.</div><div class="ttdef"><b>Definition:</b> node.hpp:63</div></div>
-<div class="ttc" id="abv_8hpp_html_acdb04427ddbfe8e99b483f1d89138efa"><div class="ttname"><a href="bv_8hpp.html#acdb04427ddbfe8e99b483f1d89138efa">bv::simple_bv</a></div><div class="ttdeci">bit_vector&lt; leaf&lt; buffer_size &gt;, node&lt; leaf&lt; buffer_size &gt;, uint64_t, leaf_size, branching_factor &gt;, malloc_alloc, leaf_size, branching_factor &gt; simple_bv</div><div class="ttdoc">Helper type definition template for bit vector with at most 2^63 elements.</div><div class="ttdef"><b>Definition:</b> bv.hpp:55</div></div>
+<div class="ttc" id="abv_8hpp_html_a7cd44cd9e01cde493f5c7301c1dc1071"><div class="ttname"><a href="bv_8hpp.html#a7cd44cd9e01cde493f5c7301c1dc1071">bv::simple_bv</a></div><div class="ttdeci">bit_vector&lt; leaf&lt; buffer_size, avx &gt;, node&lt; leaf&lt; buffer_size &gt;, uint64_t, leaf_size, branching_factor &gt;, malloc_alloc, leaf_size, branching_factor &gt; simple_bv</div><div class="ttdoc">Helper type definition template for bit vector with at most 2^63 elements.</div><div class="ttdef"><b>Definition:</b> bv.hpp:57</div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jun 21 2021 12:43:47 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

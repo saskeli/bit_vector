@@ -78,13 +78,16 @@ $(function() {
 : <a class="el" href="classbv_1_1bit__vector.html#a8dd591415a14509f8be067e4a7b1465d">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
 </li>
 <li>buffer_
-: <a class="el" href="classbv_1_1leaf.html#a19eee6b3583e209e3e7f5ef713981b90">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a0e677d3bcb1435ea0b9a8c4fe6daa793">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>buffer_count_
-: <a class="el" href="classbv_1_1leaf.html#a015a71fc8c5eaefe14f7f7b7d7fdf9f5">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#abf9a66b34ff5479b3fb7f4cc98d40386">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>capacity_
-: <a class="el" href="classbv_1_1leaf.html#ab7d09411709930afa60303d25a95f20e">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#aeb7c9d64aaebed4278aeda426910fa22">bv::leaf&lt; buffer_size, avx &gt;</a>
+</li>
+<li>child_count_
+: <a class="el" href="classbv_1_1node.html#a1b9c1b74d0f6a33b557ea515c410d01f">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>child_sizes_
 : <a class="el" href="classbv_1_1node.html#ab11e4b5852509caab27cb457e4df432f">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
@@ -96,16 +99,16 @@ $(function() {
 : <a class="el" href="classbv_1_1node.html#af6f7465fdf42b31fcab3919ddbbe05b2">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>data_
-: <a class="el" href="classbv_1_1leaf.html#af19adb2e303132a186c33d3cce13a221">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a5538dd6fe3f924c98ccbed4965dae198">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>INDEX_MASK
-: <a class="el" href="classbv_1_1leaf.html#a8ac2ff5d4f4ccca477338dfb3884db14">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a2cdd146d046d36c83c77dec7a2ffca46">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>l_root_
 : <a class="el" href="classbv_1_1bit__vector.html#a9a55b52ea39c46949a94e5ec963c3c5b">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
 </li>
 <li>MASK
-: <a class="el" href="classbv_1_1leaf.html#a5cfd98d3a58115aaf313860f4338d972">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a3962e2bf7e50e9ce67414167528a0c76">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>meta_data_
 : <a class="el" href="classbv_1_1node.html#ae01de1c67b5f3e86ef2248f6d4d0a229">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
@@ -117,25 +120,25 @@ $(function() {
 : <a class="el" href="classbv_1_1bit__vector.html#ac2ec168e6e617653934fde38d5cd5f80">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
 </li>
 <li>p_sum_
-: <a class="el" href="classbv_1_1leaf.html#a0ed1be26743068c589f059528a6dbb10">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a70be1cf26ce90465197624b710ebe13a">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>root_is_leaf_
 : <a class="el" href="classbv_1_1bit__vector.html#a393d84f94d09be134a6513898b460ba8">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
 </li>
 <li>size_
-: <a class="el" href="classbv_1_1leaf.html#a6ce0170f3a30c7b2daeb5afc1d6ad17a">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a79a1fc0fd0857a6060a871d6d2f1e167">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>TYPE_MASK
-: <a class="el" href="classbv_1_1leaf.html#ac382422f48a944d0ddb7e27e686a77e9">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a6657881af0792dc107ef309238355cda">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>VALUE_MASK
-: <a class="el" href="classbv_1_1leaf.html#ad0ede561405469041e8db0b5fae33c07">bv::leaf&lt; buffer_size &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a36d3c62a8530665493c136bc07843786">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jun 21 2021 12:43:47 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

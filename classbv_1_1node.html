@@ -234,8 +234,12 @@ Protected Member Functions</h2></td></tr>
 Protected Attributes</h2></td></tr>
 <tr class="memitem:ae01de1c67b5f3e86ef2248f6d4d0a229"><td class="memItemLeft" align="right" valign="top"><a id="ae01de1c67b5f3e86ef2248f6d4d0a229"></a>
 uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#ae01de1c67b5f3e86ef2248f6d4d0a229">meta_data_</a></td></tr>
-<tr class="memdesc:ae01de1c67b5f3e86ef2248f6d4d0a229"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of children in the 7 least significant bits and a bit indicating whether the nodes children are laves or nodes. <br /></td></tr>
+<tr class="memdesc:ae01de1c67b5f3e86ef2248f6d4d0a229"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bit indicating whether the nodes children are laves or nodes. <br /></td></tr>
 <tr class="separator:ae01de1c67b5f3e86ef2248f6d4d0a229"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1b9c1b74d0f6a33b557ea515c410d01f"><td class="memItemLeft" align="right" valign="top"><a id="a1b9c1b74d0f6a33b557ea515c410d01f"></a>
+uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a1b9c1b74d0f6a33b557ea515c410d01f">child_count_</a></td></tr>
+<tr class="memdesc:a1b9c1b74d0f6a33b557ea515c410d01f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of active children. <br /></td></tr>
+<tr class="separator:a1b9c1b74d0f6a33b557ea515c410d01f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab11e4b5852509caab27cb457e4df432f"><td class="memItemLeft" align="right" valign="top"><a id="ab11e4b5852509caab27cb457e4df432f"></a>
 dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#ab11e4b5852509caab27cb457e4df432f">child_sizes_</a> [branches]</td></tr>
 <tr class="memdesc:ab11e4b5852509caab27cb457e4df432f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cumulative child sizes and <code>(~0) &gt;&gt; 1</code> for non-existing children. <br /></td></tr>
@@ -1643,7 +1647,7 @@ template&lt;class allocator &gt; </div>
 
 <p>Ensure that there is space for insertion in the child nodes. </p>
 <p>If there is sufficient space in either sibling, elements will be transferred to the sibling with more room. If there is insufficient space in the siblings, a new node is allocated and elements are transferred from the target node to one of the siblings.</p>
-<p>Generally delays allocation of a new node as long as posisble, and when reallocating, generates a new node that is \(\approx \frac{2}{3}\) full.</p>
+<p>Generally delays allocation of a new node as long as possible, and when reallocating, generates a new node that is \(\approx \frac{2}{3}\) full.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">allocator</td><td>Type of <code>alloc</code>.</td></tr>
@@ -2093,7 +2097,7 @@ template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Mon Jun 21 2021 12:43:47 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>
