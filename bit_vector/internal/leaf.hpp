@@ -9,6 +9,8 @@
 #include <cstring>
 #include <iostream>
 
+#include "libpopcnt.h"
+
 namespace bv {
 
 #define WORD_BITS 64
@@ -37,16 +39,17 @@ namespace bv {
  * with 6 bits of an 8-bit word, with 2 bits reserved for other purposes. This
  * could easily be "fixed", but testing indicates that bigger buffer sizes are
  * unlikely to be of practical use.
- * 
+ *
  * @tparam Size of insertion/removal buffer.
+ * @tparam Use avx population counts for rank operations.
  */
-template <uint8_t buffer_size>
+template <uint8_t buffer_size, bool avx = true>
 class leaf {
    protected:
     uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
     uint32_t size_;         ///< Logical number of bits stored.
-    uint32_t p_sum_;  ///< Logical number of 1-bits stored.
+    uint32_t p_sum_;        ///< Logical number of 1-bits stored.
 #pragma GCC diagnostic ignored "-Wpedantic"
     uint32_t buffer_[buffer_size];  ///< Insert/remove buffer.
 #pragma GCC diagnostic pop
@@ -341,12 +344,18 @@ class leaf {
         }
         uint64_t target_word = idx / WORD_BITS;
         uint64_t target_offset = idx % WORD_BITS;
-        for (size_t i = 0; i < target_word; i++) {
-            count += __builtin_popcountll(data_[i]);
+        if constexpr (avx) {
+            if (target_word) {
+                count += pop::popcnt(data_, target_word * 8);
+            }
+        } else {
+            for (size_t i = 0; i < target_word; i++) {
+                count += __builtin_popcountll(data_[i]);
+            }
         }
         if (target_offset != 0) {
             count += __builtin_popcountll(data_[target_word] &
-                                          ((MASK << target_offset) - 1));
+                                        ((MASK << target_offset) - 1));
         }
         return count;
     }

@@ -29,7 +29,7 @@ void node_add_child_test(uint64_t b) {
         ASSERT_EQ((i + 1) * 64, sums[i]);
     }
 
-    nd->template deallocate<alloc>();
+    nd->deallocate(a);
     a->deallocate_node(nd);
     delete (a);
 }
@@ -60,7 +60,7 @@ void node_add_node_test(uint64_t b) {
         ASSERT_EQ((i + 1) * 64, sums[i]);
     }
 
-    nd->template deallocate<alloc>();
+    nd->deallocate(a);
     a->deallocate_node(nd);
     delete (a);
 }
@@ -78,7 +78,7 @@ void node_split_leaves_test(uint64_t b) {
         nd->append_child(l);
     }
 
-    node* sibling = nd->template split<alloc>();
+    node* sibling = nd->split(a);
 
     ASSERT_EQ(true, nd->has_leaves());
     ASSERT_EQ(b / 2, nd->child_count());
@@ -99,8 +99,8 @@ void node_split_leaves_test(uint64_t b) {
         ASSERT_EQ((i + 1) * 64, sums[i]);
     }
 
-    sibling->template deallocate<alloc>();
-    nd->template deallocate<alloc>();
+    sibling->deallocate(a);
+    nd->deallocate(a);
     a->deallocate_node(nd);
     a->deallocate_node(sibling);
     delete (a);
@@ -123,7 +123,7 @@ void node_split_nodes_test(uint64_t b) {
         nd->append_child(n);
     }
 
-    node* sibling = nd->template split<alloc>();
+    node* sibling = nd->split(a);
 
     ASSERT_EQ(false, nd->has_leaves());
     ASSERT_EQ(b / 2, nd->child_count());
@@ -146,8 +146,8 @@ void node_split_nodes_test(uint64_t b) {
         ASSERT_EQ((i + 1) * 64 * 2 * (b / 3), sums[i]);
     }
 
-    sibling->template deallocate<alloc>();
-    nd->template deallocate<alloc>();
+    sibling->deallocatealloc>(a);
+    nd->deallocate(a);
     a->deallocate_node(nd);
     a->deallocate_node(sibling);
     ASSERT_EQ(0u, a->live_allocations());
@@ -192,7 +192,7 @@ void node_append_all_test(uint64_t b) {
         ASSERT_EQ((i + 1) * 128, sizes[i]);
     }
 
-    n1->template deallocate<alloc>();
+    n1->deallocate(a);
     a->deallocate_node(n1);
     a->deallocate_node(n2);
     ASSERT_EQ(0u, a->live_allocations());
@@ -204,7 +204,7 @@ void node_clear_last_test(uint64_t b) {
     alloc* a = new alloc();
     node* n = a->template allocate_node<node>();
     n->has_leaves(true);
-    leaf* leaves[b - 2];
+    leaf** leaves = (leaf**)malloc((b - 2) * sizeof(leaf));
     for (uint64_t i = 0; i < b - 2; i++) {
         leaf* l = a->template allocate_leaf<leaf>(3);
         for (uint64_t j = 0; j < 128; j++) {
@@ -223,13 +223,14 @@ void node_clear_last_test(uint64_t b) {
     ASSERT_EQ((b - 2 - b / 2) * 128, n->size());
     ASSERT_EQ((b - 2 - b / 2), n->child_count());
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(b / 2, a->live_allocations());
     for (uint64_t i = b - 2 - b / 2; i < b - 2; i++) {
         a->deallocate_leaf(leaves[i]);
     }
-    delete (a);
+    delete(a);
+    free(leaves);
 }
 
 template <class node, class leaf, class alloc>
@@ -269,8 +270,8 @@ void node_transfer_prepend_test(uint64_t b) {
     ASSERT_EQ((b / 3 + b / 2) * 128, n2->size());
     ASSERT_EQ(b / 3 + b / 2, n2->child_count());
 
-    n1->template deallocate<alloc>();
-    n2->template deallocate<alloc>();
+    n1->deallocate(a);
+    n2->deallocate(a);
     a->deallocate_node(n1);
     a->deallocate_node(n2);
     ASSERT_EQ(0u, a->live_allocations());
@@ -282,7 +283,7 @@ void node_clear_first_test(uint64_t b) {
     alloc* a = new alloc();
     node* n = a->template allocate_node<node>();
     n->has_leaves(true);
-    leaf* leaves[b - 2];
+    leaf** leaves = (leaf**)malloc((b - 2) * sizeof(leaf));
     for (uint64_t i = 0; i < b - 2; i++) {
         leaf* l = a->template allocate_leaf<leaf>(3);
         for (uint64_t j = 0; j < 128; j++) {
@@ -301,13 +302,14 @@ void node_clear_first_test(uint64_t b) {
     ASSERT_EQ((b - 2 - b / 2) * 128, n->size());
     ASSERT_EQ(b - 2 - b / 2, n->child_count());
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(b / 2, a->live_allocations());
     for (uint64_t i = 0; i < b / 2; i++) {
         a->deallocate_leaf(leaves[i]);
     }
     delete (a);
+    free(leaves);
 }
 
 template <class node, class leaf, class alloc>
@@ -348,8 +350,8 @@ void node_transfer_append_test(uint64_t b) {
     ASSERT_EQ((b - 2 - b / 2) * 128, n2->size());
     ASSERT_EQ(b - 2 - b / 2, n2->child_count());
 
-    n1->template deallocate<alloc>();
-    n2->template deallocate<alloc>();
+    n1->deallocate(a);
+    n2->deallocate(a);
     a->deallocate_node(n1);
     a->deallocate_node(n2);
     ASSERT_EQ(0u, a->live_allocations());
@@ -373,7 +375,7 @@ void node_access_single_leaf_test() {
     for (uint64_t i = 0; i < 128; i++) {
         ASSERT_EQ(i % 2 == 0, n->at(i));
     }
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -418,7 +420,7 @@ void node_access_leaf_test(uint64_t b) {
     for (uint64_t i = 2 * (b / 3) * 128; i < 3 * (b / 3) * 128; i++) {
         ASSERT_EQ(i % 2 == 0, n->at(i));
     }
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -471,7 +473,7 @@ void node_access_node_test(uint64_t b) {
     for (uint64_t i = 2 * (b / 3) * 128; i < 3 * (b / 3) * 128; i++) {
         ASSERT_EQ(i % 2 == 0, n->at(i));
     }
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -510,7 +512,7 @@ void node_set_leaf_test(uint64_t b) {
         }
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -552,7 +554,7 @@ void node_set_node_test(uint64_t b) {
         }
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -578,7 +580,7 @@ void node_rank_leaf_test(uint64_t b) {
         ASSERT_EQ((1 + i) / 2, n->rank(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -608,7 +610,7 @@ void node_rank_leafb_test(uint64_t b) {
         }
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -640,7 +642,7 @@ void node_rank_node_test(uint64_t b) {
         }
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -677,7 +679,7 @@ void node_select_single_leaf_test() {
         ASSERT_EQ(1 + (j - 1) * 2, n->select(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -707,7 +709,7 @@ void node_select_leaf_test(uint64_t b) {
         }
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -739,7 +741,7 @@ void node_select_node_test(uint64_t b) {
         }
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -753,7 +755,7 @@ void node_insert_single_leaf_test() {
     leaf* l = a->template allocate_leaf<leaf>(3);
     n->append_child(l);
     for (uint64_t i = 0; i < 128; i++) {
-        n->template insert<alloc>(0, i % 2);
+        n->insert(0, i % 2, a);
     }
 
     ASSERT_EQ(1u * 64, n->p_sum());
@@ -764,7 +766,7 @@ void node_insert_single_leaf_test() {
         ASSERT_EQ(i % 2 == 0, n->at(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -778,7 +780,7 @@ void node_insert_single_leaf_realloc_test() {
     leaf* l = a->template allocate_leaf<leaf>(1);
     n->append_child(l);
     for (uint64_t i = 0; i < 128; i++) {
-        n->template insert<alloc>(0, i % 2);
+        n->insert(0, i % 2, a);
     }
 
     ASSERT_EQ(1u * 64, n->p_sum());
@@ -789,7 +791,7 @@ void node_insert_single_leaf_realloc_test() {
         ASSERT_EQ(i % 2 == 0, n->at(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -817,7 +819,7 @@ void node_insert_single_leaf_split_test(uint64_t size) {
     }
 
     for (uint64_t i = 0; i < 4; i++) {
-        n->template insert<alloc>(i, i % 2);
+        n->insert(i, i % 2, a);
     }
 
     ASSERT_EQ(size, n->p_sum());
@@ -828,7 +830,7 @@ void node_insert_single_leaf_split_test(uint64_t size) {
         ASSERT_EQ(i % 2, n->at(i)) << "i = " << i;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -847,7 +849,7 @@ void node_insert_leaf_split_test(uint64_t size) {
         n->append_child(l);
     }
 
-    n->template insert<alloc>(size + 5, true);
+    n->insert(size + 5, true, a);
 
     ASSERT_EQ(size + 1, n->p_sum());
     ASSERT_EQ(2 * size + 1, n->size());
@@ -861,7 +863,7 @@ void node_insert_leaf_split_test(uint64_t size) {
         ASSERT_EQ((i + 1) % 2, n->at(i)) << "i = " << i;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -889,7 +891,7 @@ void node_insert_leaf_rebalance_test(uint64_t size) {
     }
 
     for (uint64_t i = 0; i < size; i++) {
-        n->template insert<alloc>(0, i % 2);
+        n->insert(0, i % 2, a);
     }
 
     ASSERT_EQ(size, n->p_sum());
@@ -904,7 +906,7 @@ void node_insert_leaf_rebalance_test(uint64_t size) {
         ASSERT_EQ(i % 2, n->at(i)) << "i = " << i;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete(a);
@@ -930,7 +932,7 @@ void node_insert_node_test() {
     ASSERT_EQ(6u * 0, n->p_sum());
 
     for (uint64_t i = 6u * 128; i > 0; i--) {
-        n->template insert<alloc>(i, true);
+        n->insert(i, true, a);
     }
 
     ASSERT_EQ(6u, n->child_count());
@@ -941,7 +943,7 @@ void node_insert_node_test() {
         ASSERT_EQ(i % 2, n->at(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -970,7 +972,7 @@ void node_insert_node_split_test(uint64_t b) {
     ASSERT_EQ(2u * 0, n->p_sum());
 
     for (uint64_t i = 2u * 128 * b; i > 0; i--) {
-        n->template insert<alloc>(i, true);
+        n->insert(i, true, a);
     }
 
     ASSERT_EQ(3u, n->child_count());
@@ -981,7 +983,7 @@ void node_insert_node_split_test(uint64_t b) {
         ASSERT_EQ(i % 2, n->at(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1005,7 +1007,7 @@ void node_remove_leaf_simple_test(uint64_t size) {
     ASSERT_EQ(2u * size / 2, n->p_sum());
 
     for (uint64_t i = 2u * size - 1; i < 2u * size; i -= 2) {
-        n->template remove<alloc>(i);
+        n->remove(i, a);
     }
 
     ASSERT_EQ(2u, n->child_count());
@@ -1016,7 +1018,7 @@ void node_remove_leaf_simple_test(uint64_t size) {
         ASSERT_EQ(false, n->at(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1044,8 +1046,8 @@ void node_remove_leaf_a_test(uint64_t size) {
     ASSERT_EQ(m, n->size());
     ASSERT_EQ(m / 2, n->p_sum());
 
-    n->template remove<alloc>(5 * size / 6);
-    n->template remove<alloc>(5 * size / 6);
+    n->remove(5 * size / 6, a);
+    n->remove(5 * size / 6, a);
 
     ASSERT_EQ(2u, n->child_count());
     ASSERT_EQ(m - 2, n->size());
@@ -1054,7 +1056,7 @@ void node_remove_leaf_a_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1085,8 +1087,8 @@ void node_remove_leaf_b_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template remove<alloc>(size / 2);
-    n->template remove<alloc>(size / 2);
+    n->remove(size / 2, a);
+    n->remove(size / 2, a);
 
     ASSERT_EQ(1u, n->child_count());
     ASSERT_EQ(m - 2, n->size());
@@ -1095,7 +1097,7 @@ void node_remove_leaf_b_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1129,8 +1131,8 @@ void node_remove_leaf_c_test(uint64_t size) {
     ASSERT_EQ(m, n->size());
     ASSERT_EQ(m / 2, n->p_sum());
 
-    n->template remove<alloc>(size + 5 * size / 6);
-    n->template remove<alloc>(size + 5 * size / 6);
+    n->remove(size + 5 * size / 6, a);
+    n->remove(size + 5 * size / 6, a);
 
     ASSERT_EQ(3u, n->child_count());
     ASSERT_EQ(m - 2, n->size());
@@ -1139,7 +1141,7 @@ void node_remove_leaf_c_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1176,8 +1178,8 @@ void node_remove_leaf_d_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template remove<alloc>(size + size / 2);
-    n->template remove<alloc>(size + size / 2);
+    n->remove(size + size / 2, a);
+    n->remove(size + size / 2, a);
 
     ASSERT_EQ(2u, n->child_count());
     ASSERT_EQ(m - 2, n->size());
@@ -1186,7 +1188,7 @@ void node_remove_leaf_d_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1214,8 +1216,8 @@ void node_remove_leaf_e_test(uint64_t size) {
     ASSERT_EQ(m, n->size());
     ASSERT_EQ(m / 2, n->p_sum());
 
-    n->template remove<alloc>(0);
-    n->template remove<alloc>(0);
+    n->remove(0, a);
+    n->remove(0, a);
 
     ASSERT_EQ(2u, n->child_count());
     ASSERT_EQ(m - 2, n->size());
@@ -1224,7 +1226,7 @@ void node_remove_leaf_e_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1255,8 +1257,8 @@ void node_remove_leaf_f_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template remove<alloc>(0);
-    n->template remove<alloc>(0);
+    n->remove(0, a);
+    n->remove(0, a);
 
     ASSERT_EQ(1u, n->child_count());
     ASSERT_EQ(m - 2, n->size());
@@ -1265,7 +1267,7 @@ void node_remove_leaf_f_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1292,7 +1294,7 @@ void node_remove_leaf_g_test(uint64_t size) {
     }
 
     for (uint64_t i = 0; i < size; i++) {
-        n->template remove<alloc>(0);
+        n->remove(0, a);
     }
 
     ASSERT_EQ(2u, n->child_count());
@@ -1302,7 +1304,7 @@ void node_remove_leaf_g_test(uint64_t size) {
         ASSERT_EQ(j % 2, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1329,7 +1331,7 @@ void node_remove_leaf_h_test(uint64_t size) {
     }
 
     for (uint64_t i = 2 * size - 1; i < 2 * size; i -= 2) {
-        n->template remove<alloc>(i);
+        n->remove(i, a);
     }
 
     ASSERT_EQ(2u, n->child_count());
@@ -1339,7 +1341,7 @@ void node_remove_leaf_h_test(uint64_t size) {
         ASSERT_EQ(false, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1367,7 +1369,7 @@ void node_remove_node_simple_test(uint64_t size, uint64_t b) {
     ASSERT_EQ(1u * b * size, n->p_sum());
 
     for (uint64_t i = 2u * b * size - 1; i < 2u * b * size; i -= 2) {
-        n->template remove<alloc>(i);
+        n->remove(i, a);
     }
 
     ASSERT_EQ(2u, n->child_count());
@@ -1378,7 +1380,7 @@ void node_remove_node_simple_test(uint64_t size, uint64_t b) {
         ASSERT_EQ(false, n->at(i));
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1414,7 +1416,7 @@ void node_remove_node_a_test(uint64_t size, uint64_t b) {
     ASSERT_EQ(b * size + (b / 3) * size, n->size());
     ASSERT_EQ(b / 2 * size + (b / 3) * size / 2, n->p_sum());
 
-    n->template remove<alloc>(n->size() - 1);
+    n->remove(n->size() - 1, a);
 
     ASSERT_EQ(2u, n->child_count());
     ASSERT_EQ(b * size + (b / 3) * size - 1, n->size());
@@ -1426,7 +1428,7 @@ void node_remove_node_a_test(uint64_t size, uint64_t b) {
         ASSERT_EQ(j % 2, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1462,7 +1464,7 @@ void node_remove_node_b_test(uint64_t size, uint64_t b) {
     ASSERT_EQ(2u * (b / 3) * size, n->size());
     ASSERT_EQ(1u * (b / 3) * size, n->p_sum());
 
-    n->template remove<alloc>(n->size() - 1);
+    n->remove(n->size() - 1, a);
 
     ASSERT_EQ(1u, n->child_count());
     ASSERT_EQ(2u * (b / 3) * size - 1, n->size());
@@ -1471,7 +1473,7 @@ void node_remove_node_b_test(uint64_t size, uint64_t b) {
         ASSERT_EQ(j % 2, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1518,7 +1520,7 @@ void node_remove_node_c_test(uint64_t size, uint64_t b) {
     ASSERT_EQ(2u * b * size + (b / 3) * size, n->size());
     ASSERT_EQ(1u * b * size + (b / 3) * size / 2, n->p_sum());
 
-    n->template remove<alloc>(n->size() - 1);
+    n->remove(n->size() - 1, a);
 
     ASSERT_EQ(3u, n->child_count());
     ASSERT_EQ(2u * b * size + (b / 3) * size - 1, n->size());
@@ -1530,7 +1532,7 @@ void node_remove_node_c_test(uint64_t size, uint64_t b) {
         ASSERT_EQ(j % 2, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1566,7 +1568,7 @@ void node_remove_node_d_test(uint64_t size, uint64_t b) {
     ASSERT_EQ(b * size + (b / 3) * size, n->size());
     ASSERT_EQ((b * size + (b / 3) * size) / 2, n->p_sum());
 
-    n->template remove<alloc>(0);
+    n->remove(0, a);
 
     ASSERT_EQ(2u, n->child_count());
     ASSERT_EQ(b * size + (b / 3) * size - 1, n->size());
@@ -1578,7 +1580,7 @@ void node_remove_node_d_test(uint64_t size, uint64_t b) {
         ASSERT_EQ(j % 2 == 0, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);
@@ -1614,7 +1616,7 @@ void node_remove_node_e_test(uint64_t size, uint64_t b) {
     ASSERT_EQ(2u * (b / 3) * size, n->size());
     ASSERT_EQ(1u * (b / 3) * size, n->p_sum());
 
-    n->template remove<alloc>(0);
+    n->remove(0, a);
 
     ASSERT_EQ(1u, n->child_count());
     ASSERT_EQ(2u * (b / 3) * size - 1, n->size());
@@ -1623,7 +1625,7 @@ void node_remove_node_e_test(uint64_t size, uint64_t b) {
         ASSERT_EQ(j % 2 == 0, n->at(j)) << "j = " << j;
     }
 
-    n->template deallocate<alloc>();
+    n->deallocate(a);
     a->deallocate_node(n);
     ASSERT_EQ(0u, a->live_allocations());
     delete (a);

@@ -70,7 +70,7 @@ test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
-	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) -c test/test.cpp -o test/test.o
+	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE_DYN) -c test/test.cpp -o test/test.o
 
 test: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
