@@ -198,11 +198,11 @@ int main(int argc, char const *argv[]) {
 }""")
 
 def main(t_id, f_path):
-    name, is_avx, branch, leaf, buf = types[t_id]
-    if t_id < 1 or t_id >= len(types):
+    if t_id < 0 or t_id >= len(types):
         print(f"Invalid type {t_id} (should be in range [0..{len(types) - 1}]).", file=sys.stderr)
         exit(1)
     print(f"Generating code for test case {t_id} (in range [0..{len(types) - 1}]).", file=sys.stderr)
+    name, is_avx, branch, leaf, buf = types[t_id]
     with open(f_path, 'w') as out_file:
         write_header(out_file, name, is_avx, branch, leaf, buf)
         write_tester(out_file, name, is_avx, branch, leaf, buf)
