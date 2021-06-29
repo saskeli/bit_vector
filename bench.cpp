@@ -50,8 +50,9 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
     std::vector<uint64_t> loc, val;
 
-    std::cout << "type\tbuffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\t"
-              << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
+    std::cout
+        << "type\tbuffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\t"
+        << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
         uint64_t aloc = gen(mt) % (i + 1);
@@ -69,11 +70,15 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
             std::cout << "leaf\t";
         } else if constexpr (type == 2) {
             std::cout << "uint32_t\t";
-        } else {
+        } else if constexpr (type == 3) {
             std::cout << "uint64_t\t";
+        } else if constexpr (type == 4) {
+            std::cout << "n_avx_32\t";
+        } else {
+            std::cout << "n_avx_64\t";
         }
-        std::cout << int(buffer) << "\t" << int(branch) << "\t" << leaf_size << "\t"
-                  << seed << "\t" << target << "\t";
+        std::cout << int(buffer) << "\t" << int(branch) << "\t" << leaf_size
+                  << "\t" << seed << "\t" << target << "\t";
 
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
@@ -181,6 +186,7 @@ int main(int argc, char const *argv[]) {
     uint64_t seed;
     uint64_t size = 10000000;
     uint64_t steps = 100;
+    bool avx = true;
     std::sscanf(argv[1], "%lu", &type);
     std::sscanf(argv[2], "%lu", &seed);
     if (argc > 3) {
@@ -193,6 +199,11 @@ int main(int argc, char const *argv[]) {
     }
     if (argc > 4) {
         std::sscanf(argv[4], "%lu", &steps);
+    }
+    if (argc > 5) {
+        uint64_t avx_val;
+        std::sscanf(argv[5], "%lu", &avx_val);
+        avx = avx_val ? true : false;
     }
     switch (type) {
         case 1:
@@ -208,644 +219,1412 @@ int main(int argc, char const *argv[]) {
             test<dyn::b_suc_bv, 0, 1, 8, 16, 8192>(size, steps, seed);
             break;
         case 4:
-            std::cerr << "4: uint32_t, 16, 0, 4096" << std::endl;
-            test<bv::small_bv<0, 4096, 16>, 1, 2, 0, 16, 4096>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "4: uint64_t, 16, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 16>, 1, 3, 0, 16, 4096>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "4: n_avx_64, 16, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 16, false>, 1, 3, 0, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 5:
-            std::cerr << "5: uint32_t, 16, 0, 8192" << std::endl;
-            test<bv::small_bv<0, 8192, 16>, 1, 2, 0, 16, 8192>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "5: uint64_t, 16, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 16>, 1, 3, 0, 16, 8192>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "5: n_avx_64, 16, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 16, false>, 1, 3, 0, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 6:
-            std::cerr << "6: uint32_t, 16, 0, 16384" << std::endl;
-            test<bv::small_bv<0, 16384, 16>, 1, 2, 0, 16, 16384>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "6: uint64_t, 16, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 16>, 1, 3, 0, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "6: n_avx_64, 16, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 16, false>, 1, 3, 0, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 7:
-            std::cerr << "7: uint32_t, 16, 0, 32768" << std::endl;
-            test<bv::small_bv<0, 32768, 16>, 1, 2, 0, 16, 32768>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "7: uint64_t, 16, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 16>, 1, 3, 0, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "7: n_avx_64, 16, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 16, false>, 1, 3, 0, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 8:
-            std::cerr << "8: uint32_t, 16, 8, 4096" << std::endl;
-            test<bv::small_bv<8, 4096, 16>, 1, 2, 8, 16, 4096>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "8: uint64_t, 16, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 16>, 1, 3, 8, 16, 4096>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "8: n_avx_64, 16, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 16, false>, 1, 3, 8, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 9:
-            std::cerr << "9: uint32_t, 16, 8, 8192" << std::endl;
-            test<bv::small_bv<8, 8192, 16>, 1, 2, 8, 16, 8192>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "9: uint64_t, 16, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 16>, 1, 3, 8, 16, 8192>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "9: n_avx_64, 16, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 16, false>, 1, 3, 8, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 10:
-            std::cerr << "10: uint32_t, 16, 8, 16384" << std::endl;
-            test<bv::small_bv<8, 16384, 16>, 1, 2, 8, 16, 16384>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "10: uint64_t, 16, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 16>, 1, 3, 8, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "10: n_avx_64, 16, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 16, false>, 1, 3, 8, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 11:
-            std::cerr << "11: uint32_t, 16, 8, 32768" << std::endl;
-            test<bv::small_bv<8, 32768, 16>, 1, 2, 8, 16, 32768>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "11: uint64_t, 16, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 16>, 1, 3, 8, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "11: n_avx_64, 16, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 16, false>, 1, 3, 8, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 12:
-            std::cerr << "12: uint32_t, 16, 16, 4096" << std::endl;
-            test<bv::small_bv<16, 4096, 16>, 1, 2, 16, 16, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "12: uint64_t, 16, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 16>, 1, 3, 16, 16, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "12: n_avx_64, 16, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 16, false>, 1, 3, 16, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 13:
-            std::cerr << "13: uint32_t, 16, 16, 8192" << std::endl;
-            test<bv::small_bv<16, 8192, 16>, 1, 2, 16, 16, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "13: uint64_t, 16, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 16>, 1, 3, 16, 16, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "13: n_avx_64, 16, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 16, false>, 1, 3, 16, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 14:
-            std::cerr << "14: uint32_t, 16, 16, 16384" << std::endl;
-            test<bv::small_bv<16, 16384, 16>, 1, 2, 16, 16, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "14: uint64_t, 16, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 16>, 1, 3, 16, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "14: n_avx_64, 16, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 16, false>, 1, 3, 16, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 15:
-            std::cerr << "15: uint32_t, 16, 16, 32768" << std::endl;
-            test<bv::small_bv<16, 32768, 16>, 1, 2, 16, 16, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "15: uint64_t, 16, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 16>, 1, 3, 16, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "15: n_avx_64, 16, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 16, false>, 1, 3, 16, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 16:
-            std::cerr << "16: uint32_t, 16, 32, 4096" << std::endl;
-            test<bv::small_bv<32, 4096, 16>, 1, 2, 32, 16, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "16: uint64_t, 16, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 16>, 1, 3, 32, 16, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "16: n_avx_64, 16, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 16, false>, 1, 3, 32, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 17:
-            std::cerr << "17: uint32_t, 16, 32, 8192" << std::endl;
-            test<bv::small_bv<32, 8192, 16>, 1, 2, 32, 16, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "17: uint64_t, 16, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 16>, 1, 3, 32, 16, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "17: n_avx_64, 16, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 16, false>, 1, 3, 32, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 18:
-            std::cerr << "18: uint32_t, 16, 32, 16384" << std::endl;
-            test<bv::small_bv<32, 16384, 16>, 1, 2, 32, 16, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "18: uint64_t, 16, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 16>, 1, 3, 32, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "18: n_avx_64, 16, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 16, false>, 1, 3, 32, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 19:
-            std::cerr << "19: uint32_t, 16, 32, 32768" << std::endl;
-            test<bv::small_bv<32, 32768, 16>, 1, 2, 32, 16, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "19: uint64_t, 16, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 16>, 1, 3, 32, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "19: n_avx_64, 16, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 16, false>, 1, 3, 32, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 20:
-            std::cerr << "20: uint32_t, 32, 0, 4096" << std::endl;
-            test<bv::small_bv<0, 4096, 32>, 1, 2, 0, 32, 4096>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "20: uint64_t, 32, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 32>, 1, 3, 0, 32, 4096>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "20: n_avx_64, 32, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 32, false>, 1, 3, 0, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 21:
-            std::cerr << "21: uint32_t, 32, 0, 8192" << std::endl;
-            test<bv::small_bv<0, 8192, 32>, 1, 2, 0, 32, 8192>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "21: uint64_t, 32, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 32>, 1, 3, 0, 32, 8192>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "21: n_avx_64, 32, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 32, false>, 1, 3, 0, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 22:
-            std::cerr << "22: uint32_t, 32, 0, 16384" << std::endl;
-            test<bv::small_bv<0, 16384, 32>, 1, 2, 0, 32, 16384>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "22: uint64_t, 32, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 32>, 1, 3, 0, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "22: n_avx_64, 32, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 32, false>, 1, 3, 0, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 23:
-            std::cerr << "23: uint32_t, 32, 0, 32768" << std::endl;
-            test<bv::small_bv<0, 32768, 32>, 1, 2, 0, 32, 32768>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "23: uint64_t, 32, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 32>, 1, 3, 0, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "23: n_avx_64, 32, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 32, false>, 1, 3, 0, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 24:
-            std::cerr << "24: uint32_t, 32, 8, 4096" << std::endl;
-            test<bv::small_bv<8, 4096, 32>, 1, 2, 8, 32, 4096>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "24: uint64_t, 32, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 32>, 1, 3, 8, 32, 4096>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "24: n_avx_64, 32, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 32, false>, 1, 3, 8, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 25:
-            std::cerr << "25: uint32_t, 32, 8, 8192" << std::endl;
-            test<bv::small_bv<8, 8192, 32>, 1, 2, 8, 32, 8192>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "25: uint64_t, 32, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 32>, 1, 3, 8, 32, 8192>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "25: n_avx_64, 32, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 32, false>, 1, 3, 8, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 26:
-            std::cerr << "26: uint32_t, 32, 8, 16384" << std::endl;
-            test<bv::small_bv<8, 16384, 32>, 1, 2, 8, 32, 16384>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "26: uint64_t, 32, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 32>, 1, 3, 8, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "26: n_avx_64, 32, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 32, false>, 1, 3, 8, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 27:
-            std::cerr << "27: uint32_t, 32, 8, 32768" << std::endl;
-            test<bv::small_bv<8, 32768, 32>, 1, 2, 8, 32, 32768>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "27: uint64_t, 32, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 32>, 1, 3, 8, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "27: n_avx_64, 32, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 32, false>, 1, 3, 8, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 28:
-            std::cerr << "28: uint32_t, 32, 16, 4096" << std::endl;
-            test<bv::small_bv<16, 4096, 32>, 1, 2, 16, 32, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "28: uint64_t, 32, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 32>, 1, 3, 16, 32, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "28: n_avx_64, 32, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 32, false>, 1, 3, 16, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 29:
-            std::cerr << "29: uint32_t, 32, 16, 8192" << std::endl;
-            test<bv::small_bv<16, 8192, 32>, 1, 2, 16, 32, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "29: uint64_t, 32, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 32>, 1, 3, 16, 32, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "29: n_avx_64, 32, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 32, false>, 1, 3, 16, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 30:
-            std::cerr << "30: uint32_t, 32, 16, 16384" << std::endl;
-            test<bv::small_bv<16, 16384, 32>, 1, 2, 16, 32, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "30: uint64_t, 32, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 32>, 1, 3, 16, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "30: n_avx_64, 32, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 32, false>, 1, 3, 16, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 31:
-            std::cerr << "31: uint32_t, 32, 16, 32768" << std::endl;
-            test<bv::small_bv<16, 32768, 32>, 1, 2, 16, 32, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "31: uint64_t, 32, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 32>, 1, 3, 16, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "31: n_avx_64, 32, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 32, false>, 1, 3, 16, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 32:
-            std::cerr << "32: uint32_t, 32, 32, 4096" << std::endl;
-            test<bv::small_bv<32, 4096, 32>, 1, 2, 32, 32, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "32: uint64_t, 32, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 32>, 1, 3, 32, 32, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "32: n_avx_64, 32, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 32, false>, 1, 3, 32, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 33:
-            std::cerr << "33: uint32_t, 32, 32, 8192" << std::endl;
-            test<bv::small_bv<32, 8192, 32>, 1, 2, 32, 32, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "33: uint64_t, 32, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 32>, 1, 3, 32, 32, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "33: n_avx_64, 32, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 32, false>, 1, 3, 32, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 34:
-            std::cerr << "34: uint32_t, 32, 32, 16384" << std::endl;
-            test<bv::small_bv<32, 16384, 32>, 1, 2, 32, 32, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "34: uint64_t, 32, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 32>, 1, 3, 32, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "34: n_avx_64, 32, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 32, false>, 1, 3, 32, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 35:
-            std::cerr << "35: uint32_t, 32, 32, 32768" << std::endl;
-            test<bv::small_bv<32, 32768, 32>, 1, 2, 32, 32, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "35: uint64_t, 32, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 32>, 1, 3, 32, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "35: n_avx_64, 32, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 32, false>, 1, 3, 32, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 36:
-            std::cerr << "36: uint32_t, 64, 0, 4096" << std::endl;
-            test<bv::small_bv<0, 4096, 64>, 1, 2, 0, 64, 4096>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "36: uint64_t, 64, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 64>, 1, 3, 0, 64, 4096>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "36: n_avx_64, 64, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 64, false>, 1, 3, 0, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 37:
-            std::cerr << "37: uint32_t, 64, 0, 8192" << std::endl;
-            test<bv::small_bv<0, 8192, 64>, 1, 2, 0, 64, 8192>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "37: uint64_t, 64, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 64>, 1, 3, 0, 64, 8192>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "37: n_avx_64, 64, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 64, false>, 1, 3, 0, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 38:
-            std::cerr << "38: uint32_t, 64, 0, 16384" << std::endl;
-            test<bv::small_bv<0, 16384, 64>, 1, 2, 0, 64, 16384>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "38: uint64_t, 64, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 64>, 1, 3, 0, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "38: n_avx_64, 64, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 64, false>, 1, 3, 0, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 39:
-            std::cerr << "39: uint32_t, 64, 0, 32768" << std::endl;
-            test<bv::small_bv<0, 32768, 64>, 1, 2, 0, 64, 32768>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "39: uint64_t, 64, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 64>, 1, 3, 0, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "39: n_avx_64, 64, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 64, false>, 1, 3, 0, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 40:
-            std::cerr << "40: uint32_t, 64, 8, 4096" << std::endl;
-            test<bv::small_bv<8, 4096, 64>, 1, 2, 8, 64, 4096>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "40: uint64_t, 64, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 64>, 1, 3, 8, 64, 4096>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "40: n_avx_64, 64, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 64, false>, 1, 3, 8, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 41:
-            std::cerr << "41: uint32_t, 64, 8, 8192" << std::endl;
-            test<bv::small_bv<8, 8192, 64>, 1, 2, 8, 64, 8192>(size, steps,
-                                                               seed);
+            if (avx) {
+                std::cerr << "41: uint64_t, 64, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 64>, 1, 3, 8, 64, 8192>(size, steps,
+                                                                    seed);
+            } else {
+                std::cerr << "41: n_avx_64, 64, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 64, false>, 1, 3, 8, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 42:
-            std::cerr << "42: uint32_t, 64, 8, 16384" << std::endl;
-            test<bv::small_bv<8, 16384, 64>, 1, 2, 8, 64, 16384>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "42: uint64_t, 64, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "42: n_avx_64, 64, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 64, false>, 1, 3, 8, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 43:
-            std::cerr << "43: uint32_t, 64, 8, 32768" << std::endl;
-            test<bv::small_bv<8, 32768, 64>, 1, 2, 8, 64, 32768>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "43: uint64_t, 64, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 64>, 1, 3, 8, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "43: n_avx_64, 64, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 64, false>, 1, 3, 8, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 44:
-            std::cerr << "44: uint32_t, 64, 16, 4096" << std::endl;
-            test<bv::small_bv<16, 4096, 64>, 1, 2, 16, 64, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "44: uint64_t, 64, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 64>, 1, 3, 16, 64, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "44: n_avx_64, 64, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 64, false>, 1, 3, 16, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 45:
-            std::cerr << "45: uint32_t, 64, 16, 8192" << std::endl;
-            test<bv::small_bv<16, 8192, 64>, 1, 2, 16, 64, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "45: uint64_t, 64, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 64>, 1, 3, 16, 64, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "45: n_avx_64, 64, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 64, false>, 1, 3, 16, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 46:
-            std::cerr << "46: uint32_t, 64, 16, 16384" << std::endl;
-            test<bv::small_bv<16, 16384, 64>, 1, 2, 16, 64, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "46: uint64_t, 64, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "46: n_avx_64, 64, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 64, false>, 1, 3, 16, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 47:
-            std::cerr << "47: uint32_t, 64, 16, 32768" << std::endl;
-            test<bv::small_bv<16, 32768, 64>, 1, 2, 16, 64, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "47: uint64_t, 64, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 64>, 1, 3, 16, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "47: n_avx_64, 64, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 64, false>, 1, 3, 16, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 48:
-            std::cerr << "48: uint32_t, 64, 32, 4096" << std::endl;
-            test<bv::small_bv<32, 4096, 64>, 1, 2, 32, 64, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "48: uint64_t, 64, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 64>, 1, 3, 32, 64, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "48: n_avx_64, 64, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 64, false>, 1, 3, 32, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 49:
-            std::cerr << "49: uint32_t, 64, 32, 8192" << std::endl;
-            test<bv::small_bv<32, 8192, 64>, 1, 2, 32, 64, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "49: uint64_t, 64, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 64>, 1, 3, 32, 64, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "49: n_avx_64, 64, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 64, false>, 1, 3, 32, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 50:
-            std::cerr << "50: uint32_t, 64, 32, 16384" << std::endl;
-            test<bv::small_bv<32, 16384, 64>, 1, 2, 32, 64, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "50: uint64_t, 64, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 64>, 1, 3, 32, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "50: n_avx_64, 64, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 64, false>, 1, 3, 32, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 51:
-            std::cerr << "51: uint32_t, 64, 32, 32768" << std::endl;
-            test<bv::small_bv<32, 32768, 64>, 1, 2, 32, 64, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "51: uint64_t, 64, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 64>, 1, 3, 32, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "51: n_avx_64, 64, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 64, false>, 1, 3, 32, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 52:
-            std::cerr << "52: uint32_t, 128, 0, 4096" << std::endl;
-            test<bv::small_bv<0, 4096, 128>, 1, 2, 0, 128, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "52: uint64_t, 128, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 128>, 1, 3, 0, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "52: n_avx_64, 128, 0, 4096" << std::endl;
+                test<bv::simple_bv<0, 4096, 128, false>, 1, 3, 0, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 53:
-            std::cerr << "53: uint32_t, 128, 0, 8192" << std::endl;
-            test<bv::small_bv<0, 8192, 128>, 1, 2, 0, 128, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "53: uint64_t, 128, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 128>, 1, 3, 0, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "53: n_avx_64, 128, 0, 8192" << std::endl;
+                test<bv::simple_bv<0, 8192, 128, false>, 1, 3, 0, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 54:
-            std::cerr << "54: uint32_t, 128, 0, 16384" << std::endl;
-            test<bv::small_bv<0, 16384, 128>, 1, 2, 0, 128, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "54: uint64_t, 128, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 128>, 1, 3, 0, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "54: n_avx_64, 128, 0, 16384" << std::endl;
+                test<bv::simple_bv<0, 16384, 128, false>, 1, 3, 0, 128, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 55:
-            std::cerr << "55: uint32_t, 128, 0, 32768" << std::endl;
-            test<bv::small_bv<0, 32768, 128>, 1, 2, 0, 128, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "55: uint64_t, 128, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 128>, 1, 3, 0, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "55: n_avx_64, 128, 0, 32768" << std::endl;
+                test<bv::simple_bv<0, 32768, 128, false>, 1, 3, 0, 128, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 56:
-            std::cerr << "56: uint32_t, 128, 8, 4096" << std::endl;
-            test<bv::small_bv<8, 4096, 128>, 1, 2, 8, 128, 4096>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "56: uint64_t, 128, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 128>, 1, 3, 8, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "56: n_avx_64, 128, 8, 4096" << std::endl;
+                test<bv::simple_bv<8, 4096, 128, false>, 1, 3, 8, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 57:
-            std::cerr << "57: uint32_t, 128, 8, 8192" << std::endl;
-            test<bv::small_bv<8, 8192, 128>, 1, 2, 8, 128, 8192>(size, steps,
-                                                                 seed);
+            if (avx) {
+                std::cerr << "57: uint64_t, 128, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 128>, 1, 3, 8, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "57: n_avx_64, 128, 8, 8192" << std::endl;
+                test<bv::simple_bv<8, 8192, 128, false>, 1, 3, 8, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 58:
-            std::cerr << "58: uint32_t, 128, 8, 16384" << std::endl;
-            test<bv::small_bv<8, 16384, 128>, 1, 2, 8, 128, 16384>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "58: uint64_t, 128, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 128>, 1, 3, 8, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "58: n_avx_64, 128, 8, 16384" << std::endl;
+                test<bv::simple_bv<8, 16384, 128, false>, 1, 3, 8, 128, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 59:
-            std::cerr << "59: uint32_t, 128, 8, 32768" << std::endl;
-            test<bv::small_bv<8, 32768, 128>, 1, 2, 8, 128, 32768>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "59: uint64_t, 128, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 128>, 1, 3, 8, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "59: n_avx_64, 128, 8, 32768" << std::endl;
+                test<bv::simple_bv<8, 32768, 128, false>, 1, 3, 8, 128, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 60:
-            std::cerr << "60: uint32_t, 128, 16, 4096" << std::endl;
-            test<bv::small_bv<16, 4096, 128>, 1, 2, 16, 128, 4096>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "60: uint64_t, 128, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 128>, 1, 3, 16, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "60: n_avx_64, 128, 16, 4096" << std::endl;
+                test<bv::simple_bv<16, 4096, 128, false>, 1, 3, 16, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 61:
-            std::cerr << "61: uint32_t, 128, 16, 8192" << std::endl;
-            test<bv::small_bv<16, 8192, 128>, 1, 2, 16, 128, 8192>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "61: uint64_t, 128, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 128>, 1, 3, 16, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "61: n_avx_64, 128, 16, 8192" << std::endl;
+                test<bv::simple_bv<16, 8192, 128, false>, 1, 3, 16, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 62:
-            std::cerr << "62: uint32_t, 128, 16, 16384" << std::endl;
-            test<bv::small_bv<16, 16384, 128>, 1, 2, 16, 128, 16384>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "62: uint64_t, 128, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 128>, 1, 3, 16, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "62: n_avx_64, 128, 16, 16384" << std::endl;
+                test<bv::simple_bv<16, 16384, 128, false>, 1, 3, 16, 128,
+                     16384>(size, steps, seed);
+            }
             break;
         case 63:
-            std::cerr << "63: uint32_t, 128, 16, 32768" << std::endl;
-            test<bv::small_bv<16, 32768, 128>, 1, 2, 16, 128, 32768>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "63: uint64_t, 128, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 128>, 1, 3, 16, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "63: n_avx_64, 128, 16, 32768" << std::endl;
+                test<bv::simple_bv<16, 32768, 128, false>, 1, 3, 16, 128,
+                     32768>(size, steps, seed);
+            }
             break;
         case 64:
-            std::cerr << "64: uint32_t, 128, 32, 4096" << std::endl;
-            test<bv::small_bv<32, 4096, 128>, 1, 2, 32, 128, 4096>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "64: uint64_t, 128, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 128>, 1, 3, 32, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "64: n_avx_64, 128, 32, 4096" << std::endl;
+                test<bv::simple_bv<32, 4096, 128, false>, 1, 3, 32, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 65:
-            std::cerr << "65: uint32_t, 128, 32, 8192" << std::endl;
-            test<bv::small_bv<32, 8192, 128>, 1, 2, 32, 128, 8192>(size, steps,
-                                                                   seed);
+            if (avx) {
+                std::cerr << "65: uint64_t, 128, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 128>, 1, 3, 32, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "65: n_avx_64, 128, 32, 8192" << std::endl;
+                test<bv::simple_bv<32, 8192, 128, false>, 1, 3, 32, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 66:
-            std::cerr << "66: uint32_t, 128, 32, 16384" << std::endl;
-            test<bv::small_bv<32, 16384, 128>, 1, 2, 32, 128, 16384>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "66: uint64_t, 128, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 128>, 1, 3, 32, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "66: n_avx_64, 128, 32, 16384" << std::endl;
+                test<bv::simple_bv<32, 16384, 128, false>, 1, 3, 32, 128,
+                     16384>(size, steps, seed);
+            }
             break;
         case 67:
-            std::cerr << "67: uint32_t, 128, 32, 32768" << std::endl;
-            test<bv::small_bv<32, 32768, 128>, 1, 2, 32, 128, 32768>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "67: uint64_t, 128, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 128>, 1, 3, 32, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "67: n_avx_64, 128, 32, 32768" << std::endl;
+                test<bv::simple_bv<32, 32768, 128, false>, 1, 3, 32, 128,
+                     32768>(size, steps, seed);
+            }
             break;
         case 68:
-            std::cerr << "68: uint64_t, 16, 0, 4096" << std::endl;
-            test<bv::simple_bv<0, 4096, 16>, 1, 3, 0, 16, 4096>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "68: uint32_t, 16, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 16>, 1, 2, 0, 16, 4096>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "68: n_avx_32, 16, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 16, false>, 1, 2, 0, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 69:
-            std::cerr << "69: uint64_t, 16, 0, 8192" << std::endl;
-            test<bv::simple_bv<0, 8192, 16>, 1, 3, 0, 16, 8192>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "69: uint32_t, 16, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 16>, 1, 2, 0, 16, 8192>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "69: n_avx_32, 16, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 16, false>, 1, 2, 0, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 70:
-            std::cerr << "70: uint64_t, 16, 0, 16384" << std::endl;
-            test<bv::simple_bv<0, 16384, 16>, 1, 3, 0, 16, 16384>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "70: uint32_t, 16, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 16>, 1, 2, 0, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "70: n_avx_32, 16, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 16, false>, 1, 2, 0, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 71:
-            std::cerr << "71: uint64_t, 16, 0, 32768" << std::endl;
-            test<bv::simple_bv<0, 32768, 16>, 1, 3, 0, 16, 32768>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "71: uint32_t, 16, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 16>, 1, 2, 0, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "71: n_avx_32, 16, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 16, false>, 1, 2, 0, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 72:
-            std::cerr << "72: uint64_t, 16, 8, 4096" << std::endl;
-            test<bv::simple_bv<8, 4096, 16>, 1, 3, 8, 16, 4096>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "72: uint32_t, 16, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 16>, 1, 2, 8, 16, 4096>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "72: n_avx_32, 16, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 16, false>, 1, 2, 8, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 73:
-            std::cerr << "73: uint64_t, 16, 8, 8192" << std::endl;
-            test<bv::simple_bv<8, 8192, 16>, 1, 3, 8, 16, 8192>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "73: uint32_t, 16, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 16>, 1, 2, 8, 16, 8192>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "73: n_avx_32, 16, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 16, false>, 1, 2, 8, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 74:
-            std::cerr << "74: uint64_t, 16, 8, 16384" << std::endl;
-            test<bv::simple_bv<8, 16384, 16>, 1, 3, 8, 16, 16384>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "74: uint32_t, 16, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 16>, 1, 2, 8, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "74: n_avx_32, 16, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 16, false>, 1, 2, 8, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 75:
-            std::cerr << "75: uint64_t, 16, 8, 32768" << std::endl;
-            test<bv::simple_bv<8, 32768, 16>, 1, 3, 8, 16, 32768>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "75: uint32_t, 16, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 16>, 1, 2, 8, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "75: n_avx_32, 16, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 16, false>, 1, 2, 8, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 76:
-            std::cerr << "76: uint64_t, 16, 16, 4096" << std::endl;
-            test<bv::simple_bv<16, 4096, 16>, 1, 3, 16, 16, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "76: uint32_t, 16, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 16>, 1, 2, 16, 16, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "76: n_avx_32, 16, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 16, false>, 1, 2, 16, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 77:
-            std::cerr << "77: uint64_t, 16, 16, 8192" << std::endl;
-            test<bv::simple_bv<16, 8192, 16>, 1, 3, 16, 16, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "77: uint32_t, 16, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 16>, 1, 2, 16, 16, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "77: n_avx_32, 16, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 16, false>, 1, 2, 16, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 78:
-            std::cerr << "78: uint64_t, 16, 16, 16384" << std::endl;
-            test<bv::simple_bv<16, 16384, 16>, 1, 3, 16, 16, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "78: uint32_t, 16, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 16>, 1, 2, 16, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "78: n_avx_32, 16, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 16, false>, 1, 2, 16, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 79:
-            std::cerr << "79: uint64_t, 16, 16, 32768" << std::endl;
-            test<bv::simple_bv<16, 32768, 16>, 1, 3, 16, 16, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "79: uint32_t, 16, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 16>, 1, 2, 16, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "79: n_avx_32, 16, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 16, false>, 1, 2, 16, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 80:
-            std::cerr << "80: uint64_t, 16, 32, 4096" << std::endl;
-            test<bv::simple_bv<32, 4096, 16>, 1, 3, 32, 16, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "80: uint32_t, 16, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 16>, 1, 2, 32, 16, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "80: n_avx_32, 16, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 16, false>, 1, 2, 32, 16, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 81:
-            std::cerr << "81: uint64_t, 16, 32, 8192" << std::endl;
-            test<bv::simple_bv<32, 8192, 16>, 1, 3, 32, 16, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "81: uint32_t, 16, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 16>, 1, 2, 32, 16, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "81: n_avx_32, 16, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 16, false>, 1, 2, 32, 16, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 82:
-            std::cerr << "82: uint64_t, 16, 32, 16384" << std::endl;
-            test<bv::simple_bv<32, 16384, 16>, 1, 3, 32, 16, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "82: uint32_t, 16, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 16>, 1, 2, 32, 16, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "82: n_avx_32, 16, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 16, false>, 1, 2, 32, 16, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 83:
-            std::cerr << "83: uint64_t, 16, 32, 32768" << std::endl;
-            test<bv::simple_bv<32, 32768, 16>, 1, 3, 32, 16, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "83: uint32_t, 16, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 16>, 1, 2, 32, 16, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "83: n_avx_32, 16, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 16, false>, 1, 2, 32, 16, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 84:
-            std::cerr << "84: uint64_t, 32, 0, 4096" << std::endl;
-            test<bv::simple_bv<0, 4096, 32>, 1, 3, 0, 32, 4096>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "84: uint32_t, 32, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 32>, 1, 2, 0, 32, 4096>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "84: n_avx_32, 32, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 32, false>, 1, 2, 0, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 85:
-            std::cerr << "85: uint64_t, 32, 0, 8192" << std::endl;
-            test<bv::simple_bv<0, 8192, 32>, 1, 3, 0, 32, 8192>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "85: uint32_t, 32, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 32>, 1, 2, 0, 32, 8192>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "85: n_avx_32, 32, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 32, false>, 1, 2, 0, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 86:
-            std::cerr << "86: uint64_t, 32, 0, 16384" << std::endl;
-            test<bv::simple_bv<0, 16384, 32>, 1, 3, 0, 32, 16384>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "86: uint32_t, 32, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 32>, 1, 2, 0, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "86: n_avx_32, 32, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 32, false>, 1, 2, 0, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 87:
-            std::cerr << "87: uint64_t, 32, 0, 32768" << std::endl;
-            test<bv::simple_bv<0, 32768, 32>, 1, 3, 0, 32, 32768>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "87: uint32_t, 32, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 32>, 1, 2, 0, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "87: n_avx_32, 32, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 32, false>, 1, 2, 0, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 88:
-            std::cerr << "88: uint64_t, 32, 8, 4096" << std::endl;
-            test<bv::simple_bv<8, 4096, 32>, 1, 3, 8, 32, 4096>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "88: uint32_t, 32, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 32>, 1, 2, 8, 32, 4096>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "88: n_avx_32, 32, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 32, false>, 1, 2, 8, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 89:
-            std::cerr << "89: uint64_t, 32, 8, 8192" << std::endl;
-            test<bv::simple_bv<8, 8192, 32>, 1, 3, 8, 32, 8192>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "89: uint32_t, 32, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 32>, 1, 2, 8, 32, 8192>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "89: n_avx_32, 32, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 32, false>, 1, 2, 8, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 90:
-            std::cerr << "90: uint64_t, 32, 8, 16384" << std::endl;
-            test<bv::simple_bv<8, 16384, 32>, 1, 3, 8, 32, 16384>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "90: uint32_t, 32, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 32>, 1, 2, 8, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "90: n_avx_32, 32, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 32, false>, 1, 2, 8, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 91:
-            std::cerr << "91: uint64_t, 32, 8, 32768" << std::endl;
-            test<bv::simple_bv<8, 32768, 32>, 1, 3, 8, 32, 32768>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "91: uint32_t, 32, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 32>, 1, 2, 8, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "91: n_avx_32, 32, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 32, false>, 1, 2, 8, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 92:
-            std::cerr << "92: uint64_t, 32, 16, 4096" << std::endl;
-            test<bv::simple_bv<16, 4096, 32>, 1, 3, 16, 32, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "92: uint32_t, 32, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 32>, 1, 2, 16, 32, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "92: n_avx_32, 32, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 32, false>, 1, 2, 16, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 93:
-            std::cerr << "93: uint64_t, 32, 16, 8192" << std::endl;
-            test<bv::simple_bv<16, 8192, 32>, 1, 3, 16, 32, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "93: uint32_t, 32, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 32>, 1, 2, 16, 32, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "93: n_avx_32, 32, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 32, false>, 1, 2, 16, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 94:
-            std::cerr << "94: uint64_t, 32, 16, 16384" << std::endl;
-            test<bv::simple_bv<16, 16384, 32>, 1, 3, 16, 32, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "94: uint32_t, 32, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 32>, 1, 2, 16, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "94: n_avx_32, 32, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 32, false>, 1, 2, 16, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 95:
-            std::cerr << "95: uint64_t, 32, 16, 32768" << std::endl;
-            test<bv::simple_bv<16, 32768, 32>, 1, 3, 16, 32, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "95: uint32_t, 32, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 32>, 1, 2, 16, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "95: n_avx_32, 32, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 32, false>, 1, 2, 16, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 96:
-            std::cerr << "96: uint64_t, 32, 32, 4096" << std::endl;
-            test<bv::simple_bv<32, 4096, 32>, 1, 3, 32, 32, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "96: uint32_t, 32, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 32>, 1, 2, 32, 32, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "96: n_avx_32, 32, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 32, false>, 1, 2, 32, 32, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 97:
-            std::cerr << "97: uint64_t, 32, 32, 8192" << std::endl;
-            test<bv::simple_bv<32, 8192, 32>, 1, 3, 32, 32, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "97: uint32_t, 32, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 32>, 1, 2, 32, 32, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "97: n_avx_32, 32, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 32, false>, 1, 2, 32, 32, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 98:
-            std::cerr << "98: uint64_t, 32, 32, 16384" << std::endl;
-            test<bv::simple_bv<32, 16384, 32>, 1, 3, 32, 32, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "98: uint32_t, 32, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 32>, 1, 2, 32, 32, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "98: n_avx_32, 32, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 32, false>, 1, 2, 32, 32, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 99:
-            std::cerr << "99: uint64_t, 32, 32, 32768" << std::endl;
-            test<bv::simple_bv<32, 32768, 32>, 1, 3, 32, 32, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "99: uint32_t, 32, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 32>, 1, 2, 32, 32, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "99: n_avx_32, 32, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 32, false>, 1, 2, 32, 32, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 100:
-            std::cerr << "100: uint64_t, 64, 0, 4096" << std::endl;
-            test<bv::simple_bv<0, 4096, 64>, 1, 3, 0, 64, 4096>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "100: uint32_t, 64, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 64>, 1, 2, 0, 64, 4096>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "100: n_avx_32, 64, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 64, false>, 1, 2, 0, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 101:
-            std::cerr << "101: uint64_t, 64, 0, 8192" << std::endl;
-            test<bv::simple_bv<0, 8192, 64>, 1, 3, 0, 64, 8192>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "101: uint32_t, 64, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 64>, 1, 2, 0, 64, 8192>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "101: n_avx_32, 64, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 64, false>, 1, 2, 0, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 102:
-            std::cerr << "102: uint64_t, 64, 0, 16384" << std::endl;
-            test<bv::simple_bv<0, 16384, 64>, 1, 3, 0, 64, 16384>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "102: uint32_t, 64, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 64>, 1, 2, 0, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "102: n_avx_32, 64, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 64, false>, 1, 2, 0, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 103:
-            std::cerr << "103: uint64_t, 64, 0, 32768" << std::endl;
-            test<bv::simple_bv<0, 32768, 64>, 1, 3, 0, 64, 32768>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "103: uint32_t, 64, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 64>, 1, 2, 0, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "103: n_avx_32, 64, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 64, false>, 1, 2, 0, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 104:
-            std::cerr << "104: uint64_t, 64, 8, 4096" << std::endl;
-            test<bv::simple_bv<8, 4096, 64>, 1, 3, 8, 64, 4096>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "104: uint32_t, 64, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 64>, 1, 2, 8, 64, 4096>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "104: n_avx_32, 64, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 64, false>, 1, 2, 8, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 105:
-            std::cerr << "105: uint64_t, 64, 8, 8192" << std::endl;
-            test<bv::simple_bv<8, 8192, 64>, 1, 3, 8, 64, 8192>(size, steps,
-                                                                seed);
+            if (avx) {
+                std::cerr << "105: uint32_t, 64, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 64>, 1, 2, 8, 64, 8192>(size, steps,
+                                                                   seed);
+            } else {
+                std::cerr << "105: n_avx_32, 64, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 64, false>, 1, 2, 8, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 106:
-            std::cerr << "106: uint64_t, 64, 8, 16384" << std::endl;
-            test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "106: uint32_t, 64, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 64>, 1, 2, 8, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "106: n_avx_32, 64, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 64, false>, 1, 2, 8, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 107:
-            std::cerr << "107: uint64_t, 64, 8, 32768" << std::endl;
-            test<bv::simple_bv<8, 32768, 64>, 1, 3, 8, 64, 32768>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "107: uint32_t, 64, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 64>, 1, 2, 8, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "107: n_avx_32, 64, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 64, false>, 1, 2, 8, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 108:
-            std::cerr << "108: uint64_t, 64, 16, 4096" << std::endl;
-            test<bv::simple_bv<16, 4096, 64>, 1, 3, 16, 64, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "108: uint32_t, 64, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 64>, 1, 2, 16, 64, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "108: n_avx_32, 64, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 64, false>, 1, 2, 16, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 109:
-            std::cerr << "109: uint64_t, 64, 16, 8192" << std::endl;
-            test<bv::simple_bv<16, 8192, 64>, 1, 3, 16, 64, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "109: uint32_t, 64, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 64>, 1, 2, 16, 64, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "109: n_avx_32, 64, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 64, false>, 1, 2, 16, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 110:
-            std::cerr << "110: uint64_t, 64, 16, 16384" << std::endl;
-            test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "110: uint32_t, 64, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 64>, 1, 2, 16, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "110: n_avx_32, 64, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 64, false>, 1, 2, 16, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 111:
-            std::cerr << "111: uint64_t, 64, 16, 32768" << std::endl;
-            test<bv::simple_bv<16, 32768, 64>, 1, 3, 16, 64, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "111: uint32_t, 64, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 64>, 1, 2, 16, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "111: n_avx_32, 64, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 64, false>, 1, 2, 16, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 112:
-            std::cerr << "112: uint64_t, 64, 32, 4096" << std::endl;
-            test<bv::simple_bv<32, 4096, 64>, 1, 3, 32, 64, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "112: uint32_t, 64, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 64>, 1, 2, 32, 64, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "112: n_avx_32, 64, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 64, false>, 1, 2, 32, 64, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 113:
-            std::cerr << "113: uint64_t, 64, 32, 8192" << std::endl;
-            test<bv::simple_bv<32, 8192, 64>, 1, 3, 32, 64, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "113: uint32_t, 64, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 64>, 1, 2, 32, 64, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "113: n_avx_32, 64, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 64, false>, 1, 2, 32, 64, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 114:
-            std::cerr << "114: uint64_t, 64, 32, 16384" << std::endl;
-            test<bv::simple_bv<32, 16384, 64>, 1, 3, 32, 64, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "114: uint32_t, 64, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 64>, 1, 2, 32, 64, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "114: n_avx_32, 64, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 64, false>, 1, 2, 32, 64, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 115:
-            std::cerr << "115: uint64_t, 64, 32, 32768" << std::endl;
-            test<bv::simple_bv<32, 32768, 64>, 1, 3, 32, 64, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "115: uint32_t, 64, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 64>, 1, 2, 32, 64, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "115: n_avx_32, 64, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 64, false>, 1, 2, 32, 64, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 116:
-            std::cerr << "116: uint64_t, 128, 0, 4096" << std::endl;
-            test<bv::simple_bv<0, 4096, 128>, 1, 3, 0, 128, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "116: uint32_t, 128, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 128>, 1, 2, 0, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "116: n_avx_32, 128, 0, 4096" << std::endl;
+                test<bv::small_bv<0, 4096, 128, false>, 1, 2, 0, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 117:
-            std::cerr << "117: uint64_t, 128, 0, 8192" << std::endl;
-            test<bv::simple_bv<0, 8192, 128>, 1, 3, 0, 128, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "117: uint32_t, 128, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 128>, 1, 2, 0, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "117: n_avx_32, 128, 0, 8192" << std::endl;
+                test<bv::small_bv<0, 8192, 128, false>, 1, 2, 0, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 118:
-            std::cerr << "118: uint64_t, 128, 0, 16384" << std::endl;
-            test<bv::simple_bv<0, 16384, 128>, 1, 3, 0, 128, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "118: uint32_t, 128, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 128>, 1, 2, 0, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "118: n_avx_32, 128, 0, 16384" << std::endl;
+                test<bv::small_bv<0, 16384, 128, false>, 1, 2, 0, 128, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 119:
-            std::cerr << "119: uint64_t, 128, 0, 32768" << std::endl;
-            test<bv::simple_bv<0, 32768, 128>, 1, 3, 0, 128, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "119: uint32_t, 128, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 128>, 1, 2, 0, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "119: n_avx_32, 128, 0, 32768" << std::endl;
+                test<bv::small_bv<0, 32768, 128, false>, 1, 2, 0, 128, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 120:
-            std::cerr << "120: uint64_t, 128, 8, 4096" << std::endl;
-            test<bv::simple_bv<8, 4096, 128>, 1, 3, 8, 128, 4096>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "120: uint32_t, 128, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 128>, 1, 2, 8, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "120: n_avx_32, 128, 8, 4096" << std::endl;
+                test<bv::small_bv<8, 4096, 128, false>, 1, 2, 8, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 121:
-            std::cerr << "121: uint64_t, 128, 8, 8192" << std::endl;
-            test<bv::simple_bv<8, 8192, 128>, 1, 3, 8, 128, 8192>(size, steps,
-                                                                  seed);
+            if (avx) {
+                std::cerr << "121: uint32_t, 128, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 128>, 1, 2, 8, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "121: n_avx_32, 128, 8, 8192" << std::endl;
+                test<bv::small_bv<8, 8192, 128, false>, 1, 2, 8, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 122:
-            std::cerr << "122: uint64_t, 128, 8, 16384" << std::endl;
-            test<bv::simple_bv<8, 16384, 128>, 1, 3, 8, 128, 16384>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "122: uint32_t, 128, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 128>, 1, 2, 8, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "122: n_avx_32, 128, 8, 16384" << std::endl;
+                test<bv::small_bv<8, 16384, 128, false>, 1, 2, 8, 128, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 123:
-            std::cerr << "123: uint64_t, 128, 8, 32768" << std::endl;
-            test<bv::simple_bv<8, 32768, 128>, 1, 3, 8, 128, 32768>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "123: uint32_t, 128, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 128>, 1, 2, 8, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "123: n_avx_32, 128, 8, 32768" << std::endl;
+                test<bv::small_bv<8, 32768, 128, false>, 1, 2, 8, 128, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 124:
-            std::cerr << "124: uint64_t, 128, 16, 4096" << std::endl;
-            test<bv::simple_bv<16, 4096, 128>, 1, 3, 16, 128, 4096>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "124: uint32_t, 128, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 128>, 1, 2, 16, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "124: n_avx_32, 128, 16, 4096" << std::endl;
+                test<bv::small_bv<16, 4096, 128, false>, 1, 2, 16, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 125:
-            std::cerr << "125: uint64_t, 128, 16, 8192" << std::endl;
-            test<bv::simple_bv<16, 8192, 128>, 1, 3, 16, 128, 8192>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "125: uint32_t, 128, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 128>, 1, 2, 16, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "125: n_avx_32, 128, 16, 8192" << std::endl;
+                test<bv::small_bv<16, 8192, 128, false>, 1, 2, 16, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 126:
-            std::cerr << "126: uint64_t, 128, 16, 16384" << std::endl;
-            test<bv::simple_bv<16, 16384, 128>, 1, 3, 16, 128, 16384>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "126: uint32_t, 128, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 128>, 1, 2, 16, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "126: n_avx_32, 128, 16, 16384" << std::endl;
+                test<bv::small_bv<16, 16384, 128, false>, 1, 2, 16, 128, 16384>(
+                    size, steps, seed);
+            }
             break;
         case 127:
-            std::cerr << "127: uint64_t, 128, 16, 32768" << std::endl;
-            test<bv::simple_bv<16, 32768, 128>, 1, 3, 16, 128, 32768>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "127: uint32_t, 128, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 128>, 1, 2, 16, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "127: n_avx_32, 128, 16, 32768" << std::endl;
+                test<bv::small_bv<16, 32768, 128, false>, 1, 2, 16, 128, 32768>(
+                    size, steps, seed);
+            }
             break;
         case 128:
-            std::cerr << "128: uint64_t, 128, 32, 4096" << std::endl;
-            test<bv::simple_bv<32, 4096, 128>, 1, 3, 32, 128, 4096>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "128: uint32_t, 128, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 128>, 1, 2, 32, 128, 4096>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "128: n_avx_32, 128, 32, 4096" << std::endl;
+                test<bv::small_bv<32, 4096, 128, false>, 1, 2, 32, 128, 4096>(
+                    size, steps, seed);
+            }
             break;
         case 129:
-            std::cerr << "129: uint64_t, 128, 32, 8192" << std::endl;
-            test<bv::simple_bv<32, 8192, 128>, 1, 3, 32, 128, 8192>(size, steps,
-                                                                    seed);
+            if (avx) {
+                std::cerr << "129: uint32_t, 128, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 128>, 1, 2, 32, 128, 8192>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "129: n_avx_32, 128, 32, 8192" << std::endl;
+                test<bv::small_bv<32, 8192, 128, false>, 1, 2, 32, 128, 8192>(
+                    size, steps, seed);
+            }
             break;
         case 130:
-            std::cerr << "130: uint64_t, 128, 32, 16384" << std::endl;
-            test<bv::simple_bv<32, 16384, 128>, 1, 3, 32, 128, 16384>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "130: uint32_t, 128, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 128>, 1, 2, 32, 128, 16384>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "130: n_avx_32, 128, 32, 16384" << std::endl;
+                test<bv::small_bv<32, 16384, 128, false>, 1, 2, 32, 128, 16384>(
+                    size, steps, seed);
+            }
             break;
         default:
-            std::cerr << "131: uint64_t, 128, 32, 32768" << std::endl;
-            test<bv::simple_bv<32, 32768, 128>, 1, 3, 32, 128, 32768>(
-                size, steps, seed);
+            if (avx) {
+                std::cerr << "131: uint32_t, 128, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 128>, 1, 2, 32, 128, 32768>(
+                    size, steps, seed);
+            } else {
+                std::cerr << "131: n_avx_32, 128, 32, 32768" << std::endl;
+                test<bv::small_bv<32, 32768, 128, false>, 1, 2, 32, 128, 32768>(
+                    size, steps, seed);
+            }
             break;
     }
     return 0;
