@@ -58,3 +58,6 @@ html/
 #valgrind
 callgrind.out.*
 cachegrind.out.*
+
+#benchmarking stuff
+benchmarking/b*

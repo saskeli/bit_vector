@@ -46,6 +46,16 @@ bit_vector/internal/%.hpp:
 
 test/%.hpp:
 
+benchmarking/b%.cpp: benchmarking/gen_code.py
+	python $< $* $@
+
+benchmarking/b%: benchmarking/b%.cpp
+	g++ $(CFLAGS) $(INCLUDE_DYN) -DNDEBUG -Ofast -o $@ $<
+
+run%: benchmarking/b%
+	benchmarking/b$* 1337 1000000000 100
+	rm -f benchmarking/b$*
+
 clean: clean_test
 	rm -f bv_debug bench brute
 
