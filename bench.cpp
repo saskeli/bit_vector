@@ -16,18 +16,21 @@ void help() {
               << "Size should be at least 10^7 and defaults to 10^7\n"
               << "Steps defaults to 100.\n\n";
     std::cout << "Usage: bench <type> <seed> <size> <steps>\n";
-    std::cout << "   <type>   0 for dynamic... other for new bit vector "
-                             "implementation\n";
+    std::cout << "   <type>   0 for dynamic\n"
+              << "            1 for new implementation\n"
+              << "            2 for new implementation with flushing\n"
+              << "            3 for new implementation with no buffer\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
-                             "[10^6..size] range\n\n";
+                 "[10^6..size] range\n\n";
     std::cout << "Example: bench 1 1337 1000000 100" << std::endl;
     exit(0);
 }
 
 template <class bit_vector, uint64_t select_offset, uint8_t type,
-          uint8_t buffer, uint8_t branch, uint32_t leaf_size>
+          uint8_t buffer, uint8_t branch, uint32_t leaf_size,
+          bool flush = false>
 void test(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -50,9 +53,8 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
     std::vector<uint64_t> loc, val;
 
-    std::cout
-        << "type\tbuffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\t"
-        << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
+    std::cout << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\t"
+              << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
         uint64_t aloc = gen(mt) % (i + 1);
@@ -60,23 +62,10 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         bv.insert(aloc, aval);
     }
     for (uint64_t step = 1; step <= steps; step++) {
+        uint64_t checksum = 0;
         uint64_t start = bv.size();
         uint64_t target = uint64_t(pow(2.0, startexp + delta * step));
 
-        uint64_t checksum = 0;
-        if constexpr (type == 0) {
-            std::cout << "DYNAMIC\t";
-        } else if constexpr (type == 1) {
-            std::cout << "leaf\t";
-        } else if constexpr (type == 2) {
-            std::cout << "uint32_t\t";
-        } else if constexpr (type == 3) {
-            std::cout << "uint64_t\t";
-        } else if constexpr (type == 4) {
-            std::cout << "n_avx_32\t";
-        } else {
-            std::cout << "n_avx_64\t";
-        }
         std::cout << int(buffer) << "\t" << int(branch) << "\t" << leaf_size
                   << "\t" << seed << "\t" << target << "\t";
 
@@ -113,6 +102,10 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
+
+        if constexpr (flush) {
+            bv.flush();
+        }
 
         loc.clear();
         val.clear();
@@ -206,9 +199,18 @@ int main(int argc, char const *argv[]) {
     if (type == 0) {
         std::cerr << "DYNAMIC, 8, 0, 8192" << std::endl;
         test<dyn::suc_bv, 0, 0, 0, 8, 8192>(size, steps, seed);
-    } else {
+    } else if (type == 1) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384>(size, steps, seed);
+        test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384>(size, steps,
+                                                              seed);
+    } else if (type == 2) {
+        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
+        test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384, true>(size, steps,
+                                                                    seed);
+    } else {
+        std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
+        test<bv::simple_bv<0, 16384, 64>, 1, 3, 0, 64, 16384>(size, steps,
+                                                              seed);
     }
 
     return 0;

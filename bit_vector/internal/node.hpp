@@ -534,6 +534,20 @@ class node {
         return ret;
     }
 
+    void flush() {
+        if (has_leaves()) {
+            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                children[i]->commit();
+            }
+        } else {
+            node** children = reinterpret_cast<node**>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                children[i]->flush();
+            }
+        }
+    }
+
     /**
      * @brief Check that the subtree structure is internally consistent.
      *

@@ -212,3 +212,6 @@ def main(t_id, f_path):
 if __name__ == "__main__":
     if len(sys.argv) > 2:
         main(int(sys.argv[1]), sys.argv[2])
+    else:
+        for k, v in types.items():
+            print(k, v)

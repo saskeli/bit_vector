@@ -398,8 +398,9 @@ class leaf {
                         }
                         [[unlikely]] current_buffer++;
                     } else {
-                        break;
+                        [[likely]] break;
                     }
+                    [[unlikely]] (void(0));
                 }
             }
             if (pop >= x) [[unlikely]]

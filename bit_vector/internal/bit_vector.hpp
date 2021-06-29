@@ -77,8 +77,8 @@ class bit_vector {
      */
     bit_vector(allocator* alloc) {
         allocator_ = alloc;
-        l_root_ =
-            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * WORD_BITS));
+        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size /
+                                                           (2 * WORD_BITS));
     }
 
     /**
@@ -90,8 +90,8 @@ class bit_vector {
     bit_vector() {
         allocator_ = new allocator();
         owned_allocator_ = true;
-        l_root_ =
-            allocator_->template allocate_leaf<leaf>(leaf_size / (2 * WORD_BITS));
+        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size /
+                                                           (2 * WORD_BITS));
     }
 
     /**
@@ -294,7 +294,7 @@ class bit_vector {
     }
 
     /**
-     * @brief Sets the bit at "index" to "value"
+     * @brief Sets the bit at "index" to "value".
      *
      * When using bv::node and bv::leaf for internal strucutres, sets the value
      * of the index<sup>th</sup> bit in \f$\mathcal{O}\left(b\log_b(n /
@@ -309,6 +309,15 @@ class bit_vector {
         !root_is_leaf_ ? n_root_->set(index, value)
                        : l_root_->set(index, value);
     }
+
+    /**
+     * @brief Recursively flushes all buffers in the data structure.
+     *
+     * If execution transitions to a phase where no insertions or removals are
+     * expected, flushing all buffers should improve query time at the cost of a
+     * fairly expensive flushing operations.
+     */
+    void flush() { root_is_leaf_ ? l_root_->commit() : n_root_->flush(); }
 
     /**
      * @brief Total size of data structure allocations in bits.
