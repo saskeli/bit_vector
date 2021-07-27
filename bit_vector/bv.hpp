@@ -42,9 +42,9 @@ namespace bv {
  *
  * @tparam buffer_size      Size of the insert/remove buffer in the leaf
  *                          elements.\n Needs to be in the [0, 64) range.
- * @tparam leaf_size        Maximum number of elements stored in a single
- *                          leaf.\n Needs to be divisible by 64 and in the
- *                          [265, 16777215) range.
+ * @tparam leaf_size        Maximum number of 64-bit elements stored in a single
+ *                          leaf.\n Needs to be in the [4, 262144)
+ *                          ([265, 16777152] bits) range.
  * @tparam branching_factor Maximum number of children for an internal node.\n
  *                          Needs to be one of {8, 16, 32, 64, 128}.
  * @tparam avx              Should avx population counting be used for rank.
@@ -52,7 +52,7 @@ namespace bv {
 template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
           bool avx = true>
 using simple_bv =
-    bit_vector<leaf<buffer_size, avx>,
+    bit_vector<leaf<buffer_size, uint32_t, avx>,
                node<leaf<buffer_size>, uint64_t, leaf_size, branching_factor>,
                malloc_alloc, leaf_size, branching_factor>;
 
@@ -70,8 +70,8 @@ using simple_bv =
  *
  * @tparam buffer_size      Size of the insert/remove buffer in the leaf
  *                          elements.\n 0 <= `buffer_size` < 64.
- * @tparam leaf_size        Maximum number of elements stored in a single
- *                          leaf.\n 265 <= `leaf_size` < 16777215.
+ * @tparam leaf_size        Maximum number of 64-bit elements stored in a single
+ *                          leaf.\n 4 <= `leaf_size` < 262144.
  * @tparam branching_factor Maximum number of children for an internal node.\n
  *                          Needs to be one 8, 16, 32, 64 or 128.
  * @tparam avx              Should avx population counting be used for rank.
@@ -79,7 +79,7 @@ using simple_bv =
 template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
           bool avx = true>
 using small_bv =
-    bit_vector<leaf<buffer_size, avx>,
+    bit_vector<leaf<buffer_size, uint32_t, avx>,
                node<leaf<buffer_size>, uint32_t, leaf_size, branching_factor>,
                malloc_alloc, leaf_size, branching_factor>;
 
@@ -89,9 +89,9 @@ using small_bv =
  * Convenience type based on bv::simple_bv with reasonable default template
  * parameters.
  *
- * Buffer size = 8, leaf size = 2^14 and branching factor = 64
+ * Buffer size = 8, leaf size = 2^14 bits and branching factor = 64
  */
-typedef simple_bv<8, 16384, 64> bv;
+typedef simple_bv<8, 256, 64> bv;
 }  // namespace bv
 
 #endif

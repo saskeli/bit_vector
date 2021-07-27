@@ -104,10 +104,10 @@ class malloc_alloc {
     leaf_type* reallocate_leaf(leaf_type* leaf, uint64_t old_size,
                                uint64_t new_size) {
         constexpr size_t leaf_bytes = sizeof(leaf_type) + sizeof(leaf_type) % 8;
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
+//#pragma GCC diagnostic ignored "-Wclass-memaccess"
         leaf_type* n_leaf = reinterpret_cast<leaf_type*>(
             realloc(leaf, leaf_bytes + new_size * sizeof(uint64_t)));
-#pragma GCC diagnostic pop
+//#pragma GCC diagnostic pop
         uint8_t* data_ptr =
             reinterpret_cast<uint8_t*>(n_leaf) + leaf_bytes;
         memset(data_ptr + sizeof(uint64_t) * old_size, 0,
