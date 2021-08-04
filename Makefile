@@ -32,6 +32,8 @@ bv_debug: bv_debug.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -Ofast -g -o bv_debug bv_debug.cpp
 
 bench: bench.cpp $(HEADERS) update_git
+	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+	make -C deps/googletest
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ideps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
 
 brute: brute_force.cpp $(HEADERS) update_git
