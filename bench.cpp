@@ -53,8 +53,9 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     std::cerr << "startexp: " << startexp << ". delta: " << delta << std::endl;
     std::vector<uint64_t> loc, val;
 
-    std::cout << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\t"
-              << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
+    std::cout
+        << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tflush\tset\t"
+        << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
         uint64_t aloc = gen(mt) % (i + 1);
@@ -103,9 +104,13 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
+        t1 = high_resolution_clock::now();
         if constexpr (flush) {
             bv.flush();
         }
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count()
+                  << "\t";
 
         loc.clear();
         val.clear();
@@ -201,12 +206,12 @@ int main(int argc, char const *argv[]) {
         test<dyn::suc_bv, 0, 0, 0, 8, 8192>(size, steps, seed);
     } else if (type == 1) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384>(size, steps,
-                                                              seed);
+        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384>(size, steps,
+                                                                seed);
     } else if (type == 2) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<8, 16384, 64>, 1, 3, 8, 64, 16384, true>(size, steps,
-                                                                    seed);
+        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, true>(
+            size, steps, seed);
     } else {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
         test<bv::simple_bv<0, 16384, 64>, 1, 3, 0, 64, 16384>(size, steps,
