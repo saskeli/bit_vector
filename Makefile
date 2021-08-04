@@ -2,7 +2,7 @@ CL = $(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 CFLAGS = -std=c++2a -Wall -Wextra -pedantic -DCACHE_LINE=$(CL) -march=native
 
-INCLUDE_DYN = -I deps/hopscotch-map/include/ -I deps/DYNAMIC/include/
+INCLUDE = -I deps/hopscotch-map/include/ -I deps/DYNAMIC/include/
 
 HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
           bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \
@@ -29,16 +29,16 @@ cover: COVERAGE = --coverage -O0 -g
 all: bv_debug bench brute
 
 bv_debug: bv_debug.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE_DYN) -DDEBUG -Ofast -g -o bv_debug bv_debug.cpp
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -Ofast -g -o bv_debug bv_debug.cpp
 
 bench: bench.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE_DYN) -DNDEBUG -Ofast -o bench bench.cpp
+	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ideps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
 
 brute: brute_force.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE_DYN) -DDEBUG -O0 -g -o brute brute_force.cpp
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -O0 -g -o brute brute_force.cpp
 
 rem_bench: rem_bench.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE_DYN) -DNDEBUG -Ofast -o rem_bench rem_bench.cpp
+	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ofast -o rem_bench rem_bench.cpp
 
 bit_vector/%.hpp:
 
@@ -50,7 +50,7 @@ benchmarking/b%.cpp: benchmarking/gen_code.py
 	python $< $* $@
 
 benchmarking/b%: benchmarking/b%.cpp
-	g++ $(CFLAGS) $(INCLUDE_DYN) -DNDEBUG -Ofast -o $@ $<
+	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ofast -o $@ $<
 
 run%: benchmarking/b%
 	benchmarking/b$* 1337 1000000000 100
@@ -80,18 +80,18 @@ test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
-	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE_DYN) -c test/test.cpp -o test/test.o
+	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) -c test/test.cpp -o test/test.o
 
 test: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE_DYN) -lpthread test/test.o test/gtest_main.a -o test/test
+	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 
 cover: clean_test test/test.o test/gtest_main.a
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE_DYN) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
+	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 	gcov test/test.cpp
 	lcov -c -d . -o index.info
