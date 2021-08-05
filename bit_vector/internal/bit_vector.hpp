@@ -27,7 +27,7 @@ namespace bv {
  * @tparam leaf      Type for leaves. Some kind of bv::leaf.
  * @tparam node      Type for internal nodes. Some kind of bv::node.
  * @tparam allocator Allocator type. For example bv::malloc_alloc.
- * @tparam leaf_size Maximum number of 64-bit elements in leaf.
+ * @tparam leaf_size Maximum number of elements in leaf.
  * @tparam branches  Maximum branching factor of internal node.
  */
 template <class leaf, class node, class allocator, uint64_t leaf_size,
@@ -77,7 +77,8 @@ class bit_vector {
      */
     bit_vector(allocator* alloc) {
         allocator_ = alloc;
-        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size / 2);
+        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size /
+                                                           (2 * WORD_BITS));
     }
 
     /**
@@ -89,7 +90,8 @@ class bit_vector {
     bit_vector() {
         allocator_ = new allocator();
         owned_allocator_ = true;
-        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size / 2);
+        l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size /
+                                                           (2 * WORD_BITS));
     }
 
     /**
@@ -138,10 +140,10 @@ class bit_vector {
 #endif
         if (root_is_leaf_) {
             if (l_root_->need_realloc()) {
-                if (l_root_->size() >= leaf_size * WORD_BITS) {
+                if (l_root_->size() >= leaf_size) {
                     leaf* sibling = allocator_->template allocate_leaf<leaf>(
-                        leaf_size / 2);
-                    sibling->transfer_append(l_root_, leaf_size * WORD_BITS / 2);
+                        leaf_size / (2 * WORD_BITS));
+                    sibling->transfer_append(l_root_, leaf_size / 2);
                     n_root_ = allocator_->template allocate_node<node>();
                     n_root_->has_leaves(true);
                     n_root_->append_child(sibling);

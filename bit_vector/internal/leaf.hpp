@@ -41,17 +41,15 @@ namespace bv {
  * unlikely to be of practical use.
  *
  * @tparam Size of insertion/removal buffer.
- * @tparam Type used for sub-universe indexing. Practically only relevant for
- *         derived classes that can store a bigger part of the universe.
  * @tparam Use avx population counts for rank operations.
  */
-template <uint8_t buffer_size, class dtype = uint32_t, bool avx = true>
+template <uint8_t buffer_size, bool avx = true>
 class leaf {
    protected:
-    uint8_t buffer_count_;  ///< Number of elements in buffer.
+    uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
-    dtype size_;            ///< Logical number of bits stored.
-    dtype p_sum_;           ///< Logical number of 1-bits stored.
+    uint32_t size_;         ///< Logical number of bits stored.
+    uint32_t p_sum_;        ///< Logical number of 1-bits stored.
 #pragma GCC diagnostic ignored "-Wpedantic"
     uint32_t buffer_[buffer_size];  ///< Insert/remove buffer.
 #pragma GCC diagnostic pop
@@ -85,7 +83,7 @@ class leaf {
      * @param data     Pointer to a contiguous memory area available for
      * storage.
      */
-    leaf(uint16_t capacity, uint64_t* data) {
+    leaf(uint64_t capacity, uint64_t* data) {
         buffer_count_ = 0;
         capacity_ = capacity;
         size_ = 0;
@@ -100,7 +98,7 @@ class leaf {
      *
      * @return Value of bit at index i.
      */
-    bool at(const dtype i) const {
+    bool at(const uint32_t i) const {
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
             for (uint8_t idx = 0; idx < buffer_count_; idx++) {
@@ -123,9 +121,9 @@ class leaf {
     }
 
     /** @brief Getter for p_sum_ */
-    dtype p_sum() const { return p_sum_; }
+    uint64_t p_sum() const { return p_sum_; }
     /** @brief Getter for size_ */
-    dtype size() const { return size_; }
+    uint64_t size() const { return size_; }
 
     /**
      * @brief Insert x into position i
@@ -324,7 +322,7 @@ class leaf {
      *
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
-    dtype rank(const dtype n) const {
+    uint64_t rank(const uint64_t n) const {
         uint64_t count = 0;
 
         uint64_t idx = n;
@@ -357,7 +355,7 @@ class leaf {
         }
         if (target_offset != 0) {
             count += __builtin_popcountll(data_[target_word] &
-                                          ((MASK << target_offset) - 1));
+                                        ((MASK << target_offset) - 1));
         }
         return count;
     }
@@ -372,14 +370,14 @@ class leaf {
      * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
      * \mathrm{bv}[j]\right) = x\f$.
      */
-    dtype select(const dtype x) const {
-        dtype pop = 0;
-        dtype pos = 0;
+    uint32_t select(const uint32_t x) const {
+        uint32_t pop = 0;
+        uint32_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
 
         // Step one 64-bit word at a time considering the buffer until pop >= x
-        for (uint16_t j = 0; j < capacity_; j++) {
+        for (uint64_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += 64;
             if constexpr (buffer_size != 0) {
@@ -445,7 +443,7 @@ class leaf {
      *
      * @return Size of internal data storage in 64-bit words.
      */
-    uint16_t capacity() const { return capacity_; }
+    uint32_t capacity() const { return capacity_; }
 
     /**
      * @brief Set the size of the leaf-associated data storage.
@@ -456,7 +454,7 @@ class leaf {
      *
      * @param cap New size for `data_`
      */
-    void capacity(uint16_t cap) { capacity_ = cap; }
+    void capacity(uint32_t cap) { capacity_ = cap; }
 
     /**
      * @brief Sets the pointer to the leaf-associated data storage.

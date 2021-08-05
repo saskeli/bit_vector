@@ -56,7 +56,7 @@ namespace bv {
  *
  * @tparam leaf_type Type of leaf to use in the tree structure (E.g. bv::leaf).
  * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
- * @tparam leaf_size Maximum size of a leaf node in 64-bit integers.
+ * @tparam leaf_size Maximum size of a leaf node.
  * @tparam branches  Maximum branching factor of internal nodes.
  */
 template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches>
@@ -65,11 +65,11 @@ class node {
     /**
      * @brief Bit indicating whether the nodes children are laves or nodes.
      */
-    uint8_t meta_data_;
+    uint8_t meta_data_;  
     /**
      * @brief Number of active children.
      */
-    uint8_t child_count_;  // Bad word alignment. betewen 16 and 48 dead bits...
+    uint8_t child_count_; // Bad word alignment. betewen 16 and 48 dead bits...
     /**
      * @brief Cumulative child sizes and `(~0) >> 1` for non-existing children.
      */
@@ -81,12 +81,10 @@ class node {
     dtype child_sums_[branches];
     void* children_[branches];  ///< pointers to leaf_type or node children.
 
-    static_assert(leaf_size >= 4,
-                  "leaf size needs to be a at least 4 (256 bits)");
-    static_assert((leaf_size % 2) == 0,
-                  "leaf size needs to be divisible by 2 (128 bits)");
-    static_assert(leaf_size * WORD_BITS < 0xffffff,
-                  "leaf size must fit in 24 bits for a siccinct leaf");
+    static_assert(leaf_size >= 256, "leaf size needs to be a at least 256");
+    static_assert((leaf_size % 128) == 0,
+                  "leaf size needs to be divisible by 128");
+    static_assert(leaf_size < 0xffffff, "leaf size must fit in 24 bits");
     static_assert((branches == 8) || (branches == 16) || (branches == 32) ||
                       (branches == 64) || (branches == 128),
                   "branching factor needs to be a reasonable power of 2");
@@ -327,10 +325,8 @@ class node {
             child_sums_[0] = new_child->p_sum();
             [[unlikely]] children_[0] = new_child;
         } else {
-            child_sizes_[child_count_] =
-                child_sizes_[child_count_ - 1] + new_child->size();
-            child_sums_[child_count_] =
-                child_sums_[child_count_ - 1] + new_child->p_sum();
+            child_sizes_[child_count_] = child_sizes_[child_count_ - 1] + new_child->size();
+            child_sums_[child_count_] = child_sums_[child_count_ - 1] + new_child->p_sum();
             children_[child_count_] = new_child;
         }
         child_count_++;
@@ -475,8 +471,7 @@ class node {
         uint8_t o_size = other->child_count();
         memmove(children_ + elems, children_, child_count_ * sizeof(void*));
         memmove(child_sums_ + elems, child_sums_, child_count_ * sizeof(dtype));
-        memmove(child_sizes_ + elems, child_sizes_,
-                child_count_ * sizeof(dtype));
+        memmove(child_sizes_ + elems, child_sizes_, child_count_ * sizeof(dtype));
         for (uint8_t i = 0; i < elems; i++) {
             children_[i] = o_children[o_size - elems + i];
             child_sums_[i] =
@@ -508,10 +503,8 @@ class node {
         uint8_t o_size = other->child_count();
         for (uint8_t i = 0; i < o_size; i++) {
             children_[child_count_ + i] = o_children[i];
-            child_sums_[child_count_ + i] =
-                o_sums[i] + child_sums_[child_count_ - 1];
-            child_sizes_[child_count_ + i] =
-                o_sizes[i] + child_sizes_[child_count_ - 1];
+            child_sums_[child_count_ + i] = o_sums[i] + child_sums_[child_count_ - 1];
+            child_sizes_[child_count_ + i] = o_sizes[i] + child_sizes_[child_count_ - 1];
         }
         child_count_ += o_size;
     }
@@ -585,12 +578,13 @@ class node {
                 reinterpret_cast<leaf_type* const*>(children_);
             for (uint8_t i = 0; i < child_count_; i++) {
                 uint64_t child_size = children[i]->size();
-                assert(child_size >= leaf_size * WORD_BITS / 3);
+                assert(child_size >= leaf_size / 3);
                 child_s_sum += child_size;
                 assert(child_sizes_[i] == child_s_sum);
                 child_p_sum += children[i]->p_sum();
                 assert(child_sums_[i] == child_p_sum);
-                assert(children[i]->capacity() <= leaf_size);
+                assert(children[i]->capacity() * WORD_BITS <= leaf_size);
+                assert(children[i]->size() <= leaf_size);
                 ret += children[i]->validate();
             }
         } else {
@@ -863,7 +857,7 @@ class node {
         if (index > 0) {
             l_cap = child_sizes_[index - 1];
             l_cap -= index > 1 ? child_sizes_[index - 2] : 0;
-            [[likely]] l_cap = leaf_size * WORD_BITS - l_cap;
+            [[likely]] l_cap = leaf_size - l_cap;
         }
         // Number of leaves that can fir in the "right" sibling (with potential
         // reallocation).
@@ -871,10 +865,9 @@ class node {
         if (index < child_count_ - 1) {
             r_cap = child_sizes_[index + 1];
             r_cap -= child_sizes_[index];
-            [[likely]] r_cap = leaf_size * WORD_BITS - r_cap;
+            [[likely]] r_cap = leaf_size - r_cap;
         }
-        if (l_cap < 2 * leaf_size * WORD_BITS / 9 &&
-            r_cap < 2 * leaf_size * WORD_BITS / 9) {
+        if (l_cap < 2 * leaf_size / 9 && r_cap < 2 * leaf_size / 9) {
             // Rebalancing without creating a new leaf is impossible
             // (impracitcal).
             leaf_type* a_child;
@@ -886,7 +879,7 @@ class node {
                 dtype n_elem = child_sizes_[1] / 3;
                 dtype n_cap = (n_elem + 2 * WORD_BITS) / WORD_BITS;
                 n_cap += n_cap % 2;
-                n_cap = n_cap > leaf_size ? leaf_size : n_cap;
+                n_cap = n_cap * WORD_BITS > leaf_size ? leaf_size / WORD_BITS : n_cap;
                 a_child = reinterpret_cast<leaf_type*>(children_[0]);
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 b_child = reinterpret_cast<leaf_type*>(children_[1]);
@@ -901,7 +894,7 @@ class node {
                 dtype n_elem = (a_child->size() + b_child->size()) / 3;
                 dtype n_cap = (n_elem + 2 * WORD_BITS) / WORD_BITS;
                 n_cap += n_cap % 2;
-                n_cap = n_cap > leaf_size ? leaf_size : n_cap;
+                n_cap = n_cap * WORD_BITS > leaf_size ? leaf_size / WORD_BITS : n_cap;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
@@ -934,7 +927,9 @@ class node {
             if (sibling->capacity() * WORD_BITS < n_size) {
                 n_size = n_size / WORD_BITS + 1;
                 n_size += n_size % 2;
-                n_size = n_size <= leaf_size ? n_size : leaf_size;
+                n_size = n_size * WORD_BITS <= leaf_size
+                             ? n_size
+                             : leaf_size / WORD_BITS;
                 children_[index + 1] = alloc->reallocate_leaf(
                     sibling, sibling->capacity(), n_size);
                 sibling = reinterpret_cast<leaf_type*>(children_[index + 1]);
@@ -955,7 +950,9 @@ class node {
             if (sibling->capacity() * WORD_BITS < n_size) {
                 n_size = n_size / WORD_BITS + 1;
                 n_size += n_size % 2;
-                n_size = n_size <= leaf_size ? n_size : leaf_size;
+                n_size = n_size * WORD_BITS <= leaf_size
+                             ? n_size
+                             : leaf_size / WORD_BITS;
                 children_[index - 1] = alloc->reallocate_leaf(
                     sibling, sibling->capacity(), n_size);
                 sibling = reinterpret_cast<leaf_type*>(children_[index - 1]);
@@ -987,14 +984,14 @@ class node {
         uint8_t child_index = find_size(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
 #ifdef DEBUG
-        if (child->size() > leaf_size * WORD_BITS) {
-            std::cerr << child->size() << " > " << (leaf_size * WORD_BITS) << "\n";
+        if (child->size() > leaf_size) {
+            std::cerr << child->size() << " > " << leaf_size << "\n";
             std::cerr << "invalid leaf size" << std::endl;
-            assert(child->size() <= leaf_size * WORD_BITS);
+            assert(child->size() <= leaf_size);
         }
 #endif
         if (child->need_realloc()) {
-            if (child->size() >= leaf_size * WORD_BITS) {
+            if (child->size() >= leaf_size) {
                 rebalance_leaf(child_index, child, alloc);
             } else {
                 dtype cap = child->capacity();
@@ -1159,11 +1156,12 @@ class node {
     template <class allocator>
     void rebalance_leaves_right(leaf_type* a, leaf_type* b, allocator* alloc) {
         dtype a_cap = a->capacity();
-        dtype addition = (b->size() - leaf_size * WORD_BITS / 3) / 2;
+        dtype addition = (b->size() - leaf_size / 3) / 2;
         if (a_cap * WORD_BITS < a->size() + addition) {
             dtype n_cap = 1 + (a->size() + addition) / WORD_BITS;
             n_cap += n_cap % 2;
-            n_cap = n_cap <= leaf_size ? n_cap : leaf_size;
+            n_cap =
+                n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
             a = alloc->reallocate_leaf(a, a_cap, n_cap);
             children_[0] = a;
         }
@@ -1189,11 +1187,12 @@ class node {
     void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx,
                                allocator* alloc) {
         dtype b_cap = b->capacity();
-        dtype addition = (a->size() - leaf_size * WORD_BITS / 3) / 2;
+        dtype addition = (a->size() - leaf_size / 3) / 2;
         if (b_cap * WORD_BITS < b->size() + addition) {
             dtype n_cap = 1 + (b->size() + addition) / WORD_BITS;
             n_cap += n_cap % 2;
-            n_cap = n_cap <= leaf_size ? n_cap : leaf_size;
+            n_cap =
+                n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
             b = alloc->reallocate_leaf(b, b_cap, n_cap);
             children_[idx + 1] = b;
         }
@@ -1228,7 +1227,8 @@ class node {
         if (a_cap * WORD_BITS < a->size() + b->size()) {
             dtype n_cap = 1 + (a->size() + b->size()) / WORD_BITS;
             n_cap += n_cap % 2;
-            n_cap = n_cap <= leaf_size ? n_cap : leaf_size;
+            n_cap =
+                n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
             a = alloc->reallocate_leaf(a, a_cap, n_cap);
         }
         a->append_all(b);
@@ -1261,10 +1261,10 @@ class node {
     bool leaf_remove(dtype index, allocator* alloc) {
         uint8_t child_index = find_size(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
-        if (child->size() <= leaf_size * WORD_BITS / 3) {
+        if (child->size() <= leaf_size / 3) {
             if (child_index == 0) {
                 leaf_type* sibling = reinterpret_cast<leaf_type*>(children_[1]);
-                if (sibling->size() > leaf_size * WORD_BITS * 5 / 9) {
+                if (sibling->size() > leaf_size * 5 / 9) {
                     rebalance_leaves_right(child, sibling, alloc);
                 } else {
                     merge_leaves(child, sibling, 0, alloc);
@@ -1273,7 +1273,7 @@ class node {
             } else {
                 leaf_type* sibling =
                     reinterpret_cast<leaf_type*>(children_[child_index - 1]);
-                if (sibling->size() > leaf_size * WORD_BITS * 5 / 9) {
+                if (sibling->size() > leaf_size * 5 / 9) {
                     rebalance_leaves_left(sibling, child, child_index - 1,
                                           alloc);
                 } else {
