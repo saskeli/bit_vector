@@ -8,6 +8,8 @@
 #include <cassert>
 #include <cstdint>
 
+#include "query_support.hpp"
+
 namespace bv {
 
 /**
@@ -31,7 +33,7 @@ namespace bv {
  * @tparam branches  Maximum branching factor of internal node.
  */
 template <class leaf, class node, class allocator, uint64_t leaf_size,
-          uint8_t branches>
+          uint8_t branches, class dtype>
 class bit_vector {
    protected:
     bool root_is_leaf_ = true;      ///< Value indicating whether the root is in
@@ -44,6 +46,7 @@ class bit_vector {
     leaf* l_root_;  ///< Root if a single leaf is sufficient.
     allocator* allocator_;  ///< Pointer to allocator used for allocating
                             ///< internal nodes and leaves.
+    typedef query_support<dtype, leaf, leaf_size> qds;
 
     /**
      * @brief Increases the height of the tree by one level.
@@ -112,6 +115,16 @@ class bit_vector {
         if (owned_allocator_) {
             delete (allocator_);
         }
+    }
+
+    qds* generate_query_structure() {
+        qds* qs = new qds();
+        if (root_is_leaf_) {
+            [[unlikely]] qs->append(l_root_);
+        } else {
+            n_root_->generate_query_structure(qs);
+        }
+        return qs;
     }
 
     /**

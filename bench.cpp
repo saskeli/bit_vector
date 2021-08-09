@@ -21,7 +21,9 @@ void help() {
               << "            1 for new implementation\n"
               << "            2 for new implementation with flushing\n"
               << "            3 for new implementation with no buffer\n"
-              << "            4 for sdsl bit_vector\n";
+              << "            4 for sdsl bit_vector\n"
+              << "            5 for rank support structure\n"
+              << "            6 for flushed rank support structure\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
@@ -174,7 +176,8 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
 
 template <class bit_vector, uint64_t select_offset, uint8_t type,
           uint8_t buffer, uint8_t branch, uint32_t leaf_size,
-          bool flush = false>
+          bool flush = false, bool rank_support = false,
+          class qs = bv::query_support<uint_fast64_t, bv::leaf<16>, leaf_size>>
 void test(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -198,7 +201,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     std::vector<uint64_t> loc, val;
 
     std::cout
-        << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tflush\tset\t"
+        << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\tflush\t"
         << "access\trank\tselect\tsize(bits)\trss\tchecksum" << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
@@ -253,8 +256,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
             bv.flush();
         }
         t2 = high_resolution_clock::now();
-        std::cout << (double)duration_cast<microseconds>(t2 - t1).count()
-                  << "\t";
+        double f_timing = (double)duration_cast<microseconds>(t2 - t1).count();
 
         loc.clear();
         val.clear();
@@ -271,6 +273,18 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+        qs* q;
+#pragma GCC diagnostic pop
+        t1 = high_resolution_clock::now();
+        if constexpr (rank_support) {
+            q = bv.generate_query_structure();
+        }
+        t2 = high_resolution_clock::now();
+        f_timing += (double)duration_cast<microseconds>(t2 - t1).count() / ops;
+        std::cout << f_timing << "\t";
+
+
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
             loc.push_back(gen(mt) % target);
@@ -278,7 +292,11 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
         t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
-            checksum += bv.at(loc[i]);
+            if constexpr (rank_support) {
+                checksum += q->at(loc[i]);
+            } else {
+                checksum += bv.at(loc[i]);
+            }
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
@@ -291,7 +309,11 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
         t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
-            checksum += bv.rank(loc[i]);
+            if constexpr (rank_support) {
+                checksum += q->rank(loc[i]);
+            } else {
+                checksum += bv.rank(loc[i]);
+            }
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
@@ -305,17 +327,29 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
         t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
-            checksum += bv.select(loc[i] + select_offset);
+            if constexpr (rank_support) {
+                checksum += q->select(loc[i] + select_offset);
+            } else {
+                checksum += bv.select(loc[i] + select_offset);
+            }
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
-        std::cout << bv.bit_size() << "\t";
+        uint64_t b_add = 0;
+        if constexpr (rank_support) {
+            b_add += q->bit_size();
+        }
+        std::cout << bv.bit_size() + b_add << "\t";
         getrusage(RUSAGE_SELF, &ru);
         std::cout << ru.ru_maxrss * 8 * 1024 << "\t";
 
         std::cout << checksum << std::endl;
+
+        if constexpr (rank_support) {
+            delete(q);
+        }
     }
 }
 
@@ -360,9 +394,17 @@ int main(int argc, char const *argv[]) {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
         test<bv::simple_bv<0, 16384, 64>, 1, 3, 0, 64, 16384>(size, steps,
                                                               seed);
-    } else {
+    } else if (type == 4) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
+    } else if (type == 5) {
+        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
+        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, false, true>(
+            size, steps, seed);
+    } else {
+        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
+        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, true, true>(
+            size, steps, seed);
     }
 
     return 0;

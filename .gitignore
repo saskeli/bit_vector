@@ -34,6 +34,7 @@ bv_debug
 test/test
 bench
 brute
+queries
 
 # IDE stuff
 .vscode/*
@@ -61,3 +62,7 @@ cachegrind.out.*
 
 #benchmarking stuff
 benchmarking/b*
+
+#notebooks
+.ipynb_checkpoints/
+*.ipynb

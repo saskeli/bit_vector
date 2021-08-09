@@ -3,14 +3,16 @@
 #include "../bit_vector/internal/bit_vector.hpp"
 #include "../bit_vector/internal/leaf.hpp"
 #include "../bit_vector/internal/node.hpp"
+#include "../bit_vector/internal/query_support.hpp"
 #include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 #include "bv_tests.hpp"
 #include "leaf_tests.hpp"
 #include "node_tests.hpp"
 #include "run_tests.hpp"
+#include "query_support_test.hpp"
 
-#define SIZE 256
+#define SIZE 16384
 #define BRANCH 16
 #define BUFFER_SIZE 8
 
@@ -20,7 +22,8 @@ typedef malloc_alloc ma;
 typedef leaf<BUFFER_SIZE> sl;
 typedef leaf<0> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
-typedef bit_vector<sl, nd, ma, SIZE, BRANCH> test_bv;
+typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
+typedef query_support<uint64_t, sl, SIZE> qs;
 
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
@@ -51,7 +54,7 @@ TEST(SimpleLeaf, AppendAll) { leaf_append_all_test<sl, ma>(); }
 
 TEST(SimpleLeaf, BufferHit) { leaf_hit_buffer_test<sl, ma>(); }
 
-TEST(SimpleLeaf, Commit) { leaf_commit_test<sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleLeaf, Commit) { leaf_commit_test<sl, ma>(SIZE); }
 
 // A couple of tests to check that unbuffered works as well.
 TEST(SimpleLeafUnb, Insert) { leaf_insert_test<ubl, ma>(10000); }
@@ -120,15 +123,15 @@ TEST(SimpleNode, InsertSingleLeafRealloc) {
 }
 
 TEST(SimpleNode, InsertSingleLeafSplit) {
-    node_insert_single_leaf_split_test<nd, sl, ma>(SIZE * WORD_BITS);
+    node_insert_single_leaf_split_test<nd, sl, ma>(SIZE);
 }
 
 TEST(SimpleNode, InsertLeafSplit) {
-    node_insert_leaf_split_test<nd, sl, ma>(SIZE * WORD_BITS);
+    node_insert_leaf_split_test<nd, sl, ma>(SIZE);
 }
 
 TEST(SimpleNode, InsertLeafRebalance) {
-    node_insert_leaf_rebalance_test<nd, sl, ma>(SIZE * WORD_BITS);
+    node_insert_leaf_rebalance_test<nd, sl, ma>(SIZE);
 }
 
 TEST(SimpleNode, InsertNode) { node_insert_node_test<nd, sl, ma>(); }
@@ -136,47 +139,47 @@ TEST(SimpleNode, InsertNode) { node_insert_node_test<nd, sl, ma>(); }
 TEST(SimpleNode, InsertNodeSplit) { node_insert_node_split_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, RemoveLeafSimple) {
-    node_remove_leaf_simple_test<nd, sl, ma>(SIZE * WORD_BITS);
+    node_remove_leaf_simple_test<nd, sl, ma>(SIZE);
 }
 
-TEST(SimpleNode, RemoveLeafA) { node_remove_leaf_a_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafA) { node_remove_leaf_a_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafB) { node_remove_leaf_b_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafB) { node_remove_leaf_b_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafC) { node_remove_leaf_c_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafC) { node_remove_leaf_c_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafD) { node_remove_leaf_d_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafD) { node_remove_leaf_d_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafE) { node_remove_leaf_e_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafE) { node_remove_leaf_e_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafF) { node_remove_leaf_f_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafF) { node_remove_leaf_f_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafG) { node_remove_leaf_g_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafG) { node_remove_leaf_g_test<nd, sl, ma>(SIZE); }
 
-TEST(SimpleNode, RemoveLeafH) { node_remove_leaf_h_test<nd, sl, ma>(SIZE * WORD_BITS); }
+TEST(SimpleNode, RemoveLeafH) { node_remove_leaf_h_test<nd, sl, ma>(SIZE); }
 
 TEST(SimpleNode, RemoveNodeSimple) {
-    node_remove_node_simple_test<nd, sl, ma>(SIZE * WORD_BITS, BRANCH);
+    node_remove_node_simple_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
 TEST(SimpleNode, RemoveNodeA) {
-    node_remove_node_a_test<nd, sl, ma>(SIZE * WORD_BITS, BRANCH);
+    node_remove_node_a_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
 TEST(SimpleNode, RemoveNodeB) {
-    node_remove_node_b_test<nd, sl, ma>(SIZE * WORD_BITS, BRANCH);
+    node_remove_node_b_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
 TEST(SimpleNode, RemoveNodeC) {
-    node_remove_node_c_test<nd, sl, ma>(SIZE * WORD_BITS, BRANCH);
+    node_remove_node_c_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
 TEST(SimpleNode, RemoveNodeD) {
-    node_remove_node_d_test<nd, sl, ma>(SIZE * WORD_BITS, BRANCH);
+    node_remove_node_d_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
 TEST(SimpleNode, RemoveNodeE) {
-    node_remove_node_e_test<nd, sl, ma>(SIZE * WORD_BITS, BRANCH);
+    node_remove_node_e_test<nd, sl, ma>(SIZE, BRANCH);
 }
 
 // Bit vector tests
@@ -189,34 +192,62 @@ TEST(SimpleBV, InstantiateWithoutAlloc) {
 }
 
 TEST(SimpleBV, InsertSplitDeallocA) {
-    bv_insert_split_dealloc_a_test<ma, test_bv>(SIZE * WORD_BITS);
+    bv_insert_split_dealloc_a_test<ma, test_bv>(SIZE);
 }
 
 TEST(SimpleBV, InsertSplitDeallocB) {
-    bv_insert_split_dealloc_b_test<ma, test_bv>(SIZE * WORD_BITS);
+    bv_insert_split_dealloc_b_test<ma, test_bv>(SIZE);
 }
 
-TEST(SimpleBV, AccessLeaf) { bv_access_leaf_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, AccessLeaf) { bv_access_leaf_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, RemoveLeaf) { bv_remove_leaf_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, RemoveLeaf) { bv_remove_leaf_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, RemoveNode) { bv_remove_node_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, RemoveNode) { bv_remove_node_test<ma, test_bv>(SIZE); }
 
 TEST(SimpleBV, RemoveNodeNode) {
-    bv_remove_node_node_test<ma, test_bv>(SIZE * WORD_BITS);
+    bv_remove_node_node_test<ma, test_bv>(SIZE);
 }
 
-TEST(SimpleBV, SetLeaf) { bv_set_leaf_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, SetLeaf) { bv_set_leaf_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, SetNode) { bv_set_node_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, SetNode) { bv_set_node_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, RankLeaf) { bv_rank_leaf_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, RankLeaf) { bv_rank_leaf_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, RankNode) { bv_rank_node_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, RankNode) { bv_rank_node_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE * WORD_BITS); }
+TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
+
+TEST(QuerySupport, SingleAccess) {
+    qs_access_single_leaf<qs, sl, ma>(SIZE);
+}
+
+TEST(QuerySupport, SingleRank) {
+    qs_rank_single_leaf<qs, sl, ma>(SIZE);
+}
+
+TEST(QuerySupport, SingleSelect) {
+    qs_select_single_leaf<qs, sl, ma>(SIZE);
+}
+
+TEST(QuerySupport, DoubleAccess) {
+    qs_access_two_leaves<qs, sl, nd, ma>(SIZE);
+}
+
+TEST(QuerySupport, DoubleRank) {
+    qs_rank_two_leaves<qs, sl, nd, ma>(SIZE);
+}
+
+TEST(QuerySupport, DoubleSelect) {
+    qs_select_two_leaves<qs, sl, nd, ma>(SIZE);
+}
+
+TEST(QuerySupport, DoubleSelect2) {
+    qs_select_two_leaves_two<qs, sl, nd, ma>(SIZE);
+}
 
 // Run tests
 TEST(Run, A) {

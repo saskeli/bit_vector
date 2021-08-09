@@ -54,7 +54,7 @@ template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
 using simple_bv =
     bit_vector<leaf<buffer_size, avx>,
                node<leaf<buffer_size>, uint64_t, leaf_size, branching_factor>,
-               malloc_alloc, leaf_size, branching_factor>;
+               malloc_alloc, leaf_size, branching_factor, uint64_t>;
 
 /**
  * @brief Helper type definition template for bit vector with at most 2^31
@@ -81,7 +81,7 @@ template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
 using small_bv =
     bit_vector<leaf<buffer_size, avx>,
                node<leaf<buffer_size>, uint32_t, leaf_size, branching_factor>,
-               malloc_alloc, leaf_size, branching_factor>;
+               malloc_alloc, leaf_size, branching_factor, uint32_t>;
 
 /**
  * @brief Default dynamic bit vector type.

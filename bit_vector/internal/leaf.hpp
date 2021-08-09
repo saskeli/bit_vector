@@ -922,7 +922,7 @@ class leaf {
                 std::cout << ",\n";
             }
         }
-        if (internal_only) {
+        if (!internal_only) {
             std::cout << "]\n\"data\": [\n";
             for (uint64_t i = 0; i < capacity_; i++) {
                 std::bitset<64> b(data_[i]);

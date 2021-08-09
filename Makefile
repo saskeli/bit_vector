@@ -6,7 +6,7 @@ INCLUDE = -I deps/hopscotch-map/include/ -I deps/DYNAMIC/include/
 
 HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
           bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \
-		  bit_vector/bv.hpp
+		  bit_vector/bv.hpp bit_vector/internal/query_support.hpp
 
 GTEST_DIR = deps/googletest/googletest
 GFLAGS = -isystem $(GTEST_DIR)/include -I $(GTEST_DIR)/include -pthread
@@ -34,10 +34,13 @@ bv_debug: bv_debug.cpp $(HEADERS) update_git
 bench: bench.cpp $(HEADERS) update_git
 	(cd deps/sdsl-lite && cmake CMakeLists.txt)
 	make -C deps/sdsl-lite
-	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ideps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -g -Ideps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
 
 brute: brute_force.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -O0 -g -o brute brute_force.cpp
+
+queries: queries.cpp $(HEADERS)
+	g++ $(CFLAGS) -g -DDEBUG -Ofast -o queries queries.cpp
 
 rem_bench: rem_bench.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ofast -o rem_bench rem_bench.cpp
@@ -59,7 +62,7 @@ run%: benchmarking/b%
 	rm -f benchmarking/b$*
 
 clean: clean_test
-	rm -f bv_debug bench brute
+	rm -f bv_debug bench brute queries
 
 clean_test:
 	rm -f gtest_main.o gtest-all.o test/test.o test/test test/gtest_main.a \

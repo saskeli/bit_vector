@@ -102,6 +102,22 @@ class node {
         }
     }
 
+    template <class qds>
+    void generate_query_structure(qds* qs) {
+        if (has_leaves()) {
+            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            for (size_t i = 0; i < child_count_; i++) {
+                children[i]->commit();
+                qs->append(children[i]);
+            }
+        } else {
+            node** children = reinterpret_cast<node**>(children_);
+            for (size_t i = 0; i < child_count_; i++) {
+                children[i]->generate_query_structure(qs);
+            }
+        }
+    }
+
     /**
      * @brief Set whether the children of the node are leaves or internal nodes
      *
@@ -636,16 +652,14 @@ class node {
         std::cout << "],\n"
                   << "\"children\": [\n";
         if (has_leaves()) {
-            if (!internal_only) {
-                leaf_type* const* children =
-                    reinterpret_cast<leaf_type* const*>(children_);
-                for (uint8_t i = 0; i < child_count_; i++) {
-                    children[i]->print(internal_only);
-                    if (i != child_count_ - 1) {
-                        std::cout << ",";
-                    }
-                    std::cout << "\n";
+            leaf_type* const* children =
+                reinterpret_cast<leaf_type* const*>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                children[i]->print(internal_only);
+                if (i != child_count_ - 1) {
+                    std::cout << ",";
                 }
+                std::cout << "\n";
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
