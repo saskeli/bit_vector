@@ -101,21 +101,22 @@ class leaf {
     bool at(const uint32_t i) const {
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
+            int64_t b_loc = -1;
             for (uint8_t idx = 0; idx < buffer_count_; idx++) {
                 uint64_t b = buffer_index(buffer_[idx]);
                 if (b == i) {
                     if (buffer_is_insertion(buffer_[idx])) {
-                        return buffer_value(buffer_[idx]);
+                        [[unlikely]] b_loc = idx;
                     }
                     index++;
                 } else if (b < i) {
                     [[likely]] index -=
                         buffer_is_insertion(buffer_[idx]) * 2 - 1;
-                } else {
-                    break;
                 }
             }
-            return MASK & (data_[index / WORD_BITS] >> (index % WORD_BITS));
+            return b_loc == -1 ? MASK & (data_[index / WORD_BITS] >>
+                                         (index % WORD_BITS))
+                               : buffer_value(buffer_[b_loc]);
         }
         return MASK & (data_[i / WORD_BITS] >> (i % WORD_BITS));
     }
@@ -355,7 +356,7 @@ class leaf {
         }
         if (target_offset != 0) {
             count += __builtin_popcountll(data_[target_word] &
-                                        ((MASK << target_offset) - 1));
+                                          ((MASK << target_offset) - 1));
         }
         return count;
     }
@@ -952,7 +953,7 @@ class leaf {
      * @return Boolean value indicating the value of the element referred to by
      * the buffer.
      */
-    bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
+    inline bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
 
     /**
      * @brief Extract type information of a buffer element.
@@ -965,7 +966,9 @@ class leaf {
      * @return Boolean value True if the buffer is related to an insert
      * operations, and false if the buffer is related to a removal.
      */
-    bool buffer_is_insertion(uint32_t e) const { return (e & TYPE_MASK) != 0; }
+    inline bool buffer_is_insertion(uint32_t e) const {
+        return (e & TYPE_MASK) != 0;
+    }
 
     /**
      * @brief Extract index information from a butter element.
@@ -977,7 +980,7 @@ class leaf {
      *
      * @return Index information related to the buffer element.
      */
-    uint32_t buffer_index(uint32_t e) const { return (e) >> 8; }
+    inline uint32_t buffer_index(uint32_t e) const { return (e) >> 8; }
 
     /**
      * @brief Updates index information for a specified buffer element.

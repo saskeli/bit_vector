@@ -23,7 +23,7 @@ typedef leaf<BUFFER_SIZE> sl;
 typedef leaf<0> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
-typedef query_support<uint64_t, sl, SIZE> qs;
+typedef query_support<uint64_t, sl, SIZE / 3> qs;
 
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }

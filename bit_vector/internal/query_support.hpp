@@ -21,7 +21,7 @@ struct r_elem {
     }
 };
 
-template <class dtype, class leaf_type, uint64_t leaf_size>
+template <class dtype, class leaf_type, dtype block_size>
 class query_support {
    private:
     dtype size_ = 0;
@@ -31,18 +31,17 @@ class query_support {
 
    public:
     void append(leaf_type* leaf) {
-        constexpr uint64_t leaf_int = leaf_size / 3;
         dtype i = elems_.size();
         dtype a_size = leaf->size();
-        while (size_ + a_size > i * leaf_int) {
+        while (size_ + a_size > i * block_size) {
             elems_.push_back(r_elem<dtype, leaf_type>(size_, sum_, leaf));
             i++;
         }
         size_ += a_size;
         sum_ += leaf->p_sum();
-        assert(size_ <= elems_.size() * leaf_int);
+        assert(size_ <= elems_.size() * block_size);
 #ifdef DEBUG
-        if (size_ <= (elems_.size() - 1) * leaf_int) {
+        if (size_ <= (elems_.size() - 1) * block_size) {
             std::cerr << "Invalid partial sizes:" << std::endl;
             for (size_t i = 0; i < elems_.size(); i++) {
                 std::cerr << elems_[i].p_size << "\t";
@@ -53,10 +52,10 @@ class query_support {
             }
             std::cerr << std::endl;
             for (size_t i = 0; i < elems_.size(); i++) {
-                std::cerr << i * leaf_int << "\t";
+                std::cerr << i * block_size << "\t";
             }
             std::cerr << std::endl;
-            assert(size_ > (elems_.size() - 1) * leaf_int);
+            assert(size_ > (elems_.size() - 1) * block_size);
         }
 #endif
     }
@@ -65,8 +64,7 @@ class query_support {
     dtype p_sum() const { return sum_; }
 
     bool at(dtype i) const {
-        constexpr uint64_t leaf_int = leaf_size / 3;
-        dtype idx = i / leaf_int;
+        dtype idx = i / block_size;
         r_elem<dtype, leaf_type> e = elems_[idx];
         if (e.p_size + e.leaf->size() <= i) {
             [[unlikely]] e = elems_[idx + 1];
@@ -75,8 +73,7 @@ class query_support {
     }
 
     dtype rank(dtype i) const {
-        constexpr uint64_t leaf_int = leaf_size / 3;
-        dtype idx = i / leaf_int;
+        dtype idx = i / block_size;
         r_elem<dtype, leaf_type> e = elems_[idx];
         if (e.p_size + e.leaf->size() <= i) {
             [[unlikely]] e = elems_[idx + 1];
@@ -85,6 +82,10 @@ class query_support {
     }
 
     dtype select(dtype i) const {
+        /*constexpr dtype lines = CACHE_LINE / sizeof(r_elem<dtype, leaf_type>);
+        for (dtype i = 0; i < elems_.size(); i += lines) {
+            __builtin_prefetch(&elems_[0] + i);
+        }//*/
         dtype idx = 0;
         dtype b = elems_.size() - 1;
         while (idx < b) {
@@ -96,8 +97,9 @@ class query_support {
             }
         }
         r_elem<dtype, leaf_type> e = elems_[idx];
-        if (e.p_sum + e.leaf->p_sum() < i) {
-            [[unlikely]] e = elems_[idx + 1];
+        while (e.p_sum + e.leaf->p_sum() < i) {
+            idx++;
+            [[unlikely]] e = elems_[idx];
         }
         return e.p_size + e.leaf->select(i - e.p_sum);
     }

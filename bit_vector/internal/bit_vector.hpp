@@ -46,7 +46,6 @@ class bit_vector {
     leaf* l_root_;  ///< Root if a single leaf is sufficient.
     allocator* allocator_;  ///< Pointer to allocator used for allocating
                             ///< internal nodes and leaves.
-    typedef query_support<dtype, leaf, leaf_size> qds;
 
     /**
      * @brief Increases the height of the tree by one level.
@@ -117,13 +116,21 @@ class bit_vector {
         }
     }
 
-    qds* generate_query_structure() {
-        qds* qs = new qds();
+    template <dtype block_size = leaf_size / 3>
+    void generate_query_structure(query_support<dtype, leaf, block_size>* qs) const {
+        static_assert(block_size * 3 <= leaf_size);
         if (root_is_leaf_) {
             [[unlikely]] qs->append(l_root_);
         } else {
             n_root_->generate_query_structure(qs);
         }
+    }
+
+    template <dtype block_size = leaf_size / 3>
+    query_support<dtype, leaf, block_size>* generate_query_structure() const {
+        static_assert(block_size * 3 <= leaf_size);
+        query_support<dtype, leaf, block_size>* qs = new query_support<dtype, leaf, block_size>();
+        generate_query_structure(qs);
         return qs;
     }
 

@@ -177,7 +177,7 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
 template <class bit_vector, uint64_t select_offset, uint8_t type,
           uint8_t buffer, uint8_t branch, uint32_t leaf_size,
           bool flush = false, bool rank_support = false,
-          class qs = bv::query_support<uint_fast64_t, bv::leaf<16>, leaf_size>>
+          class qs = bv::query_support<uint_fast64_t, bv::leaf<16>, leaf_size / 3>>
 void test(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -273,12 +273,10 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
 
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-        qs* q;
-#pragma GCC diagnostic pop
+        qs* q = new qs();
         t1 = high_resolution_clock::now();
         if constexpr (rank_support) {
-            q = bv.generate_query_structure();
+            bv.generate_query_structure(q);
         }
         t2 = high_resolution_clock::now();
         f_timing += (double)duration_cast<microseconds>(t2 - t1).count() / ops;
@@ -346,10 +344,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         std::cout << ru.ru_maxrss * 8 * 1024 << "\t";
 
         std::cout << checksum << std::endl;
-
-        if constexpr (rank_support) {
-            delete(q);
-        }
+        delete(q);
     }
 }
 
