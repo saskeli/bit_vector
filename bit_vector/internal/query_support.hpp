@@ -23,7 +23,7 @@ struct r_elem {
 
 template <class dtype, class leaf_type, dtype block_size>
 class query_support {
-   private:
+   protected:
     dtype size_ = 0;
     dtype sum_ = 0;
     std::vector<r_elem<dtype, leaf_type>> elems_ =
@@ -39,25 +39,6 @@ class query_support {
         }
         size_ += a_size;
         sum_ += leaf->p_sum();
-        assert(size_ <= elems_.size() * block_size);
-#ifdef DEBUG
-        if (size_ <= (elems_.size() - 1) * block_size) {
-            std::cerr << "Invalid partial sizes:" << std::endl;
-            for (size_t i = 0; i < elems_.size(); i++) {
-                std::cerr << elems_[i].p_size << "\t";
-            }
-            std::cerr << std::endl;
-            for (size_t i = 0; i < elems_.size(); i++) {
-                std::cerr << elems_[i].p_size + elems_[i].leaf->size() << "\t";
-            }
-            std::cerr << std::endl;
-            for (size_t i = 0; i < elems_.size(); i++) {
-                std::cerr << i * block_size << "\t";
-            }
-            std::cerr << std::endl;
-            assert(size_ > (elems_.size() - 1) * block_size);
-        }
-#endif
     }
 
     dtype size() const { return size_; }

@@ -105,9 +105,7 @@ class leaf {
             for (uint8_t idx = 0; idx < buffer_count_; idx++) {
                 uint64_t b = buffer_index(buffer_[idx]);
                 if (b == i) {
-                    if (buffer_is_insertion(buffer_[idx])) {
-                        [[unlikely]] b_loc = idx;
-                    }
+                    b_loc += buffer_is_insertion(buffer_[idx]) * (idx + 1);
                     index++;
                 } else if (b < i) {
                     [[likely]] index -=
