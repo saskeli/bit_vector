@@ -40,7 +40,7 @@ brute: brute_force.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -O0 -g -o brute brute_force.cpp
 
 queries: queries.cpp $(HEADERS)
-	g++ $(CFLAGS) -g -DDEBUG -Ofast -o queries queries.cpp
+	g++ $(CFLAGS) -g -DDEBUG -O0 -o queries queries.cpp
 
 rem_bench: rem_bench.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ofast -o rem_bench rem_bench.cpp

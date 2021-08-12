@@ -89,6 +89,9 @@ class leaf {
         size_ = 0;
         p_sum_ = 0;
         data_ = data;
+        if constexpr (buffer_size > 0) {
+            memset(buffer_, 0xff, buffer_size * sizeof(uint32_t));
+        }
     }
 
     /**
@@ -100,17 +103,13 @@ class leaf {
      */
     bool at(const uint32_t i) const {
         if constexpr (buffer_size != 0) {
-            uint64_t index = i;
-            int64_t b_loc = -1;
-            for (uint8_t idx = 0; idx < buffer_count_; idx++) {
-                uint64_t b = buffer_index(buffer_[idx]);
-                if (b == i) {
-                    b_loc += buffer_is_insertion(buffer_[idx]) * (idx + 1);
-                    index++;
-                } else if (b < i) {
-                    [[likely]] index -=
-                        buffer_is_insertion(buffer_[idx]) * 2 - 1;
-                }
+            uint32_t index = i;
+            int32_t b_loc = -1;
+            for (uint8_t idx = 0; idx < buffer_size; idx++) {
+                uint32_t b = buffer_index(buffer_[idx]);
+                b_loc += (b == i) * buffer_is_insertion(buffer_[idx]) * (idx + 1);
+                index += b == i;
+                index -= (b < i) * (buffer_is_insertion(buffer_[idx]) * 2 - 1);
             }
             return b_loc == -1 ? MASK & (data_[index / WORD_BITS] >>
                                          (index % WORD_BITS))
@@ -349,6 +348,78 @@ class leaf {
             }
         } else {
             for (size_t i = 0; i < target_word; i++) {
+                count += __builtin_popcountll(data_[i]);
+            }
+        }
+        if (target_offset != 0) {
+            count += __builtin_popcountll(data_[target_word] &
+                                          ((MASK << target_offset) - 1));
+        }
+        return count;
+    }
+
+    /**
+     * @brief Number of 1-bits up to position n from position offset.
+     *
+     * Counts the number of bits set in the [offset n) range.
+     *
+     * This is a simple linear operations of population counting.
+     *
+     * @param n End position of summation.
+     * @param offset Start position of summation.
+     *
+     * @return \f$\sum_{i = \mathrm{offset}}^{\mathrm{n- 1}} \mathrm{bv}[i]\f$.
+     */
+    uint64_t rank(const uint64_t n, const uint64_t offset) const {
+        uint64_t count = 0;
+        uint64_t idx = n;
+        uint64_t o_idx = offset;
+        if constexpr (buffer_size != 0) {
+            for (uint8_t i = 0; i < buffer_count_; i++) {
+                uint64_t b = buffer_index(buffer_[i]);
+                if (b >= n) {
+                    [[unlikely]] break;
+                }
+                // Location of the n<sup>th</sup> element needs to be amended
+                // base on buffer contents.
+                if (buffer_is_insertion(buffer_[i])) {
+                    if (b >= offset) {
+                        count += buffer_value(buffer_[i]);
+                    } else {
+                        o_idx--;
+                    }
+                    idx--;
+                } else {
+                    if (b >= offset) {
+                        count -= buffer_value(buffer_[i]);
+                    } else {
+                        o_idx++;
+                    }
+                    idx++;
+                }
+            }
+        }
+        uint64_t target_word = idx / WORD_BITS;
+        uint64_t offset_word = o_idx / WORD_BITS;
+        uint64_t target_offset = idx % WORD_BITS;
+        uint64_t offset_offset = o_idx % WORD_BITS;
+        if (target_word == offset_word) {
+            count += __builtin_popcountll(data_[offset_word] &
+                                          ~((MASK << offset_offset) - 1) &
+                                          ((MASK << target_offset) - 1));
+            return count;
+        }
+        if (offset_offset != 0) {
+            count += __builtin_popcountll(data_[offset_word] &
+                                          ~((MASK << offset_offset) - 1));
+            offset_word++;
+        }
+        if constexpr (avx) {
+            if (target_word - offset_word > 0) {
+                count += pop::popcnt(data_ + offset_word, (target_word - offset_word) * 8);
+            }
+        } else {
+            for (size_t i = offset_word; i < target_word; i++) {
                 count += __builtin_popcountll(data_[i]);
             }
         }
@@ -859,6 +930,9 @@ class leaf {
         if (capacity_ > words) [[likely]]
             data_[words] = 0;
         buffer_count_ = 0;
+        if constexpr (buffer_size > 0) {
+            memset(buffer_, 0xff, buffer_size * sizeof(uint32_t));
+        }
     }
 
     /**
@@ -907,8 +981,9 @@ class leaf {
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
+                  << "\"buffer_count\": " << int(buffer_count_) << ",\n"
                   << "\"buffer\": [\n";
-        for (uint8_t i = 0; i < buffer_count_; i++) {
+        for (uint8_t i = 0; i < buffer_size; i++) {
 #pragma GCC diagnostic ignored "-Warray-bounds"
             std::cout << "{\"is_insertion\": "
                       << buffer_is_insertion(buffer_[i]) << ", "
@@ -917,7 +992,7 @@ class leaf {
                       << "\"buffer_index\": " << buffer_index(buffer_[i])
                       << "}";
 #pragma GCC diagnostic pop
-            if (i != buffer_count_ - 1) {
+            if (i != buffer_size - 1) {
                 std::cout << ",\n";
             }
         }
@@ -1035,7 +1110,7 @@ class leaf {
         buffer_count_--;
         memmove(buffer_ + idx, buffer_ + idx + 1,
                 (buffer_count_ - idx) * sizeof(uint32_t));
-        buffer_[buffer_count_] = 0;
+        buffer_[buffer_count_] = ~uint32_t(0);
     }
 
     /**

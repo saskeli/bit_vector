@@ -36,6 +36,8 @@ TEST(SimpleLeaf, Rank) { leaf_rank_test<sl, ma>(10000); }
 
 TEST(SimpleLeaf, RankOffset) { leaf_rank_test<sl, ma>(11); }
 
+TEST(SimpleLeaf, RankBlock) { leaf_rank_offset_test<sl, ma>(10000); }
+
 TEST(SimpleLeaf, Select) { leaf_select_test<sl, ma>(10000); }
 
 TEST(SimpleLeaf, SelectOffset) { leaf_select_test<sl, ma>(11); }

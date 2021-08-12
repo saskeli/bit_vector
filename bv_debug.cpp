@@ -8,8 +8,8 @@
 //#include "deps/valgrind/callgrind.h"
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
-//typedef bv::malloc_alloc alloc;
-//typedef bv::leaf<8> leaf;
+typedef bv::malloc_alloc alloc;
+typedef bv::leaf<8> leaf;
 //typedef bv::node<leaf, uint64_t, 16384, 64> node;
 typedef bv::simple_bv<8, 16384, 64> bit_vector;
 
@@ -95,6 +95,32 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
 }
 
 int main() {
+    alloc* a = new alloc();
+    leaf* l = a->template allocate_leaf<leaf>(4);
+    for (size_t i = 0; i < 128; i++) {
+        l->insert(0, i % 2);
+        if (i > 125) {
+            l->print(false);
+            std::cout << std::endl;
+        }
+    }
+    std::cout << "----------Removals-------------" << std::endl;
+    for (size_t i = 0; i < 128; i++) {
+        l->remove(0);
+        l->print(false);
+        assert(l->size() == 128 - i - 1);
+        uint32_t actual = l->p_sum();
+        uint32_t expected = 64 - 1 - i / 2;
+        if (actual != expected) {
+            std::cout << "i: " << i << ", actual: " << actual << ", expected: " << expected << std::endl;
+            std::cout << std::endl;
+            assert(actual == expected); 
+        }
+    }
+
+    a->deallocate_leaf(l);
+    delete(a);
+
     /*uint64_t a[] = {
         377, 0,   50,  0,   0,   284, 0,   2,   357, 1,   2,   233, 1,   2,
         251, 0,   1,   148, 0,   83,  0,   1,   137, 2,   286, 0,   0,   178,
@@ -125,7 +151,7 @@ int main() {
         2,   75,  0,   0,   133, 1,   2,   306, 1,   1,   23,  0,   10,  1};
     run_test<bit_vector, dyn::suc_bv>(a, 378, false);*/
 
-    uint64_t seed = 2586862946;
+    /*uint64_t seed = 2586862946;
     uint64_t size = 1000000000;
     uint64_t steps = 100;
     bit_vector bv;
@@ -239,5 +265,5 @@ int main() {
 
     uint64_t tot_size = bv.size();
     check<bit_vector, dyn::suc_bv>(&bv, &cbv, tot_size);
-    std::cout << "PASSED!" << std::endl;
+    std::cout << "PASSED!" << std::endl;*/
 }

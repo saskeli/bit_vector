@@ -12,12 +12,16 @@ template <class dtype, class leaf_type>
 struct r_elem {
     dtype p_size;
     dtype p_sum;
+    dtype select_index;
+    dtype internl_offset;
     leaf_type* leaf;
 
-    r_elem(dtype size, dtype sum, leaf_type* l) {
+    r_elem(dtype size, dtype sum, dtype offset, leaf_type* l) {
         p_size = size;
         p_sum = sum;
         leaf = l;
+        select_index = 0;
+        internl_offset = offset;
     }
 };
 
@@ -34,11 +38,16 @@ class query_support {
         dtype i = elems_.size();
         dtype a_size = leaf->size();
         while (size_ + a_size > i * block_size) {
-            elems_.push_back(r_elem<dtype, leaf_type>(size_, sum_, leaf));
+            //TODO: FIX THIS!
+            elems_.push_back(r_elem<dtype, leaf_type>(size_, sum_, 0, leaf));
             i++;
         }
         size_ += a_size;
         sum_ += leaf->p_sum();
+    }
+
+    void finalize() {
+
     }
 
     dtype size() const { return size_; }
@@ -63,10 +72,6 @@ class query_support {
     }
 
     dtype select(dtype i) const {
-        /*constexpr dtype lines = CACHE_LINE / sizeof(r_elem<dtype, leaf_type>);
-        for (dtype i = 0; i < elems_.size(); i += lines) {
-            __builtin_prefetch(&elems_[0] + i);
-        }//*/
         dtype idx = 0;
         dtype b = elems_.size() - 1;
         while (idx < b) {

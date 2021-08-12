@@ -1,5 +1,6 @@
 #include <sys/resource.h>
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <iomanip>
@@ -138,7 +139,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }
         t2 = high_resolution_clock::now();
         sup[3] = (double)duration_cast<microseconds>(t2 - t1).count() / ops;
-        
+
         if (checksum != 0) {
             std::cerr << "Invalid checksum " << checksum << std::endl;
             ss->print(true);
@@ -156,40 +157,46 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }
         std::cout << std::endl;
 
-        delete(ss);
+        delete (ss);
     }
 }
 
-int main(int argc, char const *argv[]) {
-    /*bv::malloc_alloc* a = new bv::malloc_alloc();
-    bv::leaf<8>* l = a->template allocate_leaf<bv::leaf<8>>(SIZE / 64);
-    bv::node<bv::leaf<8>, uint64_t, SIZE, 64>* n = a->template allocate_node<bv::node<bv::leaf<8>, uint64_t, SIZE, 64>>();
-    n->has_leaves(true);
-    for (size_t i = 0; i < 5 * SIZE / 6; i++) {
-        l->insert(i, i % 2);
-    }
-    n->append_child(l);
-    l = a->template allocate_leaf<bv::leaf<8>>(SIZE / 64);
-    for (size_t i = 0; i < SIZE / 2; i++) {
-        l->insert(i, (i + 5 * SIZE / 6) % 2);
-    }
-    n->append_child(l);
+int main(int argc, char const* argv[]) {
+    bv::malloc_alloc* a = new bv::malloc_alloc();
+    bv::leaf<8>* l = a->template allocate_leaf<bv::leaf<8>>(8);
 
-    bv::query_support<uint64_t, bv::leaf<8>, SIZE>* q = new bv::query_support<uint64_t, bv::leaf<8>, SIZE>();
-    n->generate_query_structure(q);
-    n->print(true);
-    q->print(true);
-    for (size_t i = 0; i < n->size() / 2; i++) {
-        if (q->select(i + 1) != n->select(i + 1)) {
-            std::cout << i << std::endl;
-            assert(q->select(i + 1) == n->select(i + 1));
+    uint64_t n = 10000;
+    for (uint64_t i = 0; i < n; i++) {
+        l->insert(0, bool(i & uint64_t(1)));
+        if (l->need_realloc()) {
+            uint64_t cap = l->capacity();
+            l = a->template reallocate_leaf<bv::leaf<8>>(l, cap, 2 * cap);
         }
     }
-    n->deallocate(a);
-    a->deallocate_node(n);
-    delete(a);
-    */
-    if (argc < 2) {
+
+    uint64_t block_size = n / 4;
+    uint64_t block_start = 0;
+    uint64_t prefix_ones = 0;
+    while (block_start < n) {
+        for (uint64_t i = block_start + 1; i < std::min(block_start + block_size, n); i++) {
+            uint64_t a = l->rank(i, block_start);
+            uint64_t b = l->rank(i);
+            std::cout << i << std::endl;
+            if (prefix_ones + a != b) {
+                std::cerr << "block start: " << block_start
+                          << ", block size: " << block_size
+                          << ", prefix ones: " << prefix_ones << ", a: " << a
+                          << ", b: " << b << ", i: " << i << "." << std::endl;
+                assert(prefix_ones + a == b);
+            }
+        }
+        block_start += block_size;
+        prefix_ones = l->rank(block_start);
+    }
+
+    a->deallocate_leaf(l);
+    delete (a);
+    /*if (argc < 2) {
         std::cerr << "Seed is required" << std::endl;
         return 1;
     }
@@ -212,5 +219,5 @@ int main(int argc, char const *argv[]) {
     }
 
     test<bv::simple_bv<16, 16384, 64>, 1>(size, steps, seed);
-    return 0;
+    return 0;*/
 }

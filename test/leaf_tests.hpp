@@ -158,6 +158,33 @@ void leaf_rank_test(uint64_t n) {
 }
 
 template <class leaf, class alloc>
+void leaf_rank_offset_test(uint64_t n) {
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>(8);
+    for (uint64_t i = 0; i < n; i++) {
+        l->insert(0, bool(i & uint64_t(1)));
+        if (l->need_realloc()) {
+            uint64_t cap = l->capacity();
+            l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
+        }
+    }
+
+    uint64_t block_size = n / 4;
+    uint64_t block_start = 0;
+    uint64_t prefix_ones = 0;
+    while (block_start < n) {
+        for (uint64_t i = block_start + 1; i < min(block_start + block_size, n); i++) {
+            ASSERT_EQ(prefix_ones + l->rank(i, block_start), l->rank(i)) << "Rank(" << i << ") failed";
+        }
+        block_start += block_size;
+        prefix_ones = l->rank(block_start);
+    }
+
+    allocator->template deallocate_leaf<leaf>(l);
+    delete allocator;
+}
+
+template <class leaf, class alloc>
 void leaf_select_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
