@@ -13,7 +13,7 @@ struct r_elem {
     dtype p_size;
     dtype p_sum;
     dtype select_index;
-    dtype internl_offset;
+    dtype internal_offset;
     leaf_type* leaf;
 
     r_elem(dtype size, dtype sum, dtype offset, leaf_type* l) {
@@ -21,7 +21,7 @@ struct r_elem {
         p_sum = sum;
         leaf = l;
         select_index = 0;
-        internl_offset = offset;
+        internal_offset = offset;
     }
 };
 
@@ -38,8 +38,9 @@ class query_support {
         dtype i = elems_.size();
         dtype a_size = leaf->size();
         while (size_ + a_size > i * block_size) {
-            //TODO: FIX THIS!
-            elems_.push_back(r_elem<dtype, leaf_type>(size_, sum_, 0, leaf));
+            dtype i_rank = leaf->rank(i * block_size - size_);
+            elems_.push_back(
+                r_elem<dtype, leaf_type>(size_, sum_, i_rank, leaf));
             i++;
         }
         size_ += a_size;
@@ -47,7 +48,16 @@ class query_support {
     }
 
     void finalize() {
-
+        if (sum_ <= elems_.size()) {
+            for (size_t i = 0; i < sum_; i++) {
+                elems_[i].select_index = dumb_select(i + 1);
+            }
+            [[unlikely]] (void(0));
+        } else {
+            for (size_t i = 0; i < elems_.size(); i++) {
+                elems_[i].select_index = s_select(1 + (i * sum_) / elems_.size());
+            }
+        }
     }
 
     dtype size() const { return size_; }
@@ -63,29 +73,32 @@ class query_support {
     }
 
     dtype rank(dtype i) const {
-        dtype idx = i / block_size;
+        dtype idx = block_size;
+        idx = i / idx;
         r_elem<dtype, leaf_type> e = elems_[idx];
-        if (e.p_size + e.leaf->size() <= i) {
-            [[unlikely]] e = elems_[idx + 1];
+        if (e.p_size + e.leaf->size() < i) {
+            e = elems_[++idx];
+            [[unlikely]] return e.p_sum + e.leaf->rank(i - e.p_size);
         }
-        return e.p_sum + e.leaf->rank(i - e.p_size);
+        dtype offs = idx * block_size - e.p_size;
+        return e.p_sum + e.internal_offset + e.leaf->rank(i - e.p_size, offs);
     }
 
     dtype select(dtype i) const {
-        dtype idx = 0;
-        dtype b = elems_.size() - 1;
-        while (idx < b) {
-            dtype m = (idx + b + 1) / 2;
-            if (elems_[m].p_sum >= i) {
-                b = m - 1;
-            } else {
-                idx = m;
-            }
+        if (i == 0) [[unlikely]]
+            return -1;
+        if (sum_ <= elems_.size()) {
+            [[unlikely]] return elems_[i - 1].select_index;
         }
-        r_elem<dtype, leaf_type> e = elems_[idx];
-        while (e.p_sum + e.leaf->p_sum() < i) {
-            idx++;
-            [[unlikely]] e = elems_[idx];
+        dtype idx = elems_.size() * i / (sum_ + 1);
+        if (idx == elems_.size()) [[unlikely]] idx--;
+        dtype a_idx = elems_[idx].select_index;
+        dtype b_idx = a_idx == elems_.size() - 1 ? elems_.size() - 1
+                                                 : elems_[idx + 1].select_index;
+        if (b_idx - a_idx > 1) [[unlikely]] return dumb_select(i);
+        r_elem<dtype, leaf_type> e = elems_[a_idx];
+        if (e.p_sum + e.leaf->p_sum() < i) {
+            [[unlikely]] e = elems_[a_idx + 1];
         }
         return e.p_size + e.leaf->select(i - e.p_sum);
     }
@@ -117,6 +130,22 @@ class query_support {
             }
         }
         std::cout << "],\n"
+                  << "\"internal_offsets\": [";
+        for (size_t i = 0; i < elems_.size(); i++) {
+            std::cout << elems_[i].internal_offset;
+            if (i != elems_.size() - 1) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << "],\n"
+                  << "\"select_index\": [";
+        for (size_t i = 0; i < elems_.size(); i++) {
+            std::cout << elems_[i].select_index;
+            if (i != elems_.size() - 1) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << "],\n"
                   << "\"nodes\": [";
         for (uint8_t i = 0; i < elems_.size(); i++) {
             elems_[i].leaf->print(internal_only);
@@ -126,6 +155,45 @@ class query_support {
             std::cout << "\n";
         }
         std::cout << "]}" << std::endl;
+    }
+
+   protected:
+    dtype s_select(dtype i) const {
+        dtype idx = 0;
+        dtype b = elems_.size() - 1;
+        while (idx < b) {
+            dtype m = (idx + b + 1) / 2;
+            if (elems_[m].p_sum + elems_[m].internal_offset >= i) {
+                b = m - 1;
+            } else {
+                idx = m;
+            }
+        }
+        r_elem<dtype, leaf_type> e = elems_[idx];
+        while (e.p_sum + e.leaf->p_sum() < i) {
+            idx++;
+            [[unlikely]] e = elems_[idx];
+        }
+        return idx;
+    }
+
+    dtype dumb_select(dtype i) const {
+        dtype idx = 0;
+        dtype b = elems_.size() - 1;
+        while (idx < b) {
+            dtype m = (idx + b + 1) / 2;
+            if (elems_[m].p_sum >= i) {
+                b = m - 1;
+            } else {
+                idx = m;
+            }
+        }
+        r_elem<dtype, leaf_type> e = elems_[idx];
+        while (e.p_sum + e.leaf->p_sum() < i) {
+            idx++;
+            [[unlikely]] e = elems_[idx];
+        }
+        return e.p_size + e.leaf->select(i - e.p_sum);
     }
 };
 

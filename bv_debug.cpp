@@ -7,9 +7,10 @@
 #include "bit_vector/bv.hpp"
 //#include "deps/valgrind/callgrind.h"
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
+#include "sdsl/bit_vectors.hpp"
 
-typedef bv::malloc_alloc alloc;
-typedef bv::leaf<8> leaf;
+//typedef bv::malloc_alloc alloc;
+//typedef bv::leaf<8> leaf;
 //typedef bv::node<leaf, uint64_t, 16384, 64> node;
 typedef bv::simple_bv<8, 16384, 64> bit_vector;
 
@@ -95,31 +96,15 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
 }
 
 int main() {
-    alloc* a = new alloc();
-    leaf* l = a->template allocate_leaf<leaf>(4);
-    for (size_t i = 0; i < 128; i++) {
-        l->insert(0, i % 2);
-        if (i > 125) {
-            l->print(false);
-            std::cout << std::endl;
+    bit_vector bv;
+    uint64_t max = 10000000;
+    uint64_t n = 2;
+    while (n < max) {
+        while (bv.size() < n) {
+            bv.insert(0, bv.size() % 2);
         }
+        sdsl::bit_vector sdsl_bv(bv.size());
     }
-    std::cout << "----------Removals-------------" << std::endl;
-    for (size_t i = 0; i < 128; i++) {
-        l->remove(0);
-        l->print(false);
-        assert(l->size() == 128 - i - 1);
-        uint32_t actual = l->p_sum();
-        uint32_t expected = 64 - 1 - i / 2;
-        if (actual != expected) {
-            std::cout << "i: " << i << ", actual: " << actual << ", expected: " << expected << std::endl;
-            std::cout << std::endl;
-            assert(actual == expected); 
-        }
-    }
-
-    a->deallocate_leaf(l);
-    delete(a);
 
     /*uint64_t a[] = {
         377, 0,   50,  0,   0,   284, 0,   2,   357, 1,   2,   233, 1,   2,

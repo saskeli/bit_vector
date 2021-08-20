@@ -89,9 +89,6 @@ class leaf {
         size_ = 0;
         p_sum_ = 0;
         data_ = data;
-        if constexpr (buffer_size > 0) {
-            memset(buffer_, 0xff, buffer_size * sizeof(uint32_t));
-        }
     }
 
     /**
@@ -103,17 +100,20 @@ class leaf {
      */
     bool at(const uint32_t i) const {
         if constexpr (buffer_size != 0) {
-            uint32_t index = i;
-            int32_t b_loc = -1;
-            for (uint8_t idx = 0; idx < buffer_size; idx++) {
-                uint32_t b = buffer_index(buffer_[idx]);
-                b_loc += (b == i) * buffer_is_insertion(buffer_[idx]) * (idx + 1);
-                index += b == i;
-                index -= (b < i) * (buffer_is_insertion(buffer_[idx]) * 2 - 1);
+            uint64_t index = i;
+            for (uint8_t idx = 0; idx < buffer_count_; idx++) {
+                uint64_t b = buffer_index(buffer_[idx]);
+                if (b == i) {
+                    if (buffer_is_insertion(buffer_[idx])) {
+                        [[unlikely]] return buffer_value(buffer_[idx]);
+                    }
+                    index++;
+                } else if (b < i) {
+                    [[likely]] index -=
+                        buffer_is_insertion(buffer_[idx]) * 2 - 1;
+                }
             }
-            return b_loc == -1 ? MASK & (data_[index / WORD_BITS] >>
-                                         (index % WORD_BITS))
-                               : buffer_value(buffer_[b_loc]);
+            return MASK & (data_[index / WORD_BITS] >> (index % WORD_BITS));
         }
         return MASK & (data_[i / WORD_BITS] >> (i % WORD_BITS));
     }
@@ -416,7 +416,8 @@ class leaf {
         }
         if constexpr (avx) {
             if (target_word - offset_word > 0) {
-                count += pop::popcnt(data_ + offset_word, (target_word - offset_word) * 8);
+                count += pop::popcnt(data_ + offset_word,
+                                     (target_word - offset_word) * 8);
             }
         } else {
             for (size_t i = offset_word; i < target_word; i++) {
@@ -930,9 +931,6 @@ class leaf {
         if (capacity_ > words) [[likely]]
             data_[words] = 0;
         buffer_count_ = 0;
-        if constexpr (buffer_size > 0) {
-            memset(buffer_, 0xff, buffer_size * sizeof(uint32_t));
-        }
     }
 
     /**
@@ -981,9 +979,8 @@ class leaf {
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
-                  << "\"buffer_count\": " << int(buffer_count_) << ",\n"
                   << "\"buffer\": [\n";
-        for (uint8_t i = 0; i < buffer_size; i++) {
+        for (uint8_t i = 0; i < buffer_count_; i++) {
 #pragma GCC diagnostic ignored "-Warray-bounds"
             std::cout << "{\"is_insertion\": "
                       << buffer_is_insertion(buffer_[i]) << ", "
@@ -992,7 +989,7 @@ class leaf {
                       << "\"buffer_index\": " << buffer_index(buffer_[i])
                       << "}";
 #pragma GCC diagnostic pop
-            if (i != buffer_size - 1) {
+            if (i != buffer_count_ - 1) {
                 std::cout << ",\n";
             }
         }
@@ -1110,7 +1107,7 @@ class leaf {
         buffer_count_--;
         memmove(buffer_ + idx, buffer_ + idx + 1,
                 (buffer_count_ - idx) * sizeof(uint32_t));
-        buffer_[buffer_count_] = ~uint32_t(0);
+        buffer_[buffer_count_] = 0;
     }
 
     /**

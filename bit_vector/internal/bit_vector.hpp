@@ -119,11 +119,13 @@ class bit_vector {
     template <dtype block_size = leaf_size / 3>
     void generate_query_structure(query_support<dtype, leaf, block_size>* qs) const {
         static_assert(block_size * 3 <= leaf_size);
+        static_assert(block_size >= 2 * 64);
         if (root_is_leaf_) {
             [[unlikely]] qs->append(l_root_);
         } else {
             n_root_->generate_query_structure(qs);
         }
+        qs->finalize();
     }
 
     template <dtype block_size = leaf_size / 3>

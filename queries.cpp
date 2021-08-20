@@ -161,41 +161,36 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     }
 }
 
+typedef bv::malloc_alloc alloc;
+typedef bv::leaf<8> leaf;
+typedef bv::node<leaf, uint64_t, 16384, 64> node;
+typedef bv::query_support<uint64_t, leaf, 2048> qs;
+
 int main(int argc, char const* argv[]) {
-    bv::malloc_alloc* a = new bv::malloc_alloc();
-    bv::leaf<8>* l = a->template allocate_leaf<bv::leaf<8>>(8);
-
-    uint64_t n = 10000;
-    for (uint64_t i = 0; i < n; i++) {
-        l->insert(0, bool(i & uint64_t(1)));
-        if (l->need_realloc()) {
-            uint64_t cap = l->capacity();
-            l = a->template reallocate_leaf<bv::leaf<8>>(l, cap, 2 * cap);
-        }
+    uint64_t size = 16384;
+    alloc* a = new alloc();
+    node* n = a->template allocate_node<node>();
+    n->has_leaves(true);
+    leaf* l = a->template allocate_leaf<leaf>(1 + size / 64);
+    for (size_t i = 0; i < size / 2; i++) {
+        l->insert(i, i % 2);
     }
-
-    uint64_t block_size = n / 4;
-    uint64_t block_start = 0;
-    uint64_t prefix_ones = 0;
-    while (block_start < n) {
-        for (uint64_t i = block_start + 1; i < std::min(block_start + block_size, n); i++) {
-            uint64_t a = l->rank(i, block_start);
-            uint64_t b = l->rank(i);
-            std::cout << i << std::endl;
-            if (prefix_ones + a != b) {
-                std::cerr << "block start: " << block_start
-                          << ", block size: " << block_size
-                          << ", prefix ones: " << prefix_ones << ", a: " << a
-                          << ", b: " << b << ", i: " << i << "." << std::endl;
-                assert(prefix_ones + a == b);
-            }
-        }
-        block_start += block_size;
-        prefix_ones = l->rank(block_start);
+    n->append_child(l);
+    l = a->template allocate_leaf<leaf>(1 + size / 64);
+    for (size_t i = 0; i < size / 2; i++) {
+        l->insert(i, (i + size / 2) % 2);
     }
+    n->append_child(l);
 
-    a->deallocate_leaf(l);
-    delete (a);
+    qs* q = new qs();
+    n->generate_query_structure(q);
+    q->finalize();
+    q->print(true);
+    assert(n->select(4096) == q->select(4096));
+    n->deallocate(a);
+    a->deallocate_node(n);
+    delete(a);
+    delete(q);
     /*if (argc < 2) {
         std::cerr << "Seed is required" << std::endl;
         return 1;
