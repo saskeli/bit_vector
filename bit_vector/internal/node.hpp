@@ -10,6 +10,8 @@
 #define CACHE_LINE 64
 #endif
 
+#include "branch_selection.hpp"
+
 namespace bv {
 
 /**
@@ -62,6 +64,8 @@ namespace bv {
 template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches>
 class node {
    protected:
+
+    typedef branchless_scan<dtype, branches> branching;
     /**
      * @brief Bit indicating whether the nodes children are laves or nodes.
      */
@@ -73,12 +77,12 @@ class node {
     /**
      * @brief Cumulative child sizes and `(~0) >> 1` for non-existing children.
      */
-    dtype child_sizes_[branches];
+    branching child_sizes_;
     /**
      * @brief Cumulative child sums and `(~0) >> 1` for non-existint
      * children.
      */
-    dtype child_sums_[branches];
+    branching child_sums_;
     void* children_[branches];  ///< pointers to leaf_type or node children.
 
     static_assert(leaf_size >= 256, "leaf size needs to be a at least 256");
@@ -96,10 +100,8 @@ class node {
     node() {
         meta_data_ = 0;
         child_count_ = 0;
-        for (uint8_t i = 0; i < branches; i++) {
-            child_sizes_[i] = (~dtype(0)) >> 1;
-            child_sums_[i] = (~dtype(0)) >> 1;
-        }
+        child_sizes_ = branching();
+        child_sums_ = branching();
     }
 
     template <class qds>
@@ -147,7 +149,7 @@ class node {
      * @param index Index to access.
      */
     bool at(dtype index) const {
-        uint8_t child_index = find_size(index + 1);
+        uint8_t child_index = child_sizes_.find(index + 1);
         index -= child_index != 0 ? child_sizes_[child_index - 1] : 0;
         if (has_leaves()) {
             [[unlikely]] return reinterpret_cast<leaf_type*>(
@@ -171,8 +173,8 @@ class node {
      * @return Change to data structure sum triggered by the set operation.
      */
     int set(dtype index, bool v) {
-        uint8_t child_index = find_size(index + 1);
-        index -= child_index == 0 ? 0 : child_sizes_[child_index - 1];
+        uint8_t child_index = child_sizes_.find(index + 1);
+        index -= child_index != 0 ? child_sizes_[child_index - 1] : 0;
         dtype change = 0;
         if (has_leaves()) {
             leaf_type* child =
@@ -201,7 +203,7 @@ class node {
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
     dtype rank(dtype index) const {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = child_sizes_.find(index);
         dtype res = 0;
         if (child_index != 0) {
             res = child_sums_[child_index - 1];
@@ -229,7 +231,7 @@ class node {
      * \mathrm{bv}[j]\right) =  \f$ count.
      */
     dtype select(dtype count) const {
-        uint8_t child_index = find_sum(count);
+        uint8_t child_index = child_sums_.find(count);
         dtype res = 0;
         if (child_index != 0) {
             res = child_sizes_[child_index - 1];
@@ -296,7 +298,7 @@ class node {
      *
      * @returns Address of the array of cumulative child sizes.
      */
-    dtype* child_sizes() { return child_sizes_; }
+    branching* child_sizes() { return &child_sizes_; }
 
     /**
      * @brief Get pointer to the cumulative child sums.
@@ -305,7 +307,7 @@ class node {
      *
      * @return Address of the array of cumulative child sums.
      */
-    dtype* child_sums() { return child_sums_; }
+    branching* child_sums() { return &child_sums_; }
 
     /**
      * @brief Logical number of elements stored in the subtree.
@@ -437,15 +439,15 @@ class node {
      */
     void transfer_append(node* other, uint8_t elems) {
         void** o_children = other->children();
-        dtype* o_sizes = other->child_sizes();
-        dtype* o_sums = other->child_sums();
+        branching* o_sizes = other->child_sizes();
+        branching* o_sums = other->child_sums();
         uint8_t local_index = child_count();
         dtype base_size = local_index == 0 ? 0 : child_sizes_[local_index - 1];
         dtype base_sum = local_index == 0 ? 0 : child_sums_[local_index - 1];
         for (uint8_t i = 0; i < elems; i++) {
             children_[local_index] = o_children[i];
-            child_sizes_[local_index] = base_size + o_sizes[i];
-            child_sums_[local_index] = base_sum + o_sums[i];
+            child_sizes_[local_index] = base_size + (*o_sizes)[i];
+            child_sums_[local_index] = base_sum + (*o_sums)[i];
             local_index++;
         }
         child_count_ += elems;
@@ -482,18 +484,20 @@ class node {
      */
     void transfer_prepend(node* other, uint8_t elems) {
         void** o_children = other->children();
-        dtype* o_sizes = other->child_sizes();
-        dtype* o_sums = other->child_sums();
+        branching* o_sizes = other->child_sizes();
+        branching* o_sums = other->child_sums();
         uint8_t o_size = other->child_count();
         memmove(children_ + elems, children_, child_count_ * sizeof(void*));
-        memmove(child_sums_ + elems, child_sums_, child_count_ * sizeof(dtype));
-        memmove(child_sizes_ + elems, child_sizes_, child_count_ * sizeof(dtype));
+        for (uint8_t i = child_count_ + elems - 1; i >= elems; i--) {
+            child_sums_[i] = child_sums_[i - elems];
+            child_sizes_[i] = child_sizes_[i - elems];
+        }
         for (uint8_t i = 0; i < elems; i++) {
             children_[i] = o_children[o_size - elems + i];
             child_sums_[i] =
-                o_sums[o_size - elems + i] - o_sums[o_size - elems - 1];
+                (*o_sums)[o_size - elems + i] - (*o_sums)[o_size - elems - 1];
             child_sizes_[i] =
-                o_sizes[o_size - elems + i] - o_sizes[o_size - elems - 1];
+                (*o_sizes)[o_size - elems + i] - (*o_sizes)[o_size - elems - 1];
         }
         for (uint8_t i = elems; i < elems + child_count_; i++) {
             child_sums_[i] += child_sums_[elems - 1];
@@ -514,13 +518,13 @@ class node {
      */
     void append_all(node* other) {
         void** o_children = other->children();
-        dtype* o_sizes = other->child_sizes();
-        dtype* o_sums = other->child_sums();
+        branching* o_sizes = other->child_sizes();
+        branching* o_sums = other->child_sums();
         uint8_t o_size = other->child_count();
         for (uint8_t i = 0; i < o_size; i++) {
             children_[child_count_ + i] = o_children[i];
-            child_sums_[child_count_ + i] = o_sums[i] + child_sums_[child_count_ - 1];
-            child_sizes_[child_count_ + i] = o_sizes[i] + child_sizes_[child_count_ - 1];
+            child_sums_[child_count_ + i] = child_sums_[child_count_ - 1] + (*o_sums)[i];
+            child_sizes_[child_count_ + i] = child_sizes_[child_count_ - 1] + (*o_sizes)[i];
         }
         child_count_ += o_size;
     }
@@ -676,176 +680,6 @@ class node {
 
    protected:
     /**
-     * @brief Find the lowest child index s.t. the cumulative size at the index
-     * is at least q.
-     *
-     * This is implemented as a branchless binary search that uses the "sign
-     * bit" for index manipulations instead of conditional moves. This is the
-     * reason for limiting the maximum data structure size to `(~dtype(0)) >>
-     * 1`.
-     *
-     * If \f$q > \f$ `size()`, this will return either the index of the last
-     * child or the index following the last child. Either way, this will likely
-     * very quickly lead to undefined behaviour and segmentation fault.
-     *
-     * If `size() > (~(dtype(0)) >> 1`, querying is considered undefined
-     * behaviour.
-     *
-     * This conditionally compiles the binary search based on acceptable branch
-     * factors. For low branching factors this is expected to be slightly slower
-     * than efficient vectorized linear searches. For higher branchin factors
-     * this branchless binary search should be faster as long as cache
-     * performance is good. Agressibe prefetching is done in an attempt to
-     * ensure that cache misses don't occur during querying. See
-     * https://github.com/saskeli/search_microbench for a simple benchmark.
-     *
-     * @param q Query target
-     * @return \f$\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sizes}[i] \geq
-     * q)\f$.
-     */
-    uint8_t find_size(dtype q) const {
-        constexpr dtype SIGN_BIT = ~((~dtype(0)) >> 1);
-        constexpr dtype num_bits = sizeof(dtype) * 8;
-        constexpr dtype lines = CACHE_LINE / sizeof(dtype);
-        for (dtype i = 0; i < branches; i += lines) {
-            __builtin_prefetch(child_sizes_ + i);
-        }
-        uint8_t idx;
-        if constexpr (branches == 128) {
-            idx = (uint8_t(1) << 6) - 1;
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 7)) |
-                (uint8_t(1) << 5);
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 6)) |
-                (uint8_t(1) << 4);
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                (uint8_t(1) << 3);
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else if constexpr (branches == 64) {
-            idx = (uint8_t(1) << 5) - 1;
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 6)) |
-                (uint8_t(1) << 4);
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                (uint8_t(1) << 3);
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else if constexpr (branches == 32) {
-            idx = (uint8_t(1) << 4) - 1;
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                (uint8_t(1) << 3);
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else if constexpr (branches == 16) {
-            idx = (uint8_t(1) << 3) - 1;
-            idx ^=
-                (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else {
-            idx = (uint8_t(1) << 2) - 1;
-        }
-        idx ^= (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 3)) |
-               (uint8_t(1) << 1);
-        idx ^= (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 2)) |
-               uint8_t(1);
-        return idx ^
-               (dtype((child_sizes_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
-    }
-
-    /**
-     * @brief Find the lowest child index s.t. the cumulative sum at the index
-     * is at least q.
-     *
-     * This is implemented as a branchless binary search that uses the "sign
-     * bit" for index manipulations instead of conditional moves. This is the
-     * reason for limiting the maximum data structure size to `(~dtype(0)) >>
-     * 1`.
-     *
-     * If \f$q > \f$ `p_sum()`, this will return either the index of the last
-     * child or the index following the last child. Either way, this will likely
-     * very quickly lead to undefined behaviour and segmentation fault.
-     *
-     * If `p_sum() > (~(dtype(0)) >> 1`, querying is considered undefined
-     * behaviour.
-     *
-     * This conditionally compiles the binary search based on acceptable branch
-     * factors. For low branching factors this is expected to be slightly slower
-     * than efficient vectorized linear searches. For higher branchin factors
-     * this branchless binary search should be faster as long as cache
-     * performance is good. Agressibe prefetching is done in an attempt to
-     * ensure that cache misses don't occur during querying. See
-     * https://github.com/saskeli/search_microbench for a simple benchmark.
-     *
-     * @param q Query target
-     * @return \f$\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sums}[i] \geq
-     * q)\f$.
-     */
-    uint8_t find_sum(dtype q) const {
-        constexpr dtype SIGN_BIT = ~((~dtype(0)) >> 1);
-        constexpr dtype num_bits = sizeof(dtype) * 8;
-        constexpr dtype lines = CACHE_LINE / sizeof(dtype);
-        for (dtype i = 0; i < branches; i += lines) {
-            __builtin_prefetch(child_sums_ + i);
-        }
-        uint8_t idx;
-        if constexpr (branches == 128) {
-            idx = (uint8_t(1) << 6) - 1;
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 7)) |
-                (uint8_t(1) << 5);
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 6)) |
-                (uint8_t(1) << 4);
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                (uint8_t(1) << 3);
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else if constexpr (branches == 64) {
-            idx = (uint8_t(1) << 5) - 1;
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 6)) |
-                (uint8_t(1) << 4);
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                (uint8_t(1) << 3);
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else if constexpr (branches == 32) {
-            idx = (uint8_t(1) << 4) - 1;
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                (uint8_t(1) << 3);
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else if constexpr (branches == 16) {
-            idx = (uint8_t(1) << 3) - 1;
-            idx ^=
-                (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                (uint8_t(1) << 2);
-        } else {
-            idx = (uint8_t(1) << 2) - 1;
-        }
-        idx ^= (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 3)) |
-               (uint8_t(1) << 1);
-        idx ^= (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 2)) |
-               uint8_t(1);
-        return idx ^
-               (dtype((child_sums_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
-    }
-
-    /**
      * @brief Ensure that there is space for insertion in the child leaves.
      *
      * If there is sufficient space in either sibling, elements will be
@@ -995,7 +829,7 @@ class node {
      */
     template <class allocator>
     void leaf_insert(dtype index, bool value, allocator* alloc) {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = child_sizes_.find(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
 #ifdef DEBUG
         if (child->size() > leaf_size) {
@@ -1127,7 +961,7 @@ class node {
      */
     template <class allocator>
     void node_insert(dtype index, bool value, allocator* alloc) {
-        uint8_t child_index = find_size(index);
+        uint8_t child_index = child_sizes_.find(index);
         node* child = reinterpret_cast<node*>(children_[child_index]);
 #ifdef DEBUG
         if (child_index >= child_count_) {
@@ -1138,7 +972,7 @@ class node {
 #endif
         if (child->child_count() == branches) {
             rebalance_node(child_index, alloc);
-            child_index = find_size(index);
+            child_index = child_sizes_.find(index);
             [[unlikely]] child =
                 reinterpret_cast<node*>(children_[child_index]);
         }
@@ -1273,7 +1107,7 @@ class node {
      */
     template <class allocator>
     bool leaf_remove(dtype index, allocator* alloc) {
-        uint8_t child_index = find_size(index + 1);
+        uint8_t child_index = child_sizes_.find(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->size() <= leaf_size / 3) {
             if (child_index == 0) {
@@ -1294,7 +1128,7 @@ class node {
                     merge_leaves(sibling, child, child_index - 1, alloc);
                 }
             }
-            child_index = find_size(index);
+            child_index = child_sizes_.find(index);
             [[unlikely]] child =
                 reinterpret_cast<leaf_type*>(children_[child_index]);
         }
@@ -1401,7 +1235,7 @@ class node {
      */
     template <class allocator>
     bool node_remove(dtype index, allocator* alloc) {
-        uint8_t child_index = find_size(index + 1);
+        uint8_t child_index = child_sizes_.find(index + 1);
         node* child = reinterpret_cast<node*>(children_[child_index]);
         if (child->child_count_ <= branches / 3) {
             if (child_index == 0) {
@@ -1421,7 +1255,7 @@ class node {
                     merge_nodes(sibling, child, child_index - 1, alloc);
                 }
             }
-            child_index = find_size(index + 1);
+            child_index = child_sizes_.find(index + 1);
             [[unlikely]] child =
                 reinterpret_cast<node*>(children_[child_index]);
         }

@@ -7,11 +7,11 @@
 #include "bit_vector/bv.hpp"
 //#include "deps/valgrind/callgrind.h"
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
-#include "sdsl/bit_vectors.hpp"
+//#include "sdsl/bit_vectors.hpp"
 
-//typedef bv::malloc_alloc alloc;
-//typedef bv::leaf<8> leaf;
-//typedef bv::node<leaf, uint64_t, 16384, 64> node;
+typedef bv::malloc_alloc alloc;
+typedef bv::leaf<16> leaf;
+typedef bv::node<leaf, uint64_t, 16384, 16> node;
 typedef bv::simple_bv<8, 16384, 64> bit_vector;
 
 template <class bva, class bvb>
@@ -96,15 +96,49 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
 }
 
 int main() {
-    bit_vector bv;
-    uint64_t max = 10000000;
-    uint64_t n = 2;
-    while (n < max) {
-        while (bv.size() < n) {
-            bv.insert(0, bv.size() % 2);
+    uint64_t b = 16;
+    alloc* a = new alloc();
+    node* n1 = a->template allocate_node<node>();
+    node* n2 = a->template allocate_node<node>();
+    n1->has_leaves(true);
+    n2->has_leaves(true);
+    for (uint64_t i = 0; i < b - 2; i++) {
+        leaf* l = a->template allocate_leaf<leaf>(3);
+        for (uint64_t j = 0; j < 128; j++) {
+            l->insert(0, j % 2 == 1);
         }
-        sdsl::bit_vector sdsl_bv(bv.size());
+        n1->append_child(l);
     }
+    for (uint64_t i = 0; i < b / 3; i++) {
+        leaf* l = a->template allocate_leaf<leaf>(3);
+        for (uint64_t j = 0; j < 128; j++) {
+            l->insert(0, j % 2 == 1);
+        }
+        n2->append_child(l);
+    }
+
+    assert((b - 2) * 64 == n1->p_sum());
+    assert((b - 2) * 128 == n1->size());
+    assert(b - 2 == n1->child_count());
+    assert((b / 3) * 64 == n2->p_sum());
+    assert((b / 3) * 128 == n2->size());
+    assert((b / 3) == n2->child_count());
+
+    n2->transfer_prepend(n1, b / 2);
+
+    assert((b - 2 - b / 2) * 64 == n1->p_sum());
+    assert((b - 2 - b / 2) * 128 == n1->size());
+    assert(b - 2 - b / 2 == n1->child_count());
+    assert((b / 3 + b / 2) * 64 == n2->p_sum());
+    assert((b / 3 + b / 2) * 128 == n2->size());
+    assert(b / 3 + b / 2 == n2->child_count());
+
+    n1->deallocate(a);
+    n2->deallocate(a);
+    a->deallocate_node(n1);
+    a->deallocate_node(n2);
+    assert(0u == a->live_allocations());
+    delete (a);
 
     /*uint64_t a[] = {
         377, 0,   50,  0,   0,   284, 0,   2,   357, 1,   2,   233, 1,   2,

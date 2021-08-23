@@ -2,12 +2,14 @@
 #include "../bit_vector/internal/allocator.hpp"
 #include "../bit_vector/internal/bit_vector.hpp"
 #include "../bit_vector/internal/leaf.hpp"
+#include "../bit_vector/internal/branch_selection.hpp"
 #include "../bit_vector/internal/node.hpp"
 #include "../bit_vector/internal/query_support.hpp"
 #include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 #include "bv_tests.hpp"
 #include "leaf_tests.hpp"
+#include "branch_selection_test.hpp"
 #include "node_tests.hpp"
 #include "run_tests.hpp"
 #include "query_support_test.hpp"
@@ -22,6 +24,7 @@ typedef malloc_alloc ma;
 typedef leaf<BUFFER_SIZE> sl;
 typedef leaf<0> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
+typedef branchless_scan<uint64_t, BRANCH> branch;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
 typedef query_support<uint64_t, sl, SIZE / 3> qs;
 
@@ -72,6 +75,19 @@ TEST(SimpleLeafUnb, Select) { leaf_select_test<ubl, ma>(10000); }
 TEST(SimpleLeafUnb, SelectOffset) { leaf_select_test<ubl, ma>(11); }
 
 TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
+
+// Branch selection tests
+TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, Increment) { branching_increment_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, ClearFirst) { branching_delete_first_n_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, Appending) { branching_append_n_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, ClearLast) { branching_delete_last_n_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, Prepending) { branching_prepend_n_test<branch, BRANCH>(); }
 
 // Node tests
 TEST(SimpleNode, AddLeaf) { node_add_child_test<nd, sl, ma>(BRANCH); }
@@ -223,6 +239,7 @@ TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE); }
 
 TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
 
+// Query support structure tests
 TEST(QuerySupport, SingleAccess) {
     qs_access_single_leaf<qs, sl, ma>(SIZE);
 }

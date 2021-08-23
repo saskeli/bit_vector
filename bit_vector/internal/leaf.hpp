@@ -119,9 +119,9 @@ class leaf {
     }
 
     /** @brief Getter for p_sum_ */
-    uint64_t p_sum() const { return p_sum_; }
+    uint32_t p_sum() const { return p_sum_; }
     /** @brief Getter for size_ */
-    uint64_t size() const { return size_; }
+    uint32_t size() const { return size_; }
 
     /**
      * @brief Insert x into position i
@@ -320,8 +320,8 @@ class leaf {
      *
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
-    uint64_t rank(const uint64_t n) const {
-        uint64_t count = 0;
+    uint32_t rank(const uint64_t n) const {
+        uint32_t count = 0;
 
         uint64_t idx = n;
         if constexpr (buffer_size != 0) {
@@ -370,8 +370,8 @@ class leaf {
      *
      * @return \f$\sum_{i = \mathrm{offset}}^{\mathrm{n- 1}} \mathrm{bv}[i]\f$.
      */
-    uint64_t rank(const uint64_t n, const uint64_t offset) const {
-        uint64_t count = 0;
+    uint32_t rank(const uint64_t n, const uint64_t offset) const {
+        uint32_t count = 0;
         uint64_t idx = n;
         uint64_t o_idx = offset;
         if constexpr (buffer_size != 0) {
