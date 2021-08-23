@@ -31,6 +31,50 @@ class branchless_scan {
     dtype& operator[](size_t idx) { return elems_[idx]; }
     const dtype& operator[](size_t idx) const { return elems_[idx]; }
 
+    dtype get(uint8_t index) const { return elems_[index]; }
+
+    void set(uint8_t index, dtype value) { elems_[index] = value; }
+
+    template <class T>
+    void increment(uint8_t from, uint8_t to, T change) {
+        for (uint8_t i = from; i < to; i++) {
+            elems_[i] += change;
+        }
+    }
+
+    void clear_first(uint8_t n, uint8_t array_size) {
+        dtype subtrahend = elems_[n - 1];
+        for (uint8_t i = n; i < array_size; i++) {
+            elems_[i - n] = elems_[i] - subtrahend;
+            elems_[i] = (~dtype(0)) >> 1;
+        }
+    }
+
+    void clear_last(uint8_t n, uint8_t array_size) {
+        for (uint8_t i = array_size - n; i < array_size; i++) {
+            elems_[i] = (~dtype(0)) >> 1;
+        }
+    }
+
+    void append(uint8_t n_elems, uint8_t index, branchless_scan* other) {
+        dtype addend = index != 0 ? elems_[index - 1] : 0;
+        for (uint8_t i = 0; i < n_elems; i++) {
+            elems_[i + index] = addend + other->get(i);
+        }
+    }
+
+    void prepend(uint8_t n_elems, uint8_t array_size, uint8_t o_size,
+                 branchless_scan* other) {
+        memmove(elems_ + n_elems, elems_, array_size * sizeof(dtype));
+        dtype subtrahend = n_elems < o_size ? other->get(o_size - n_elems - 1) : 0;
+        for (uint8_t i = 0; i < n_elems; i++) {
+            elems_[i] = other->get(i + o_size - n_elems) - subtrahend;
+        }
+        for (uint8_t i = n_elems; i < array_size + n_elems; i++) {
+            elems_[i] += elems_[n_elems - 1];
+        }
+    }
+
     /**
      * @brief Find the lowest child index s.t. the cumulative sum at the index
      * is at least q.

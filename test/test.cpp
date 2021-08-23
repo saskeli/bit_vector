@@ -89,6 +89,8 @@ TEST(SimpleBranch, ClearLast) { branching_delete_last_n_test<branch, BRANCH>(); 
 
 TEST(SimpleBranch, Prepending) { branching_prepend_n_test<branch, BRANCH>(); }
 
+TEST(SimpleBranch, TransferPrepend) { branching_transfer_prepend_n_test<branch, BRANCH>(); }
+
 // Node tests
 TEST(SimpleNode, AddLeaf) { node_add_child_test<nd, sl, ma>(BRANCH); }
 
