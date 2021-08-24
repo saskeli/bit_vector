@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['has_5fleaves_41',['has_leaves',['../classbv_1_1node.html#ab25112ec2200c74cb83b6feab93ef9a1',1,'bv::node::has_leaves(bool leaves)'],['../classbv_1_1node.html#a6d8ab5b2b761ac226f455dfad665162e',1,'bv::node::has_leaves() const']]]
+  ['find_42',['find',['../classbv_1_1branchless__scan.html#aca4a78361d42756b5d7ad349c3640925',1,'bv::branchless_scan']]],
+  ['flush_43',['flush',['../classbv_1_1bit__vector.html#a6c86a5406563b81482628ae018ea8e30',1,'bv::bit_vector']]],
+  ['fast_20dynamic_20bit_20vector_20headers_44',['Fast dynamic bit vector headers',['../index.html',1,'']]]
 ];

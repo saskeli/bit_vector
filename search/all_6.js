@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['index_5fmask_42',['INDEX_MASK',['../classbv_1_1leaf.html#a2cdd146d046d36c83c77dec7a2ffca46',1,'bv::leaf']]],
-  ['insert_43',['insert',['../classbv_1_1bit__vector.html#ae9cc8e6105e31ff528fc13209ad1f918',1,'bv::bit_vector::insert()'],['../classbv_1_1leaf.html#a381923edd5cf825653e30b47455d995d',1,'bv::leaf::insert()'],['../classbv_1_1node.html#acf15e749a6311c34ae62eaa4ad9ddfd9',1,'bv::node::insert()']]],
-  ['insert_5fbuffer_44',['insert_buffer',['../classbv_1_1leaf.html#a6c1d38ed8c9721890c57a211c9d3f860',1,'bv::leaf']]]
+  ['generate_5fquery_5fstructure_45',['generate_query_structure',['../classbv_1_1bit__vector.html#aca847b9c081d8b677f5bd7b7b8b88d3e',1,'bv::bit_vector::generate_query_structure(query_support&lt; dtype, leaf, block_size &gt; *qs) const'],['../classbv_1_1bit__vector.html#ae94dbda4eac1f26f93e8b9c37a058d98',1,'bv::bit_vector::generate_query_structure() const']]],
+  ['get_46',['get',['../classbv_1_1branchless__scan.html#a563dc71ab583876c649b3cf885267d6c',1,'bv::branchless_scan']]]
 ];

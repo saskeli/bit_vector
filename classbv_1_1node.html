@@ -76,6 +76,7 @@ $(function() {
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-types">Protected Types</a> &#124;
 <a href="#pro-methods">Protected Member Functions</a> &#124;
 <a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classbv_1_1node-members.html">List of all members</a>  </div>
@@ -95,6 +96,10 @@ Public Member Functions</h2></td></tr>
 &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a3d51a19bc649c8292a03211b1cdcfde9">node</a> ()</td></tr>
 <tr class="memdesc:a3d51a19bc649c8292a03211b1cdcfde9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor. <br /></td></tr>
 <tr class="separator:a3d51a19bc649c8292a03211b1cdcfde9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a44659dc05b545f8058845702d4139dbc"><td class="memTemplParams" colspan="2"><a id="a44659dc05b545f8058845702d4139dbc"></a>
+template&lt;class qds &gt; </td></tr>
+<tr class="memitem:a44659dc05b545f8058845702d4139dbc"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><b>generate_query_structure</b> (qds *qs)</td></tr>
+<tr class="separator:a44659dc05b545f8058845702d4139dbc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab25112ec2200c74cb83b6feab93ef9a1"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#ab25112ec2200c74cb83b6feab93ef9a1">has_leaves</a> (bool leaves)</td></tr>
 <tr class="memdesc:ab25112ec2200c74cb83b6feab93ef9a1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Set whether the children of the node are leaves or internal nodes.  <a href="classbv_1_1node.html#ab25112ec2200c74cb83b6feab93ef9a1">More...</a><br /></td></tr>
 <tr class="separator:ab25112ec2200c74cb83b6feab93ef9a1"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -123,12 +128,12 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:aca9966c28ef766b094cc83b2c8fb463f"><td class="memItemLeft" align="right" valign="top">void **&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#aca9966c28ef766b094cc83b2c8fb463f">children</a> ()</td></tr>
 <tr class="memdesc:aca9966c28ef766b094cc83b2c8fb463f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to the children of this node.  <a href="classbv_1_1node.html#aca9966c28ef766b094cc83b2c8fb463f">More...</a><br /></td></tr>
 <tr class="separator:aca9966c28ef766b094cc83b2c8fb463f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a886f19e7f1735c9e2f0f385c9853b1d7"><td class="memItemLeft" align="right" valign="top">dtype *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a886f19e7f1735c9e2f0f385c9853b1d7">child_sizes</a> ()</td></tr>
-<tr class="memdesc:a886f19e7f1735c9e2f0f385c9853b1d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to the cumulative child sizes.  <a href="classbv_1_1node.html#a886f19e7f1735c9e2f0f385c9853b1d7">More...</a><br /></td></tr>
-<tr class="separator:a886f19e7f1735c9e2f0f385c9853b1d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a616e43c47f27de439ed1172273f3ad6a"><td class="memItemLeft" align="right" valign="top">dtype *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a616e43c47f27de439ed1172273f3ad6a">child_sums</a> ()</td></tr>
-<tr class="memdesc:a616e43c47f27de439ed1172273f3ad6a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to the cumulative child sums.  <a href="classbv_1_1node.html#a616e43c47f27de439ed1172273f3ad6a">More...</a><br /></td></tr>
-<tr class="separator:a616e43c47f27de439ed1172273f3ad6a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7107ee49f44c1fc4af123ac20855434"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classbv_1_1branchless__scan.html">branching</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#aa7107ee49f44c1fc4af123ac20855434">child_sizes</a> ()</td></tr>
+<tr class="memdesc:aa7107ee49f44c1fc4af123ac20855434"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to the cumulative child sizes.  <a href="classbv_1_1node.html#aa7107ee49f44c1fc4af123ac20855434">More...</a><br /></td></tr>
+<tr class="separator:aa7107ee49f44c1fc4af123ac20855434"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af01debf052fe9f5831aa56c40de9cbe4"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classbv_1_1branchless__scan.html">branching</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#af01debf052fe9f5831aa56c40de9cbe4">child_sums</a> ()</td></tr>
+<tr class="memdesc:af01debf052fe9f5831aa56c40de9cbe4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get pointer to the cumulative child sums.  <a href="classbv_1_1node.html#af01debf052fe9f5831aa56c40de9cbe4">More...</a><br /></td></tr>
+<tr class="separator:af01debf052fe9f5831aa56c40de9cbe4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acbdfb951964fa5b8583178a79671e392"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#acbdfb951964fa5b8583178a79671e392">size</a> () const</td></tr>
 <tr class="memdesc:acbdfb951964fa5b8583178a79671e392"><td class="mdescLeft">&#160;</td><td class="mdescRight">Logical number of elements stored in the subtree.  <a href="classbv_1_1node.html#acbdfb951964fa5b8583178a79671e392">More...</a><br /></td></tr>
 <tr class="separator:acbdfb951964fa5b8583178a79671e392"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -168,6 +173,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ac8058dc416614319ee5c00c473dc8146"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#ac8058dc416614319ee5c00c473dc8146">bits_size</a> () const</td></tr>
 <tr class="memdesc:ac8058dc416614319ee5c00c473dc8146"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the subtree in "allocated" bits.  <a href="classbv_1_1node.html#ac8058dc416614319ee5c00c473dc8146">More...</a><br /></td></tr>
 <tr class="separator:ac8058dc416614319ee5c00c473dc8146"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad247f94aafd46dead4a8b1d55a1b2393"><td class="memItemLeft" align="right" valign="top"><a id="ad247f94aafd46dead4a8b1d55a1b2393"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>flush</b> ()</td></tr>
+<tr class="separator:ad247f94aafd46dead4a8b1d55a1b2393"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af6f9dc1092d0dbac400e2eaa0787ae17"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#af6f9dc1092d0dbac400e2eaa0787ae17">validate</a> () const</td></tr>
 <tr class="memdesc:af6f9dc1092d0dbac400e2eaa0787ae17"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check that the subtree structure is internally consistent.  <a href="classbv_1_1node.html#af6f9dc1092d0dbac400e2eaa0787ae17">More...</a><br /></td></tr>
 <tr class="separator:af6f9dc1092d0dbac400e2eaa0787ae17"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -175,14 +183,14 @@ Public Member Functions</h2></td></tr>
 <tr class="memdesc:a102f163e9ac6b0842c11ce624aa19642"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outputs this subtree as json.  <a href="classbv_1_1node.html#a102f163e9ac6b0842c11ce624aa19642">More...</a><br /></td></tr>
 <tr class="separator:a102f163e9ac6b0842c11ce624aa19642"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-types"></a>
+Protected Types</h2></td></tr>
+<tr class="memitem:a930b2c57240dca3c4c8c5c6f2ca7b35b"><td class="memItemLeft" align="right" valign="top"><a id="a930b2c57240dca3c4c8c5c6f2ca7b35b"></a>
+typedef <a class="el" href="classbv_1_1branchless__scan.html">branchless_scan</a>&lt; dtype, branches &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>branching</b></td></tr>
+<tr class="separator:a930b2c57240dca3c4c8c5c6f2ca7b35b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:ab6ad044b1e3c70922eff23252de2b3c8"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#ab6ad044b1e3c70922eff23252de2b3c8">find_size</a> (dtype q) const</td></tr>
-<tr class="memdesc:ab6ad044b1e3c70922eff23252de2b3c8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the lowest child index s.t. the cumulative size at the index is at least q.  <a href="classbv_1_1node.html#ab6ad044b1e3c70922eff23252de2b3c8">More...</a><br /></td></tr>
-<tr class="separator:ab6ad044b1e3c70922eff23252de2b3c8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f78eaa5d41749dd64e057d331fefe45"><td class="memItemLeft" align="right" valign="top">uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a1f78eaa5d41749dd64e057d331fefe45">find_sum</a> (dtype q) const</td></tr>
-<tr class="memdesc:a1f78eaa5d41749dd64e057d331fefe45"><td class="mdescLeft">&#160;</td><td class="mdescRight">Find the lowest child index s.t. the cumulative sum at the index is at least q.  <a href="classbv_1_1node.html#a1f78eaa5d41749dd64e057d331fefe45">More...</a><br /></td></tr>
-<tr class="separator:a1f78eaa5d41749dd64e057d331fefe45"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abfa478cf40b029e8e89c99ad4fd62b19"><td class="memTemplParams" colspan="2">template&lt;class allocator &gt; </td></tr>
 <tr class="memitem:abfa478cf40b029e8e89c99ad4fd62b19"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#abfa478cf40b029e8e89c99ad4fd62b19">rebalance_leaf</a> (uint8_t index, leaf_type *<a class="el" href="classbv_1_1leaf.html">leaf</a>, allocator *alloc)</td></tr>
 <tr class="memdesc:abfa478cf40b029e8e89c99ad4fd62b19"><td class="mdescLeft">&#160;</td><td class="mdescRight">Ensure that there is space for insertion in the child leaves.  <a href="classbv_1_1node.html#abfa478cf40b029e8e89c99ad4fd62b19">More...</a><br /></td></tr>
@@ -240,14 +248,14 @@ uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="c
 uint8_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a1b9c1b74d0f6a33b557ea515c410d01f">child_count_</a></td></tr>
 <tr class="memdesc:a1b9c1b74d0f6a33b557ea515c410d01f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of active children. <br /></td></tr>
 <tr class="separator:a1b9c1b74d0f6a33b557ea515c410d01f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab11e4b5852509caab27cb457e4df432f"><td class="memItemLeft" align="right" valign="top"><a id="ab11e4b5852509caab27cb457e4df432f"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#ab11e4b5852509caab27cb457e4df432f">child_sizes_</a> [branches]</td></tr>
-<tr class="memdesc:ab11e4b5852509caab27cb457e4df432f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cumulative child sizes and <code>(~0) &gt;&gt; 1</code> for non-existing children. <br /></td></tr>
-<tr class="separator:ab11e4b5852509caab27cb457e4df432f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6acf051331dfecf51768db28d88f7a4e"><td class="memItemLeft" align="right" valign="top"><a id="a6acf051331dfecf51768db28d88f7a4e"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#a6acf051331dfecf51768db28d88f7a4e">child_sums_</a> [branches]</td></tr>
-<tr class="memdesc:a6acf051331dfecf51768db28d88f7a4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cumulative child sums and <code>(~0) &gt;&gt; 1</code> for non-existint children. <br /></td></tr>
-<tr class="separator:a6acf051331dfecf51768db28d88f7a4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:add484bd7148fa03c910ea1f3c08b16c5"><td class="memItemLeft" align="right" valign="top"><a id="add484bd7148fa03c910ea1f3c08b16c5"></a>
+<a class="el" href="classbv_1_1branchless__scan.html">branching</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#add484bd7148fa03c910ea1f3c08b16c5">child_sizes_</a></td></tr>
+<tr class="memdesc:add484bd7148fa03c910ea1f3c08b16c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cumulative child sizes and <code>(~0) &gt;&gt; 1</code> for non-existing children. <br /></td></tr>
+<tr class="separator:add484bd7148fa03c910ea1f3c08b16c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aacf31d9477a7748f59ff0e2a1a84e38f"><td class="memItemLeft" align="right" valign="top"><a id="aacf31d9477a7748f59ff0e2a1a84e38f"></a>
+<a class="el" href="classbv_1_1branchless__scan.html">branching</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#aacf31d9477a7748f59ff0e2a1a84e38f">child_sums_</a></td></tr>
+<tr class="memdesc:aacf31d9477a7748f59ff0e2a1a84e38f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cumulative child sums and <code>(~0) &gt;&gt; 1</code> for non-existint children. <br /></td></tr>
+<tr class="separator:aacf31d9477a7748f59ff0e2a1a84e38f"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af6f7465fdf42b31fcab3919ddbbe05b2"><td class="memItemLeft" align="right" valign="top"><a id="af6f7465fdf42b31fcab3919ddbbe05b2"></a>
 void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1node.html#af6f7465fdf42b31fcab3919ddbbe05b2">children_</a> [branches]</td></tr>
 <tr class="memdesc:af6f7465fdf42b31fcab3919ddbbe05b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">pointers to leaf_type or node children. <br /></td></tr>
@@ -498,8 +506,8 @@ template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches
 
 </div>
 </div>
-<a id="a886f19e7f1735c9e2f0f385c9853b1d7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a886f19e7f1735c9e2f0f385c9853b1d7">&#9670;&nbsp;</a></span>child_sizes()</h2>
+<a id="aa7107ee49f44c1fc4af123ac20855434"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa7107ee49f44c1fc4af123ac20855434">&#9670;&nbsp;</a></span>child_sizes()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -510,7 +518,7 @@ template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">dtype* <a class="el" href="classbv_1_1node.html">bv::node</a>&lt; leaf_type, dtype, leaf_size, branches &gt;::child_sizes </td>
+          <td class="memname"><a class="el" href="classbv_1_1branchless__scan.html">branching</a>* <a class="el" href="classbv_1_1node.html">bv::node</a>&lt; leaf_type, dtype, leaf_size, branches &gt;::child_sizes </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -529,8 +537,8 @@ template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches
 
 </div>
 </div>
-<a id="a616e43c47f27de439ed1172273f3ad6a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a616e43c47f27de439ed1172273f3ad6a">&#9670;&nbsp;</a></span>child_sums()</h2>
+<a id="af01debf052fe9f5831aa56c40de9cbe4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af01debf052fe9f5831aa56c40de9cbe4">&#9670;&nbsp;</a></span>child_sums()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -541,7 +549,7 @@ template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">dtype* <a class="el" href="classbv_1_1node.html">bv::node</a>&lt; leaf_type, dtype, leaf_size, branches &gt;::child_sums </td>
+          <td class="memname"><a class="el" href="classbv_1_1branchless__scan.html">branching</a>* <a class="el" href="classbv_1_1node.html">bv::node</a>&lt; leaf_type, dtype, leaf_size, branches &gt;::child_sums </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -707,90 +715,6 @@ template&lt;class allocator &gt; </div>
   </table>
   </dd>
 </dl>
-
-</div>
-</div>
-<a id="ab6ad044b1e3c70922eff23252de2b3c8"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab6ad044b1e3c70922eff23252de2b3c8">&#9670;&nbsp;</a></span>find_size()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint8_t <a class="el" href="classbv_1_1node.html">bv::node</a>&lt; leaf_type, dtype, leaf_size, branches &gt;::find_size </td>
-          <td>(</td>
-          <td class="paramtype">dtype&#160;</td>
-          <td class="paramname"><em>q</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Find the lowest child index s.t. the cumulative size at the index is at least q. </p>
-<p>This is implemented as a branchless binary search that uses the "sign
-bit" for index manipulations instead of conditional moves. This is the reason for limiting the maximum data structure size to <code>(~dtype(0)) &gt;&gt; 1</code>.</p>
-<p>If \(q &gt; \) <code><a class="el" href="classbv_1_1node.html#acbdfb951964fa5b8583178a79671e392" title="Logical number of elements stored in the subtree.">size()</a></code>, this will return either the index of the last child or the index following the last child. Either way, this will likely very quickly lead to undefined behaviour and segmentation fault.</p>
-<p>If <code><a class="el" href="classbv_1_1node.html#acbdfb951964fa5b8583178a79671e392" title="Logical number of elements stored in the subtree.">size()</a> &gt; (~(dtype(0)) &gt;&gt; 1</code>, querying is considered undefined behaviour.</p>
-<p>This conditionally compiles the binary search based on acceptable branch factors. For low branching factors this is expected to be slightly slower than efficient vectorized linear searches. For higher branchin factors this branchless binary search should be faster as long as cache performance is good. Agressibe prefetching is done in an attempt to ensure that cache misses don't occur during querying. See <a href="https://github.com/saskeli/search_microbench">https://github.com/saskeli/search_microbench</a> for a simple benchmark.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">q</td><td>Query target </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>\(\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sizes}[i] \geq q)\). </dd></dl>
-
-</div>
-</div>
-<a id="a1f78eaa5d41749dd64e057d331fefe45"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1f78eaa5d41749dd64e057d331fefe45">&#9670;&nbsp;</a></span>find_sum()</h2>
-
-<div class="memitem">
-<div class="memproto">
-<div class="memtemplate">
-template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches&gt; </div>
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">uint8_t <a class="el" href="classbv_1_1node.html">bv::node</a>&lt; leaf_type, dtype, leaf_size, branches &gt;::find_sum </td>
-          <td>(</td>
-          <td class="paramtype">dtype&#160;</td>
-          <td class="paramname"><em>q</em></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Find the lowest child index s.t. the cumulative sum at the index is at least q. </p>
-<p>This is implemented as a branchless binary search that uses the "sign
-bit" for index manipulations instead of conditional moves. This is the reason for limiting the maximum data structure size to <code>(~dtype(0)) &gt;&gt; 1</code>.</p>
-<p>If \(q &gt; \) <code><a class="el" href="classbv_1_1node.html#a3bf18e7fb6cd2f123b4ac9726dacdbee" title="Logical number of 1-bits stored in the subtree.">p_sum()</a></code>, this will return either the index of the last child or the index following the last child. Either way, this will likely very quickly lead to undefined behaviour and segmentation fault.</p>
-<p>If <code><a class="el" href="classbv_1_1node.html#a3bf18e7fb6cd2f123b4ac9726dacdbee" title="Logical number of 1-bits stored in the subtree.">p_sum()</a> &gt; (~(dtype(0)) &gt;&gt; 1</code>, querying is considered undefined behaviour.</p>
-<p>This conditionally compiles the binary search based on acceptable branch factors. For low branching factors this is expected to be slightly slower than efficient vectorized linear searches. For higher branchin factors this branchless binary search should be faster as long as cache performance is good. Agressibe prefetching is done in an attempt to ensure that cache misses don't occur during querying. See <a href="https://github.com/saskeli/search_microbench">https://github.com/saskeli/search_microbench</a> for a simple benchmark.</p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">q</td><td>Query target </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>\(\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sums}[i] \geq q)\). </dd></dl>
 
 </div>
 </div>
@@ -2097,7 +2021,7 @@ template&lt;class leaf_type , class dtype , uint64_t leaf_size, uint8_t branches
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Aug 24 2021 14:19:39 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

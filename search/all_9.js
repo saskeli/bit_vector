@@ -1,8 +1,9 @@
 var searchData=
 [
-  ['n_5froot_5f_55',['n_root_',['../classbv_1_1bit__vector.html#a79b154fc6db039824594aa2122156d72',1,'bv::bit_vector']]],
-  ['need_5frealloc_56',['need_realloc',['../classbv_1_1leaf.html#a72b6cbe028c84fa34c1bbecec8adf56a',1,'bv::leaf']]],
-  ['node_57',['node',['../classbv_1_1node.html',1,'bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;'],['../classbv_1_1node.html#a3d51a19bc649c8292a03211b1cdcfde9',1,'bv::node::node()']]],
-  ['node_5finsert_58',['node_insert',['../classbv_1_1node.html#a6918444b124f2f4fd2c9eef9a43117bb',1,'bv::node']]],
-  ['node_5fremove_59',['node_remove',['../classbv_1_1node.html#a1df5aca9c6ae88fff2a762f10964259f',1,'bv::node']]]
+  ['l_5froot_5f_52',['l_root_',['../classbv_1_1bit__vector.html#a9e68bb9811acf634b39ed401b5e9cb69',1,'bv::bit_vector']]],
+  ['leaf_53',['leaf',['../classbv_1_1leaf.html',1,'bv::leaf&lt; buffer_size, avx &gt;'],['../classbv_1_1leaf.html#a3d053d183a6cc9b268675dab349ed291',1,'bv::leaf::leaf()']]],
+  ['leaf_3c_20buffer_5fsize_2c_20true_20_3e_54',['leaf&lt; buffer_size, true &gt;',['../classbv_1_1leaf.html',1,'bv']]],
+  ['leaf_5finsert_55',['leaf_insert',['../classbv_1_1node.html#ad56b0771306c929622f11ecb2903df1d',1,'bv::node']]],
+  ['leaf_5fremove_56',['leaf_remove',['../classbv_1_1node.html#a679beca7562433e0505191474c63d518',1,'bv::node']]],
+  ['live_5fallocations_57',['live_allocations',['../classbv_1_1malloc__alloc.html#a5f8780cce3eba0dc48b65ff6c2a5ec86',1,'bv::malloc_alloc']]]
 ];

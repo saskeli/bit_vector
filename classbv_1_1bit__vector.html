@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.8.17"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Bit vector: bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt; Class Template Reference</title>
+<title>Bit vector: bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -80,7 +80,7 @@ $(function() {
 <a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classbv_1_1bit__vector-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt; Class Template Reference</div>  </div>
+<div class="title">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
@@ -89,11 +89,11 @@ $(function() {
 
 <p><code>#include &lt;<a class="el" href="bit__vector_8hpp_source.html">bit_vector.hpp</a>&gt;</code></p>
 <div class="dynheader">
-Collaboration diagram for bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;:</div>
+Collaboration diagram for bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;:</div>
 <div class="dyncontent">
-<div class="center"><img src="classbv_1_1bit__vector__coll__graph.png" border="0" usemap="#bv_1_1bit__vector_3_01leaf_00_01node_00_01allocator_00_01leaf__size_00_01branches_01_4_coll__map" alt="Collaboration graph"/></div>
-<map name="bv_1_1bit__vector_3_01leaf_00_01node_00_01allocator_00_01leaf__size_00_01branches_01_4_coll__map" id="bv_1_1bit__vector_3_01leaf_00_01node_00_01allocator_00_01leaf__size_00_01branches_01_4_coll__map">
-<area shape="rect" title="Container class for dynamic b&#45;tree bit vector stuctures." alt="" coords="127,109,266,165"/>
+<div class="center"><img src="classbv_1_1bit__vector__coll__graph.png" border="0" usemap="#bv_1_1bit__vector_3_01leaf_00_01node_00_01allocator_00_01leaf__size_00_01branches_00_01dtype_01_4_coll__map" alt="Collaboration graph"/></div>
+<map name="bv_1_1bit__vector_3_01leaf_00_01node_00_01allocator_00_01leaf__size_00_01branches_00_01dtype_01_4_coll__map" id="bv_1_1bit__vector_3_01leaf_00_01node_00_01allocator_00_01leaf__size_00_01branches_00_01dtype_01_4_coll__map">
+<area shape="rect" title="Container class for dynamic b&#45;tree bit vector stuctures." alt="" coords="113,109,280,165"/>
 <area shape="rect" href="classbv_1_1node.html" title="Internal node for use with bit vector b&#45;tree structures." alt="" coords="5,5,196,47"/>
 <area shape="rect" href="classbv_1_1leaf.html" title="Simple flat dynamic bit vector for use as a leaf for a dynamic b&#45;tree bit vector." alt="" coords="220,5,365,47"/>
 </map>
@@ -101,81 +101,92 @@ Collaboration diagram for bv::bit_vector&lt; leaf, node, allocator, leaf_size, b
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a1e2f45734a662544a1a6650bdb9b88bf"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a1e2f45734a662544a1a6650bdb9b88bf">bit_vector</a> (allocator *alloc)</td></tr>
-<tr class="memdesc:a1e2f45734a662544a1a6650bdb9b88bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bit vector constructor with existing allocator.  <a href="classbv_1_1bit__vector.html#a1e2f45734a662544a1a6650bdb9b88bf">More...</a><br /></td></tr>
-<tr class="separator:a1e2f45734a662544a1a6650bdb9b88bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad2d298336cee72cbdecbc674146db9fe"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ad2d298336cee72cbdecbc674146db9fe">bit_vector</a> ()</td></tr>
-<tr class="memdesc:ad2d298336cee72cbdecbc674146db9fe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor that creates an owned allocator.  <a href="classbv_1_1bit__vector.html#ad2d298336cee72cbdecbc674146db9fe">More...</a><br /></td></tr>
-<tr class="separator:ad2d298336cee72cbdecbc674146db9fe"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:adee10cdadd2bed49dc0e18cdb153d725"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#adee10cdadd2bed49dc0e18cdb153d725">~bit_vector</a> ()</td></tr>
-<tr class="memdesc:adee10cdadd2bed49dc0e18cdb153d725"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deconstructor that deallocates the entire data structure.  <a href="classbv_1_1bit__vector.html#adee10cdadd2bed49dc0e18cdb153d725">More...</a><br /></td></tr>
-<tr class="separator:adee10cdadd2bed49dc0e18cdb153d725"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9cc8e6105e31ff528fc13209ad1f918"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ae9cc8e6105e31ff528fc13209ad1f918">insert</a> (uint64_t index, bool value)</td></tr>
-<tr class="memdesc:ae9cc8e6105e31ff528fc13209ad1f918"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert "value" into position "index".  <a href="classbv_1_1bit__vector.html#ae9cc8e6105e31ff528fc13209ad1f918">More...</a><br /></td></tr>
-<tr class="separator:ae9cc8e6105e31ff528fc13209ad1f918"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6ba7ad4c32302bab757fdd0efd48b790"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a6ba7ad4c32302bab757fdd0efd48b790">remove</a> (uint64_t index)</td></tr>
-<tr class="memdesc:a6ba7ad4c32302bab757fdd0efd48b790"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove element at "index".  <a href="classbv_1_1bit__vector.html#a6ba7ad4c32302bab757fdd0efd48b790">More...</a><br /></td></tr>
-<tr class="separator:a6ba7ad4c32302bab757fdd0efd48b790"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3e711dbef3d646af5c75520bab276da7"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a3e711dbef3d646af5c75520bab276da7">sum</a> () const</td></tr>
-<tr class="memdesc:a3e711dbef3d646af5c75520bab276da7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits in the data structure.  <a href="classbv_1_1bit__vector.html#a3e711dbef3d646af5c75520bab276da7">More...</a><br /></td></tr>
-<tr class="separator:a3e711dbef3d646af5c75520bab276da7"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae9384d3b5a2dd385f2467d4d68647404"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ae9384d3b5a2dd385f2467d4d68647404">size</a> () const</td></tr>
-<tr class="memdesc:ae9384d3b5a2dd385f2467d4d68647404"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of elements stored in the data structure.  <a href="classbv_1_1bit__vector.html#ae9384d3b5a2dd385f2467d4d68647404">More...</a><br /></td></tr>
-<tr class="separator:ae9384d3b5a2dd385f2467d4d68647404"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a03a8dff701f9f32833cd8f208048bf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a6a03a8dff701f9f32833cd8f208048bf">at</a> (uint64_t index) const</td></tr>
-<tr class="memdesc:a6a03a8dff701f9f32833cd8f208048bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the value of the index<sup>th</sup> element in the data structure.  <a href="classbv_1_1bit__vector.html#a6a03a8dff701f9f32833cd8f208048bf">More...</a><br /></td></tr>
-<tr class="separator:a6a03a8dff701f9f32833cd8f208048bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa19f5f27141027ab7b889a1bd3f91b71"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#aa19f5f27141027ab7b889a1bd3f91b71">rank</a> (uint64_t index) const</td></tr>
-<tr class="memdesc:aa19f5f27141027ab7b889a1bd3f91b71"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits up to position index.  <a href="classbv_1_1bit__vector.html#aa19f5f27141027ab7b889a1bd3f91b71">More...</a><br /></td></tr>
-<tr class="separator:aa19f5f27141027ab7b889a1bd3f91b71"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a16c40fed84f9236d9f4fafd29cdce88c"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a16c40fed84f9236d9f4fafd29cdce88c">select</a> (uint64_t count) const</td></tr>
-<tr class="memdesc:a16c40fed84f9236d9f4fafd29cdce88c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the count<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1bit__vector.html#a16c40fed84f9236d9f4fafd29cdce88c">More...</a><br /></td></tr>
-<tr class="separator:a16c40fed84f9236d9f4fafd29cdce88c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad694f865744adc813bd38523050eae91"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ad694f865744adc813bd38523050eae91">set</a> (uint64_t index, bool value)</td></tr>
-<tr class="memdesc:ad694f865744adc813bd38523050eae91"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the bit at "index" to "value".  <a href="classbv_1_1bit__vector.html#ad694f865744adc813bd38523050eae91">More...</a><br /></td></tr>
-<tr class="separator:ad694f865744adc813bd38523050eae91"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a45eb90409f956d1dc6ec9613f699c8fa"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a45eb90409f956d1dc6ec9613f699c8fa">bit_size</a> () const</td></tr>
-<tr class="memdesc:a45eb90409f956d1dc6ec9613f699c8fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total size of data structure allocations in bits.  <a href="classbv_1_1bit__vector.html#a45eb90409f956d1dc6ec9613f699c8fa">More...</a><br /></td></tr>
-<tr class="separator:a45eb90409f956d1dc6ec9613f699c8fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae7af2a6b9adc0e9da7d0bdb30046174a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ae7af2a6b9adc0e9da7d0bdb30046174a">validate</a> () const</td></tr>
-<tr class="memdesc:ae7af2a6b9adc0e9da7d0bdb30046174a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Asserts that the data structure is internally consistent.  <a href="classbv_1_1bit__vector.html#ae7af2a6b9adc0e9da7d0bdb30046174a">More...</a><br /></td></tr>
-<tr class="separator:ae7af2a6b9adc0e9da7d0bdb30046174a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af45c40cbd94cb69b3d62dcde307fe92b"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#af45c40cbd94cb69b3d62dcde307fe92b">print</a> (bool internal_only) const</td></tr>
-<tr class="memdesc:af45c40cbd94cb69b3d62dcde307fe92b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output data structure to standard out as json.  <a href="classbv_1_1bit__vector.html#af45c40cbd94cb69b3d62dcde307fe92b">More...</a><br /></td></tr>
-<tr class="separator:af45c40cbd94cb69b3d62dcde307fe92b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa31ef41be5f20c1ac67260a14877160"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#afa31ef41be5f20c1ac67260a14877160">bit_vector</a> (allocator *alloc)</td></tr>
+<tr class="memdesc:afa31ef41be5f20c1ac67260a14877160"><td class="mdescLeft">&#160;</td><td class="mdescRight">Bit vector constructor with existing allocator.  <a href="classbv_1_1bit__vector.html#afa31ef41be5f20c1ac67260a14877160">More...</a><br /></td></tr>
+<tr class="separator:afa31ef41be5f20c1ac67260a14877160"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aed34138f9c8bc42e139a4737a978a1cd"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#aed34138f9c8bc42e139a4737a978a1cd">bit_vector</a> ()</td></tr>
+<tr class="memdesc:aed34138f9c8bc42e139a4737a978a1cd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor that creates an owned allocator.  <a href="classbv_1_1bit__vector.html#aed34138f9c8bc42e139a4737a978a1cd">More...</a><br /></td></tr>
+<tr class="separator:aed34138f9c8bc42e139a4737a978a1cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a626e6b4e4fb95b2b6b28982669899556"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a626e6b4e4fb95b2b6b28982669899556">~bit_vector</a> ()</td></tr>
+<tr class="memdesc:a626e6b4e4fb95b2b6b28982669899556"><td class="mdescLeft">&#160;</td><td class="mdescRight">Deconstructor that deallocates the entire data structure.  <a href="classbv_1_1bit__vector.html#a626e6b4e4fb95b2b6b28982669899556">More...</a><br /></td></tr>
+<tr class="separator:a626e6b4e4fb95b2b6b28982669899556"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aca847b9c081d8b677f5bd7b7b8b88d3e"><td class="memTemplParams" colspan="2">template&lt;dtype block_size = leaf_size / 3&gt; </td></tr>
+<tr class="memitem:aca847b9c081d8b677f5bd7b7b8b88d3e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#aca847b9c081d8b677f5bd7b7b8b88d3e">generate_query_structure</a> (<a class="el" href="classbv_1_1query__support.html">query_support</a>&lt; dtype, <a class="el" href="classbv_1_1leaf.html">leaf</a>, block_size &gt; *qs) const</td></tr>
+<tr class="memdesc:aca847b9c081d8b677f5bd7b7b8b88d3e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Populate a given query support stucture using <code>this</code>  <a href="classbv_1_1bit__vector.html#aca847b9c081d8b677f5bd7b7b8b88d3e">More...</a><br /></td></tr>
+<tr class="separator:aca847b9c081d8b677f5bd7b7b8b88d3e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae94dbda4eac1f26f93e8b9c37a058d98"><td class="memTemplParams" colspan="2">template&lt;dtype block_size = leaf_size / 3&gt; </td></tr>
+<tr class="memitem:ae94dbda4eac1f26f93e8b9c37a058d98"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="classbv_1_1query__support.html">query_support</a>&lt; dtype, <a class="el" href="classbv_1_1leaf.html">leaf</a>, block_size &gt; *&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ae94dbda4eac1f26f93e8b9c37a058d98">generate_query_structure</a> () const</td></tr>
+<tr class="memdesc:ae94dbda4eac1f26f93e8b9c37a058d98"><td class="mdescLeft">&#160;</td><td class="mdescRight">Create and Populate a query support structure using <code>this</code>  <a href="classbv_1_1bit__vector.html#ae94dbda4eac1f26f93e8b9c37a058d98">More...</a><br /></td></tr>
+<tr class="separator:ae94dbda4eac1f26f93e8b9c37a058d98"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a50359f3006b3385bca19c1f66837989f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a50359f3006b3385bca19c1f66837989f">insert</a> (uint64_t index, bool value)</td></tr>
+<tr class="memdesc:a50359f3006b3385bca19c1f66837989f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Insert "value" into position "index".  <a href="classbv_1_1bit__vector.html#a50359f3006b3385bca19c1f66837989f">More...</a><br /></td></tr>
+<tr class="separator:a50359f3006b3385bca19c1f66837989f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af90c658e7247819d6ce5c6c2e122f847"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#af90c658e7247819d6ce5c6c2e122f847">remove</a> (uint64_t index)</td></tr>
+<tr class="memdesc:af90c658e7247819d6ce5c6c2e122f847"><td class="mdescLeft">&#160;</td><td class="mdescRight">Remove element at "index".  <a href="classbv_1_1bit__vector.html#af90c658e7247819d6ce5c6c2e122f847">More...</a><br /></td></tr>
+<tr class="separator:af90c658e7247819d6ce5c6c2e122f847"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bc35998360ebf979440b900a7f0cb0d"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a8bc35998360ebf979440b900a7f0cb0d">sum</a> () const</td></tr>
+<tr class="memdesc:a8bc35998360ebf979440b900a7f0cb0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits in the data structure.  <a href="classbv_1_1bit__vector.html#a8bc35998360ebf979440b900a7f0cb0d">More...</a><br /></td></tr>
+<tr class="separator:a8bc35998360ebf979440b900a7f0cb0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a27db13321587d2d1d6d84c656c5c57e4"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a27db13321587d2d1d6d84c656c5c57e4">size</a> () const</td></tr>
+<tr class="memdesc:a27db13321587d2d1d6d84c656c5c57e4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of elements stored in the data structure.  <a href="classbv_1_1bit__vector.html#a27db13321587d2d1d6d84c656c5c57e4">More...</a><br /></td></tr>
+<tr class="separator:a27db13321587d2d1d6d84c656c5c57e4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7d8e0e257c0c1d71285afd14c24b3714"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a7d8e0e257c0c1d71285afd14c24b3714">at</a> (uint64_t index) const</td></tr>
+<tr class="memdesc:a7d8e0e257c0c1d71285afd14c24b3714"><td class="mdescLeft">&#160;</td><td class="mdescRight">Retrieves the value of the index<sup>th</sup> element in the data structure.  <a href="classbv_1_1bit__vector.html#a7d8e0e257c0c1d71285afd14c24b3714">More...</a><br /></td></tr>
+<tr class="separator:a7d8e0e257c0c1d71285afd14c24b3714"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a42e09275d4a5894bd22bd15fdcf748f3"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a42e09275d4a5894bd22bd15fdcf748f3">rank</a> (uint64_t index) const</td></tr>
+<tr class="memdesc:a42e09275d4a5894bd22bd15fdcf748f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits up to position index.  <a href="classbv_1_1bit__vector.html#a42e09275d4a5894bd22bd15fdcf748f3">More...</a><br /></td></tr>
+<tr class="separator:a42e09275d4a5894bd22bd15fdcf748f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5cce189fc9895ebb1b44f4fe4f9cb2eb"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a5cce189fc9895ebb1b44f4fe4f9cb2eb">select</a> (uint64_t count) const</td></tr>
+<tr class="memdesc:a5cce189fc9895ebb1b44f4fe4f9cb2eb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the count<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1bit__vector.html#a5cce189fc9895ebb1b44f4fe4f9cb2eb">More...</a><br /></td></tr>
+<tr class="separator:a5cce189fc9895ebb1b44f4fe4f9cb2eb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adf657ea587d49412b81044fc245c853f"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#adf657ea587d49412b81044fc245c853f">set</a> (uint64_t index, bool value)</td></tr>
+<tr class="memdesc:adf657ea587d49412b81044fc245c853f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Sets the bit at "index" to "value".  <a href="classbv_1_1bit__vector.html#adf657ea587d49412b81044fc245c853f">More...</a><br /></td></tr>
+<tr class="separator:adf657ea587d49412b81044fc245c853f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6c86a5406563b81482628ae018ea8e30"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a6c86a5406563b81482628ae018ea8e30">flush</a> ()</td></tr>
+<tr class="memdesc:a6c86a5406563b81482628ae018ea8e30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Recursively flushes all buffers in the data structure.  <a href="classbv_1_1bit__vector.html#a6c86a5406563b81482628ae018ea8e30">More...</a><br /></td></tr>
+<tr class="separator:a6c86a5406563b81482628ae018ea8e30"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a852e5ff9b92c149b3a6698fb53e918f6"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a852e5ff9b92c149b3a6698fb53e918f6">bit_size</a> () const</td></tr>
+<tr class="memdesc:a852e5ff9b92c149b3a6698fb53e918f6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Total size of data structure allocations in bits.  <a href="classbv_1_1bit__vector.html#a852e5ff9b92c149b3a6698fb53e918f6">More...</a><br /></td></tr>
+<tr class="separator:a852e5ff9b92c149b3a6698fb53e918f6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a91f68d3946754d40c7257416f2132b75"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a91f68d3946754d40c7257416f2132b75">validate</a> () const</td></tr>
+<tr class="memdesc:a91f68d3946754d40c7257416f2132b75"><td class="mdescLeft">&#160;</td><td class="mdescRight">Asserts that the data structure is internally consistent.  <a href="classbv_1_1bit__vector.html#a91f68d3946754d40c7257416f2132b75">More...</a><br /></td></tr>
+<tr class="separator:a91f68d3946754d40c7257416f2132b75"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab4d2162a502c79f77869c4bd1aaf2446"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ab4d2162a502c79f77869c4bd1aaf2446">print</a> (bool internal_only) const</td></tr>
+<tr class="memdesc:ab4d2162a502c79f77869c4bd1aaf2446"><td class="mdescLeft">&#160;</td><td class="mdescRight">Output data structure to standard out as json.  <a href="classbv_1_1bit__vector.html#ab4d2162a502c79f77869c4bd1aaf2446">More...</a><br /></td></tr>
+<tr class="separator:ab4d2162a502c79f77869c4bd1aaf2446"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:a7aca131f67c823f8555e47a6d9f03198"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a7aca131f67c823f8555e47a6d9f03198">split_root</a> ()</td></tr>
-<tr class="memdesc:a7aca131f67c823f8555e47a6d9f03198"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increases the height of the tree by one level.  <a href="classbv_1_1bit__vector.html#a7aca131f67c823f8555e47a6d9f03198">More...</a><br /></td></tr>
-<tr class="separator:a7aca131f67c823f8555e47a6d9f03198"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e991908e2749805c303ee52033c9d14"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a1e991908e2749805c303ee52033c9d14">split_root</a> ()</td></tr>
+<tr class="memdesc:a1e991908e2749805c303ee52033c9d14"><td class="mdescLeft">&#160;</td><td class="mdescRight">Increases the height of the tree by one level.  <a href="classbv_1_1bit__vector.html#a1e991908e2749805c303ee52033c9d14">More...</a><br /></td></tr>
+<tr class="separator:a1e991908e2749805c303ee52033c9d14"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
 Protected Attributes</h2></td></tr>
-<tr class="memitem:a393d84f94d09be134a6513898b460ba8"><td class="memItemLeft" align="right" valign="top"><a id="a393d84f94d09be134a6513898b460ba8"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a393d84f94d09be134a6513898b460ba8">root_is_leaf_</a> = true</td></tr>
-<tr class="memdesc:a393d84f94d09be134a6513898b460ba8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Value indicating whether the root is in <code>n_root_</code> or <code>l_root_</code>. <br /></td></tr>
-<tr class="separator:a393d84f94d09be134a6513898b460ba8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac2ec168e6e617653934fde38d5cd5f80"><td class="memItemLeft" align="right" valign="top"><a id="ac2ec168e6e617653934fde38d5cd5f80"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#ac2ec168e6e617653934fde38d5cd5f80">owned_allocator_</a> = false</td></tr>
-<tr class="memdesc:ac2ec168e6e617653934fde38d5cd5f80"><td class="mdescLeft">&#160;</td><td class="mdescRight">True if deallocating the allocator is the responsibilty of the data structure. <br /></td></tr>
-<tr class="separator:ac2ec168e6e617653934fde38d5cd5f80"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a79b154fc6db039824594aa2122156d72"><td class="memItemLeft" align="right" valign="top"><a id="a79b154fc6db039824594aa2122156d72"></a>
-<a class="el" href="classbv_1_1node.html">node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a79b154fc6db039824594aa2122156d72">n_root_</a></td></tr>
-<tr class="memdesc:a79b154fc6db039824594aa2122156d72"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root of the b-tree if a multi-level structure is required. <br /></td></tr>
-<tr class="separator:a79b154fc6db039824594aa2122156d72"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9a55b52ea39c46949a94e5ec963c3c5b"><td class="memItemLeft" align="right" valign="top"><a id="a9a55b52ea39c46949a94e5ec963c3c5b"></a>
-<a class="el" href="classbv_1_1leaf.html">leaf</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a9a55b52ea39c46949a94e5ec963c3c5b">l_root_</a></td></tr>
-<tr class="memdesc:a9a55b52ea39c46949a94e5ec963c3c5b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root if a single leaf is sufficient. <br /></td></tr>
-<tr class="separator:a9a55b52ea39c46949a94e5ec963c3c5b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8dd591415a14509f8be067e4a7b1465d"><td class="memItemLeft" align="right" valign="top"><a id="a8dd591415a14509f8be067e4a7b1465d"></a>
-allocator *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a8dd591415a14509f8be067e4a7b1465d">allocator_</a></td></tr>
-<tr class="memdesc:a8dd591415a14509f8be067e4a7b1465d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to allocator used for allocating internal nodes and leaves. <br /></td></tr>
-<tr class="separator:a8dd591415a14509f8be067e4a7b1465d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a77524afbfe09f1f45a15a2a7927c49d7"><td class="memItemLeft" align="right" valign="top"><a id="a77524afbfe09f1f45a15a2a7927c49d7"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a77524afbfe09f1f45a15a2a7927c49d7">root_is_leaf_</a> = true</td></tr>
+<tr class="memdesc:a77524afbfe09f1f45a15a2a7927c49d7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Value indicating whether the root is in <code>n_root_</code> or <code>l_root_</code>. <br /></td></tr>
+<tr class="separator:a77524afbfe09f1f45a15a2a7927c49d7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18afd5d8170208dd040d7c4845b42b10"><td class="memItemLeft" align="right" valign="top"><a id="a18afd5d8170208dd040d7c4845b42b10"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a18afd5d8170208dd040d7c4845b42b10">owned_allocator_</a> = false</td></tr>
+<tr class="memdesc:a18afd5d8170208dd040d7c4845b42b10"><td class="mdescLeft">&#160;</td><td class="mdescRight">True if deallocating the allocator is the responsibilty of the data structure. <br /></td></tr>
+<tr class="separator:a18afd5d8170208dd040d7c4845b42b10"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a756dec3c572889c7c9af2a04dfc515db"><td class="memItemLeft" align="right" valign="top"><a id="a756dec3c572889c7c9af2a04dfc515db"></a>
+<a class="el" href="classbv_1_1node.html">node</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a756dec3c572889c7c9af2a04dfc515db">n_root_</a></td></tr>
+<tr class="memdesc:a756dec3c572889c7c9af2a04dfc515db"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root of the b-tree if a multi-level structure is required. <br /></td></tr>
+<tr class="separator:a756dec3c572889c7c9af2a04dfc515db"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a9e68bb9811acf634b39ed401b5e9cb69"><td class="memItemLeft" align="right" valign="top"><a id="a9e68bb9811acf634b39ed401b5e9cb69"></a>
+<a class="el" href="classbv_1_1leaf.html">leaf</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#a9e68bb9811acf634b39ed401b5e9cb69">l_root_</a></td></tr>
+<tr class="memdesc:a9e68bb9811acf634b39ed401b5e9cb69"><td class="mdescLeft">&#160;</td><td class="mdescRight">Root if a single leaf is sufficient. <br /></td></tr>
+<tr class="separator:a9e68bb9811acf634b39ed401b5e9cb69"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa4a5b14e0bfcaa25ed972d9ee923debc"><td class="memItemLeft" align="right" valign="top"><a id="aa4a5b14e0bfcaa25ed972d9ee923debc"></a>
+allocator *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1bit__vector.html#aa4a5b14e0bfcaa25ed972d9ee923debc">allocator_</a></td></tr>
+<tr class="memdesc:aa4a5b14e0bfcaa25ed972d9ee923debc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Pointer to allocator used for allocating internal nodes and leaves. <br /></td></tr>
+<tr class="separator:aa4a5b14e0bfcaa25ed972d9ee923debc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><h3>template&lt;class leaf, class node, class allocator, uint64_t leaf_size, uint8_t branches&gt;<br />
-class bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</h3>
+<div class="textblock"><h3>template&lt;class leaf, class node, class allocator, uint64_t leaf_size, uint8_t branches, class dtype&gt;<br />
+class bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</h3>
 
 <p>Container class for dynamic b-tree bit vector stuctures. </p>
 <p>This class manages a dynamic bit vector structure and provides the public API for querying the structure.</p>
@@ -192,19 +203,19 @@ class bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</h3>
   </dd>
 </dl>
 </div><h2 class="groupheader">Constructor &amp; Destructor Documentation</h2>
-<a id="a1e2f45734a662544a1a6650bdb9b88bf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a1e2f45734a662544a1a6650bdb9b88bf">&#9670;&nbsp;</a></span>bit_vector() <span class="overload">[1/2]</span></h2>
+<a id="afa31ef41be5f20c1ac67260a14877160"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#afa31ef41be5f20c1ac67260a14877160">&#9670;&nbsp;</a></span>bit_vector() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::<a class="el" href="classbv_1_1bit__vector.html">bit_vector</a> </td>
+          <td class="memname"><a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::<a class="el" href="classbv_1_1bit__vector.html">bit_vector</a> </td>
           <td>(</td>
           <td class="paramtype">allocator *&#160;</td>
           <td class="paramname"><em>alloc</em></td><td>)</td>
@@ -229,19 +240,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="ad2d298336cee72cbdecbc674146db9fe"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad2d298336cee72cbdecbc674146db9fe">&#9670;&nbsp;</a></span>bit_vector() <span class="overload">[2/2]</span></h2>
+<a id="aed34138f9c8bc42e139a4737a978a1cd"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aed34138f9c8bc42e139a4737a978a1cd">&#9670;&nbsp;</a></span>bit_vector() <span class="overload">[2/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::<a class="el" href="classbv_1_1bit__vector.html">bit_vector</a> </td>
+          <td class="memname"><a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::<a class="el" href="classbv_1_1bit__vector.html">bit_vector</a> </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -259,19 +270,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="adee10cdadd2bed49dc0e18cdb153d725"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#adee10cdadd2bed49dc0e18cdb153d725">&#9670;&nbsp;</a></span>~bit_vector()</h2>
+<a id="a626e6b4e4fb95b2b6b28982669899556"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a626e6b4e4fb95b2b6b28982669899556">&#9670;&nbsp;</a></span>~bit_vector()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname"><a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::~<a class="el" href="classbv_1_1bit__vector.html">bit_vector</a> </td>
+          <td class="memname"><a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::~<a class="el" href="classbv_1_1bit__vector.html">bit_vector</a> </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -290,19 +301,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="a6a03a8dff701f9f32833cd8f208048bf"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6a03a8dff701f9f32833cd8f208048bf">&#9670;&nbsp;</a></span>at()</h2>
+<a id="a7d8e0e257c0c1d71285afd14c24b3714"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7d8e0e257c0c1d71285afd14c24b3714">&#9670;&nbsp;</a></span>at()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::at </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::at </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>index</em></td><td>)</td>
@@ -329,19 +340,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="a45eb90409f956d1dc6ec9613f699c8fa"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a45eb90409f956d1dc6ec9613f699c8fa">&#9670;&nbsp;</a></span>bit_size()</h2>
+<a id="a852e5ff9b92c149b3a6698fb53e918f6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a852e5ff9b92c149b3a6698fb53e918f6">&#9670;&nbsp;</a></span>bit_size()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::bit_size </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::bit_size </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -361,19 +372,133 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="ae9cc8e6105e31ff528fc13209ad1f918"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae9cc8e6105e31ff528fc13209ad1f918">&#9670;&nbsp;</a></span>insert()</h2>
+<a id="a6c86a5406563b81482628ae018ea8e30"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6c86a5406563b81482628ae018ea8e30">&#9670;&nbsp;</a></span>flush()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::insert </td>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::flush </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Recursively flushes all buffers in the data structure. </p>
+<p>If execution transitions to a phase where no insertions or removals are expected, flushing all buffers should improve query time at the cost of a fairly expensive flushing operations. </p>
+
+</div>
+</div>
+<a id="ae94dbda4eac1f26f93e8b9c37a058d98"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae94dbda4eac1f26f93e8b9c37a058d98">&#9670;&nbsp;</a></span>generate_query_structure() <span class="overload">[1/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
+<div class="memtemplate">
+template&lt;dtype block_size = leaf_size / 3&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classbv_1_1query__support.html">query_support</a>&lt;dtype, <a class="el" href="classbv_1_1leaf.html">leaf</a>, block_size&gt;* <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::generate_query_structure </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Create and Populate a query support structure using <code>this</code> </p>
+<p>Creates a new support structure and adds leaves in order.</p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">block_size</td><td>Size of blocks used in the query support structure. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>A new query support strucutre. </dd></dl>
+
+</div>
+</div>
+<a id="aca847b9c081d8b677f5bd7b7b8b88d3e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aca847b9c081d8b677f5bd7b7b8b88d3e">&#9670;&nbsp;</a></span>generate_query_structure() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
+<div class="memtemplate">
+template&lt;dtype block_size = leaf_size / 3&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::generate_query_structure </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="classbv_1_1query__support.html">query_support</a>&lt; dtype, <a class="el" href="classbv_1_1leaf.html">leaf</a>, block_size &gt; *&#160;</td>
+          <td class="paramname"><em>qs</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Populate a given query support stucture using <code>this</code> </p>
+<p>Traverses the tree and ads encountered leaves to the query support strucutre.</p>
+<dl class="tparams"><dt>Template Parameters</dt><dd>
+  <table class="tparams">
+    <tr><td class="paramname">block_size</td><td>Size of blocks used in the query support structure. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">qs</td><td>Query support structure. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a50359f3006b3385bca19c1f66837989f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a50359f3006b3385bca19c1f66837989f">&#9670;&nbsp;</a></span>insert()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::insert </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>index</em>, </td>
@@ -410,19 +535,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="af45c40cbd94cb69b3d62dcde307fe92b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#af45c40cbd94cb69b3d62dcde307fe92b">&#9670;&nbsp;</a></span>print()</h2>
+<a id="ab4d2162a502c79f77869c4bd1aaf2446"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab4d2162a502c79f77869c4bd1aaf2446">&#9670;&nbsp;</a></span>print()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::print </td>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::print </td>
           <td>(</td>
           <td class="paramtype">bool&#160;</td>
           <td class="paramname"><em>internal_only</em></td><td>)</td>
@@ -446,19 +571,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="aa19f5f27141027ab7b889a1bd3f91b71"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aa19f5f27141027ab7b889a1bd3f91b71">&#9670;&nbsp;</a></span>rank()</h2>
+<a id="a42e09275d4a5894bd22bd15fdcf748f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a42e09275d4a5894bd22bd15fdcf748f3">&#9670;&nbsp;</a></span>rank()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::rank </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::rank </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>index</em></td><td>)</td>
@@ -485,19 +610,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="a6ba7ad4c32302bab757fdd0efd48b790"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a6ba7ad4c32302bab757fdd0efd48b790">&#9670;&nbsp;</a></span>remove()</h2>
+<a id="af90c658e7247819d6ce5c6c2e122f847"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af90c658e7247819d6ce5c6c2e122f847">&#9670;&nbsp;</a></span>remove()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">bool <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::remove </td>
+          <td class="memname">bool <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::remove </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>index</em></td><td>)</td>
@@ -525,19 +650,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="a16c40fed84f9236d9f4fafd29cdce88c"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a16c40fed84f9236d9f4fafd29cdce88c">&#9670;&nbsp;</a></span>select()</h2>
+<a id="a5cce189fc9895ebb1b44f4fe4f9cb2eb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5cce189fc9895ebb1b44f4fe4f9cb2eb">&#9670;&nbsp;</a></span>select()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::select </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::select </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>count</em></td><td>)</td>
@@ -563,19 +688,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="ad694f865744adc813bd38523050eae91"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ad694f865744adc813bd38523050eae91">&#9670;&nbsp;</a></span>set()</h2>
+<a id="adf657ea587d49412b81044fc245c853f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adf657ea587d49412b81044fc245c853f">&#9670;&nbsp;</a></span>set()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::set </td>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::set </td>
           <td>(</td>
           <td class="paramtype">uint64_t&#160;</td>
           <td class="paramname"><em>index</em>, </td>
@@ -611,19 +736,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="ae9384d3b5a2dd385f2467d4d68647404"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae9384d3b5a2dd385f2467d4d68647404">&#9670;&nbsp;</a></span>size()</h2>
+<a id="a27db13321587d2d1d6d84c656c5c57e4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a27db13321587d2d1d6d84c656c5c57e4">&#9670;&nbsp;</a></span>size()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::size </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::size </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -642,19 +767,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="a7aca131f67c823f8555e47a6d9f03198"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a7aca131f67c823f8555e47a6d9f03198">&#9670;&nbsp;</a></span>split_root()</h2>
+<a id="a1e991908e2749805c303ee52033c9d14"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e991908e2749805c303ee52033c9d14">&#9670;&nbsp;</a></span>split_root()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::split_root </td>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::split_root </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td></td>
@@ -673,19 +798,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="a3e711dbef3d646af5c75520bab276da7"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a3e711dbef3d646af5c75520bab276da7">&#9670;&nbsp;</a></span>sum()</h2>
+<a id="a8bc35998360ebf979440b900a7f0cb0d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8bc35998360ebf979440b900a7f0cb0d">&#9670;&nbsp;</a></span>sum()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::sum </td>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::sum </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -704,19 +829,19 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 
 </div>
 </div>
-<a id="ae7af2a6b9adc0e9da7d0bdb30046174a"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae7af2a6b9adc0e9da7d0bdb30046174a">&#9670;&nbsp;</a></span>validate()</h2>
+<a id="a91f68d3946754d40c7257416f2132b75"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a91f68d3946754d40c7257416f2132b75">&#9670;&nbsp;</a></span>validate()</h2>
 
 <div class="memitem">
 <div class="memproto">
 <div class="memtemplate">
-template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches&gt; </div>
+template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint8_t branches, class dtype &gt; </div>
 <table class="mlabels">
   <tr>
   <td class="mlabels-left">
       <table class="memname">
         <tr>
-          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches &gt;::validate </td>
+          <td class="memname">void <a class="el" href="classbv_1_1bit__vector.html">bv::bit_vector</a>&lt; <a class="el" href="classbv_1_1leaf.html">leaf</a>, <a class="el" href="classbv_1_1node.html">node</a>, allocator, leaf_size, branches, dtype &gt;::validate </td>
           <td>(</td>
           <td class="paramname"></td><td>)</td>
           <td> const</td>
@@ -742,7 +867,7 @@ template&lt;class leaf , class node , class allocator , uint64_t leaf_size, uint
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Aug 24 2021 14:19:39 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

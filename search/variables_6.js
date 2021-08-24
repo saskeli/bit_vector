@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['mask_172',['MASK',['../classbv_1_1leaf.html#a3962e2bf7e50e9ce67414167528a0c76',1,'bv::leaf']]],
-  ['meta_5fdata_5f_173',['meta_data_',['../classbv_1_1node.html#ae01de1c67b5f3e86ef2248f6d4d0a229',1,'bv::node']]]
+  ['l_5froot_5f_194',['l_root_',['../classbv_1_1bit__vector.html#a9e68bb9811acf634b39ed401b5e9cb69',1,'bv::bit_vector']]]
 ];

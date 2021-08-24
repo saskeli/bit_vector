@@ -79,6 +79,9 @@ $(function() {
 <li>allocate_node()
 : <a class="el" href="classbv_1_1malloc__alloc.html#a8722e76455ba24e299ab8e66a5a0fc9e">bv::malloc_alloc</a>
 </li>
+<li>append()
+: <a class="el" href="classbv_1_1branchless__scan.html#a4ed07aaa79d9a96bf22ce1afa21b6041">bv::branchless_scan&lt; dtype, branches &gt;</a>
+</li>
 <li>append_all()
 : <a class="el" href="classbv_1_1leaf.html#abe59292eb12f672767516224cdee5752">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#a3064a3b2686b8e4f4264d0fdcb510aed">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
@@ -87,7 +90,7 @@ $(function() {
 : <a class="el" href="classbv_1_1node.html#a667820844114f3bb0004272dcc8c077b">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>at()
-: <a class="el" href="classbv_1_1bit__vector.html#a6a03a8dff701f9f32833cd8f208048bf">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a7d8e0e257c0c1d71285afd14c24b3714">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#af308d5eeb5d80e924ed180db52bb0ee2">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#ac704bf7b4d5ddfc2f150f9d73ee68bea">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
@@ -96,14 +99,17 @@ $(function() {
 
 <h3><a id="index_b"></a>- b -</h3><ul>
 <li>bit_size()
-: <a class="el" href="classbv_1_1bit__vector.html#a45eb90409f956d1dc6ec9613f699c8fa">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a852e5ff9b92c149b3a6698fb53e918f6">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 </li>
 <li>bit_vector()
-: <a class="el" href="classbv_1_1bit__vector.html#a1e2f45734a662544a1a6650bdb9b88bf">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#afa31ef41be5f20c1ac67260a14877160">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 </li>
 <li>bits_size()
 : <a class="el" href="classbv_1_1leaf.html#a7104583e1fed9975f0313b771cf78d07">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#ac8058dc416614319ee5c00c473dc8146">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
+</li>
+<li>branchless_scan()
+: <a class="el" href="classbv_1_1branchless__scan.html#affab69f8448e7f3b1b064134c1af7247">bv::branchless_scan&lt; dtype, branches &gt;</a>
 </li>
 <li>buffer_index()
 : <a class="el" href="classbv_1_1leaf.html#a20bda2ec1e0cfca8a4ed8e5c22754a3e">bv::leaf&lt; buffer_size, avx &gt;</a>
@@ -128,20 +134,22 @@ $(function() {
 : <a class="el" href="classbv_1_1node.html#ac847a9047faf8dfbd52b3a2b91197cf0">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>child_sizes()
-: <a class="el" href="classbv_1_1node.html#a886f19e7f1735c9e2f0f385c9853b1d7">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1node.html#aa7107ee49f44c1fc4af123ac20855434">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>child_sums()
-: <a class="el" href="classbv_1_1node.html#a616e43c47f27de439ed1172273f3ad6a">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1node.html#af01debf052fe9f5831aa56c40de9cbe4">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>children()
 : <a class="el" href="classbv_1_1node.html#aca9966c28ef766b094cc83b2c8fb463f">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>clear_first()
-: <a class="el" href="classbv_1_1leaf.html#a1ce4dfe392785421e602354485df46a4">bv::leaf&lt; buffer_size, avx &gt;</a>
+: <a class="el" href="classbv_1_1branchless__scan.html#a7d7cf39738cd42dceb5ef32feaa638d5">bv::branchless_scan&lt; dtype, branches &gt;</a>
+, <a class="el" href="classbv_1_1leaf.html#a1ce4dfe392785421e602354485df46a4">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#aa1213cc63e7b62e7923ae94fca02787c">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>clear_last()
-: <a class="el" href="classbv_1_1leaf.html#aae902140cfd3665c9acd85039a25af8e">bv::leaf&lt; buffer_size, avx &gt;</a>
+: <a class="el" href="classbv_1_1branchless__scan.html#abc501318e710b909b638636e117854f9">bv::branchless_scan&lt; dtype, branches &gt;</a>
+, <a class="el" href="classbv_1_1leaf.html#aae902140cfd3665c9acd85039a25af8e">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#adf0a2977c1024b410e84b9e4be7397d6">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>commit()
@@ -173,11 +181,21 @@ $(function() {
 
 
 <h3><a id="index_f"></a>- f -</h3><ul>
-<li>find_size()
-: <a class="el" href="classbv_1_1node.html#ab6ad044b1e3c70922eff23252de2b3c8">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
+<li>find()
+: <a class="el" href="classbv_1_1branchless__scan.html#aca4a78361d42756b5d7ad349c3640925">bv::branchless_scan&lt; dtype, branches &gt;</a>
 </li>
-<li>find_sum()
-: <a class="el" href="classbv_1_1node.html#a1f78eaa5d41749dd64e057d331fefe45">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
+<li>flush()
+: <a class="el" href="classbv_1_1bit__vector.html#a6c86a5406563b81482628ae018ea8e30">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+</li>
+</ul>
+
+
+<h3><a id="index_g"></a>- g -</h3><ul>
+<li>generate_query_structure()
+: <a class="el" href="classbv_1_1bit__vector.html#aca847b9c081d8b677f5bd7b7b8b88d3e">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+</li>
+<li>get()
+: <a class="el" href="classbv_1_1branchless__scan.html#a563dc71ab583876c649b3cf885267d6c">bv::branchless_scan&lt; dtype, branches &gt;</a>
 </li>
 </ul>
 
@@ -190,8 +208,12 @@ $(function() {
 
 
 <h3><a id="index_i"></a>- i -</h3><ul>
+<li>increment()
+: <a class="el" href="classbv_1_1branchless__scan.html#a13e33906ab251c2664755eb0bf084c20">bv::branchless_scan&lt; dtype, branches &gt;</a>
+</li>
 <li>insert()
-: <a class="el" href="classbv_1_1bit__vector.html#ae9cc8e6105e31ff528fc13209ad1f918">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a50359f3006b3385bca19c1f66837989f">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+, <a class="el" href="classbv_1_1branchless__scan.html#ab2356610cf8948bbf29fa486264432f6">bv::branchless_scan&lt; dtype, branches &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#a381923edd5cf825653e30b47455d995d">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#acf15e749a6311c34ae62eaa4ad9ddfd9">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
@@ -245,11 +267,14 @@ $(function() {
 
 <h3><a id="index_p"></a>- p -</h3><ul>
 <li>p_sum()
-: <a class="el" href="classbv_1_1leaf.html#a9f695cd17f566190c4478da07e489b45">bv::leaf&lt; buffer_size, avx &gt;</a>
+: <a class="el" href="classbv_1_1leaf.html#a5b695c79739b5c77d8fe808f85dd848a">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#a3bf18e7fb6cd2f123b4ac9726dacdbee">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
+<li>prepend()
+: <a class="el" href="classbv_1_1branchless__scan.html#a48f59f804e16c1eb8d5621ef977cf15d">bv::branchless_scan&lt; dtype, branches &gt;</a>
+</li>
 <li>print()
-: <a class="el" href="classbv_1_1bit__vector.html#af45c40cbd94cb69b3d62dcde307fe92b">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#ab4d2162a502c79f77869c4bd1aaf2446">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#a1f1766922dc590897519b4fb1c851430">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#a102f163e9ac6b0842c11ce624aa19642">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
@@ -261,8 +286,8 @@ $(function() {
 
 <h3><a id="index_r"></a>- r -</h3><ul>
 <li>rank()
-: <a class="el" href="classbv_1_1bit__vector.html#aa19f5f27141027ab7b889a1bd3f91b71">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
-, <a class="el" href="classbv_1_1leaf.html#abbffbd888e260cc0ec52ba7821294b09">bv::leaf&lt; buffer_size, avx &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a42e09275d4a5894bd22bd15fdcf748f3">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+, <a class="el" href="classbv_1_1leaf.html#ae7dfb0c74b9839b550055fd93dc8cf3e">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#afe9c306d0befba0e1fca4d6178aaf6f0">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>reallocate_leaf()
@@ -287,7 +312,8 @@ $(function() {
 : <a class="el" href="classbv_1_1node.html#ad3bb4e623e06394829bb794586176191">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>remove()
-: <a class="el" href="classbv_1_1bit__vector.html#a6ba7ad4c32302bab757fdd0efd48b790">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#af90c658e7247819d6ce5c6c2e122f847">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+, <a class="el" href="classbv_1_1branchless__scan.html#a4df7fdfe653f38675f6fbe016bec8ef1">bv::branchless_scan&lt; dtype, branches &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#a70cac3c8e3fd04423245e6619d9c5fcc">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#ada1ee834ac68d417cfcdfd18b098b98b">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
@@ -296,12 +322,13 @@ $(function() {
 
 <h3><a id="index_s"></a>- s -</h3><ul>
 <li>select()
-: <a class="el" href="classbv_1_1bit__vector.html#a16c40fed84f9236d9f4fafd29cdce88c">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a5cce189fc9895ebb1b44f4fe4f9cb2eb">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#aae36d25acec747b82fb12da32c347661">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#ab48b17e82e1a4a81aa80d6fd38991383">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>set()
-: <a class="el" href="classbv_1_1bit__vector.html#ad694f865744adc813bd38523050eae91">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#adf657ea587d49412b81044fc245c853f">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+, <a class="el" href="classbv_1_1branchless__scan.html#ab90a25b40c679751d980447f69250bb9">bv::branchless_scan&lt; dtype, branches &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#a19d80e6c67137a30ab9c31d5b3021101">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#a2bf12280dae2634721d0d8d8206fee63">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
@@ -312,15 +339,15 @@ $(function() {
 : <a class="el" href="classbv_1_1leaf.html#ab1e3b8778a102033d5c9c3b419fa997d">bv::leaf&lt; buffer_size, avx &gt;</a>
 </li>
 <li>size()
-: <a class="el" href="classbv_1_1bit__vector.html#ae9384d3b5a2dd385f2467d4d68647404">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
-, <a class="el" href="classbv_1_1leaf.html#a80c498945e9cad87668936a6f23c71e8">bv::leaf&lt; buffer_size, avx &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a27db13321587d2d1d6d84c656c5c57e4">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
+, <a class="el" href="classbv_1_1leaf.html#aa74c1e34145f7acd5c61ccdec116e49f">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#acbdfb951964fa5b8583178a79671e392">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
 <li>split_root()
-: <a class="el" href="classbv_1_1bit__vector.html#a7aca131f67c823f8555e47a6d9f03198">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a1e991908e2749805c303ee52033c9d14">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 </li>
 <li>sum()
-: <a class="el" href="classbv_1_1bit__vector.html#a3e711dbef3d646af5c75520bab276da7">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a8bc35998360ebf979440b900a7f0cb0d">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 </li>
 </ul>
 
@@ -339,7 +366,7 @@ $(function() {
 
 <h3><a id="index_v"></a>- v -</h3><ul>
 <li>validate()
-: <a class="el" href="classbv_1_1bit__vector.html#ae7af2a6b9adc0e9da7d0bdb30046174a">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a91f68d3946754d40c7257416f2132b75">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 , <a class="el" href="classbv_1_1leaf.html#aa8a8696df9bdda57a46e824c79e24dcc">bv::leaf&lt; buffer_size, avx &gt;</a>
 , <a class="el" href="classbv_1_1node.html#af6f9dc1092d0dbac400e2eaa0787ae17">bv::node&lt; leaf_type, dtype, leaf_size, branches &gt;</a>
 </li>
@@ -348,13 +375,13 @@ $(function() {
 
 <h3><a id="index__7E"></a>- ~ -</h3><ul>
 <li>~bit_vector()
-: <a class="el" href="classbv_1_1bit__vector.html#adee10cdadd2bed49dc0e18cdb153d725">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;</a>
+: <a class="el" href="classbv_1_1bit__vector.html#a626e6b4e4fb95b2b6b28982669899556">bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;</a>
 </li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jun 23 2021 14:50:53 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Tue Aug 24 2021 14:19:39 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

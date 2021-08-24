@@ -1,5 +1,5 @@
-<map id="bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;" name="bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches &gt;">
-<area shape="rect" id="node1" title="Container class for dynamic b&#45;tree bit vector stuctures." alt="" coords="127,109,266,165"/>
+<map id="bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;" name="bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;">
+<area shape="rect" id="node1" title="Container class for dynamic b&#45;tree bit vector stuctures." alt="" coords="113,109,280,165"/>
 <area shape="rect" id="node2" href="$classbv_1_1node.html" title="Internal node for use with bit vector b&#45;tree structures." alt="" coords="5,5,196,47"/>
 <area shape="rect" id="node3" href="$classbv_1_1leaf.html" title="Simple flat dynamic bit vector for use as a leaf for a dynamic b&#45;tree bit vector." alt="" coords="220,5,365,47"/>
 </map>

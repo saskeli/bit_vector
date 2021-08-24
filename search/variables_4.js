@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['index_5fmask_170',['INDEX_MASK',['../classbv_1_1leaf.html#a2cdd146d046d36c83c77dec7a2ffca46',1,'bv::leaf']]]
+  ['elems_5f_192',['elems_',['../classbv_1_1branchless__scan.html#a82872402c47ed8eab5ec1b02effd89de',1,'bv::branchless_scan']]]
 ];

@@ -1,10 +1,12 @@
 var searchData=
 [
-  ['select_149',['select',['../classbv_1_1bit__vector.html#a16c40fed84f9236d9f4fafd29cdce88c',1,'bv::bit_vector::select()'],['../classbv_1_1leaf.html#aae36d25acec747b82fb12da32c347661',1,'bv::leaf::select()'],['../classbv_1_1node.html#ab48b17e82e1a4a81aa80d6fd38991383',1,'bv::node::select()']]],
-  ['set_150',['set',['../classbv_1_1bit__vector.html#ad694f865744adc813bd38523050eae91',1,'bv::bit_vector::set()'],['../classbv_1_1leaf.html#a19d80e6c67137a30ab9c31d5b3021101',1,'bv::leaf::set()'],['../classbv_1_1node.html#a2bf12280dae2634721d0d8d8206fee63',1,'bv::node::set()']]],
-  ['set_5fbuffer_5findex_151',['set_buffer_index',['../classbv_1_1leaf.html#a7fc207b79bac43eb153e4242257dc475',1,'bv::leaf']]],
-  ['set_5fdata_5fptr_152',['set_data_ptr',['../classbv_1_1leaf.html#ab1e3b8778a102033d5c9c3b419fa997d',1,'bv::leaf']]],
-  ['size_153',['size',['../classbv_1_1bit__vector.html#ae9384d3b5a2dd385f2467d4d68647404',1,'bv::bit_vector::size()'],['../classbv_1_1leaf.html#a80c498945e9cad87668936a6f23c71e8',1,'bv::leaf::size()'],['../classbv_1_1node.html#acbdfb951964fa5b8583178a79671e392',1,'bv::node::size()']]],
-  ['split_5froot_154',['split_root',['../classbv_1_1bit__vector.html#a7aca131f67c823f8555e47a6d9f03198',1,'bv::bit_vector']]],
-  ['sum_155',['sum',['../classbv_1_1bit__vector.html#a3e711dbef3d646af5c75520bab276da7',1,'bv::bit_vector']]]
+  ['rank_162',['rank',['../classbv_1_1bit__vector.html#a42e09275d4a5894bd22bd15fdcf748f3',1,'bv::bit_vector::rank()'],['../classbv_1_1leaf.html#ae7dfb0c74b9839b550055fd93dc8cf3e',1,'bv::leaf::rank(const uint64_t n) const'],['../classbv_1_1leaf.html#a16bb3daf7c3567c924426d74bc69e903',1,'bv::leaf::rank(const uint64_t n, const uint64_t offset) const'],['../classbv_1_1node.html#afe9c306d0befba0e1fca4d6178aaf6f0',1,'bv::node::rank()']]],
+  ['reallocate_5fleaf_163',['reallocate_leaf',['../classbv_1_1malloc__alloc.html#a9d1f2f9530c08603bddf18189c950154',1,'bv::malloc_alloc']]],
+  ['rebalance_5fleaf_164',['rebalance_leaf',['../classbv_1_1node.html#abfa478cf40b029e8e89c99ad4fd62b19',1,'bv::node']]],
+  ['rebalance_5fleaves_5fleft_165',['rebalance_leaves_left',['../classbv_1_1node.html#a2179a509cec5f2cca091d6035472fdf5',1,'bv::node']]],
+  ['rebalance_5fleaves_5fright_166',['rebalance_leaves_right',['../classbv_1_1node.html#afba13b4bd1acc8adf5c69e17cd3e0844',1,'bv::node']]],
+  ['rebalance_5fnode_167',['rebalance_node',['../classbv_1_1node.html#a7404ff49559a0e9d194d8fd74e1b58ab',1,'bv::node']]],
+  ['rebalance_5fnodes_5fleft_168',['rebalance_nodes_left',['../classbv_1_1node.html#a3df575c9efb74baa579888b780327472',1,'bv::node']]],
+  ['rebalance_5fnodes_5fright_169',['rebalance_nodes_right',['../classbv_1_1node.html#ad3bb4e623e06394829bb794586176191',1,'bv::node']]],
+  ['remove_170',['remove',['../classbv_1_1bit__vector.html#af90c658e7247819d6ce5c6c2e122f847',1,'bv::bit_vector::remove()'],['../classbv_1_1branchless__scan.html#a4df7fdfe653f38675f6fbe016bec8ef1',1,'bv::branchless_scan::remove()'],['../classbv_1_1leaf.html#a70cac3c8e3fd04423245e6619d9c5fcc',1,'bv::leaf::remove()'],['../classbv_1_1node.html#ada1ee834ac68d417cfcdfd18b098b98b',1,'bv::node::remove()']]]
 ];

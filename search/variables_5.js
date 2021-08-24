@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['l_5froot_5f_171',['l_root_',['../classbv_1_1bit__vector.html#a9a55b52ea39c46949a94e5ec963c3c5b',1,'bv::bit_vector']]]
+  ['index_5fmask_193',['INDEX_MASK',['../classbv_1_1leaf.html#a2cdd146d046d36c83c77dec7a2ffca46',1,'bv::leaf']]]
 ];

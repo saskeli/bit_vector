@@ -1,12 +1,7 @@
 var searchData=
 [
-  ['rank_140',['rank',['../classbv_1_1bit__vector.html#aa19f5f27141027ab7b889a1bd3f91b71',1,'bv::bit_vector::rank()'],['../classbv_1_1leaf.html#abbffbd888e260cc0ec52ba7821294b09',1,'bv::leaf::rank()'],['../classbv_1_1node.html#afe9c306d0befba0e1fca4d6178aaf6f0',1,'bv::node::rank()']]],
-  ['reallocate_5fleaf_141',['reallocate_leaf',['../classbv_1_1malloc__alloc.html#a9d1f2f9530c08603bddf18189c950154',1,'bv::malloc_alloc']]],
-  ['rebalance_5fleaf_142',['rebalance_leaf',['../classbv_1_1node.html#abfa478cf40b029e8e89c99ad4fd62b19',1,'bv::node']]],
-  ['rebalance_5fleaves_5fleft_143',['rebalance_leaves_left',['../classbv_1_1node.html#a2179a509cec5f2cca091d6035472fdf5',1,'bv::node']]],
-  ['rebalance_5fleaves_5fright_144',['rebalance_leaves_right',['../classbv_1_1node.html#afba13b4bd1acc8adf5c69e17cd3e0844',1,'bv::node']]],
-  ['rebalance_5fnode_145',['rebalance_node',['../classbv_1_1node.html#a7404ff49559a0e9d194d8fd74e1b58ab',1,'bv::node']]],
-  ['rebalance_5fnodes_5fleft_146',['rebalance_nodes_left',['../classbv_1_1node.html#a3df575c9efb74baa579888b780327472',1,'bv::node']]],
-  ['rebalance_5fnodes_5fright_147',['rebalance_nodes_right',['../classbv_1_1node.html#ad3bb4e623e06394829bb794586176191',1,'bv::node']]],
-  ['remove_148',['remove',['../classbv_1_1bit__vector.html#a6ba7ad4c32302bab757fdd0efd48b790',1,'bv::bit_vector::remove()'],['../classbv_1_1leaf.html#a70cac3c8e3fd04423245e6619d9c5fcc',1,'bv::leaf::remove()'],['../classbv_1_1node.html#ada1ee834ac68d417cfcdfd18b098b98b',1,'bv::node::remove()']]]
+  ['p_5fsum_158',['p_sum',['../classbv_1_1leaf.html#a5b695c79739b5c77d8fe808f85dd848a',1,'bv::leaf::p_sum()'],['../classbv_1_1node.html#a3bf18e7fb6cd2f123b4ac9726dacdbee',1,'bv::node::p_sum()']]],
+  ['prepend_159',['prepend',['../classbv_1_1branchless__scan.html#a48f59f804e16c1eb8d5621ef977cf15d',1,'bv::branchless_scan']]],
+  ['print_160',['print',['../classbv_1_1bit__vector.html#ab4d2162a502c79f77869c4bd1aaf2446',1,'bv::bit_vector::print()'],['../classbv_1_1leaf.html#a1f1766922dc590897519b4fb1c851430',1,'bv::leaf::print()'],['../classbv_1_1node.html#a102f163e9ac6b0842c11ce624aa19642',1,'bv::node::print()']]],
+  ['push_5fback_161',['push_back',['../classbv_1_1leaf.html#a3a3203c6025d5272ea52a560720ee23a',1,'bv::leaf']]]
 ];

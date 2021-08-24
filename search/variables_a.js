@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['root_5fis_5fleaf_5f_177',['root_is_leaf_',['../classbv_1_1bit__vector.html#a393d84f94d09be134a6513898b460ba8',1,'bv::bit_vector']]]
+  ['p_5fsum_5f_199',['p_sum_',['../classbv_1_1leaf.html#a70be1cf26ce90465197624b710ebe13a',1,'bv::leaf']]]
 ];
