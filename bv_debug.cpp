@@ -96,48 +96,45 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
 }
 
 int main() {
-    uint64_t b = 16;
+    uint64_t size = 16384;
     alloc* a = new alloc();
-    node* n1 = a->template allocate_node<node>();
-    node* n2 = a->template allocate_node<node>();
-    n1->has_leaves(true);
-    n2->has_leaves(true);
-    for (uint64_t i = 0; i < b - 2; i++) {
-        leaf* l = a->template allocate_leaf<leaf>(3);
-        for (uint64_t j = 0; j < 128; j++) {
-            l->insert(0, j % 2 == 1);
+    node* n = a->template allocate_node<node>();
+    n->has_leaves(true);
+    for (uint8_t i = 0; i < 2; i++) {
+        leaf* l = a->template allocate_leaf<leaf>(size / 64);
+        for (uint64_t i = 0; i < size - 2; i++) {
+            l->insert(i, i % 2);
         }
-        n1->append_child(l);
-    }
-    for (uint64_t i = 0; i < b / 3; i++) {
-        leaf* l = a->template allocate_leaf<leaf>(3);
-        for (uint64_t j = 0; j < 128; j++) {
-            l->insert(0, j % 2 == 1);
-        }
-        n2->append_child(l);
+        n->append_child(l);
     }
 
-    assert((b - 2) * 64 == n1->p_sum());
-    assert((b - 2) * 128 == n1->size());
-    assert(b - 2 == n1->child_count());
-    assert((b / 3) * 64 == n2->p_sum());
-    assert((b / 3) * 128 == n2->size());
-    assert((b / 3) == n2->child_count());
+    assert((size - 2) == (n->p_sum()));
+    assert((size * 2 - 4) == (n->size()));
+    assert((2u) == (n->child_count()));
 
-    n2->transfer_prepend(n1, b / 2);
+    for (uint64_t i = 0; i < 2 * size - 4; i++) {
+        assert((i % 2) == n->at(i));
+    }
+    n->print(false);
+    for (uint64_t i = 0; i < 4; i++) {
+        n->insert(i, i % 2, a);
+    }
+    n->print(false);
 
-    assert((b - 2 - b / 2) * 64 == n1->p_sum());
-    assert((b - 2 - b / 2) * 128 == n1->size());
-    assert(b - 2 - b / 2 == n1->child_count());
-    assert((b / 3 + b / 2) * 64 == n2->p_sum());
-    assert((b / 3 + b / 2) * 128 == n2->size());
-    assert(b / 3 + b / 2 == n2->child_count());
+    assert((size) == (n->p_sum()));
+    assert((size * 2) == (n->size()));
+    assert((3u) == (n->child_count()));
 
-    n1->deallocate(a);
-    n2->deallocate(a);
-    a->deallocate_node(n1);
-    a->deallocate_node(n2);
-    assert(0u == a->live_allocations());
+    for (uint64_t i = 0; i < 2 * size; i++) {
+        if ((i % 2) != n->at(i)) {
+            std::cout << "i = " << i << std::endl;
+            assert((i % 2) == n->at(i));
+        }
+    }
+
+    n->deallocate(a);
+    a->deallocate_node(n);
+    assert((0u) == (a->live_allocations()));
     delete (a);
 
     /*uint64_t a[] = {

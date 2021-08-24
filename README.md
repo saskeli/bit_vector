@@ -16,7 +16,7 @@ See the `Makefile` for more.
 
 Clone the repository recursively (`git clone --recursive https://github.com/saskeli/bit_vector.git`) to ensure availability of [DYNAMIC](https://github.com/xxsds/DYNAMIC).
 
-If a sufficiently new version of g++ is available, you can simply compile the benchmarking binaries with `make bench`.
+If a sufficiently new version of g++ is available, you can simply compile the benchmarking binaries with "`make bench`".
 
 ## Requirements
 
@@ -30,8 +30,14 @@ If you do not want to run tests, the `googletest` submodule is not needed.
 
 If you do not want to generate coverage reports, gcov, lcov and genhtml are not required.
 
+Test can be run with "`make test`" and coverage with "`make cover`"
+
 ### API documentation
+
+Compiled docs are available at https://saskeli.github.io/bit_vector/.
 
 Installing [Doxygen](https://www.doxygen.nl/index.html) from a distribution package manager should suffice.
 
 If you do not need to generate documentation, you do not need doxygen.
+
+Documentation is generated in the "html" subfolder with the "`doxygen`" command.

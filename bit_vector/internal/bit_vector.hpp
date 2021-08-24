@@ -116,8 +116,18 @@ class bit_vector {
         }
     }
 
+    /**
+     * @brief Populate a given query support stucture using `this`
+     *
+     * Traverses the tree and ads encountered leaves to the query support
+     * strucutre.
+     *
+     * @tparam block_size Size of blocks used in the query support structure.
+     * @param qs Query support structure.
+     */
     template <dtype block_size = leaf_size / 3>
-    void generate_query_structure(query_support<dtype, leaf, block_size>* qs) const {
+    void generate_query_structure(
+        query_support<dtype, leaf, block_size>* qs) const {
         static_assert(block_size * 3 <= leaf_size);
         static_assert(block_size >= 2 * 64);
         if (root_is_leaf_) {
@@ -128,10 +138,19 @@ class bit_vector {
         qs->finalize();
     }
 
+    /**
+     * @brief Create and Populate a query support structure using `this`
+     * 
+     * Creates a new support structure and adds leaves in order.
+     * 
+     * @tparam block_size Size of blocks used in the query support structure.
+     * @return A new query support strucutre.
+     */
     template <dtype block_size = leaf_size / 3>
     query_support<dtype, leaf, block_size>* generate_query_structure() const {
         static_assert(block_size * 3 <= leaf_size);
-        query_support<dtype, leaf, block_size>* qs = new query_support<dtype, leaf, block_size>();
+        query_support<dtype, leaf, block_size>* qs =
+            new query_support<dtype, leaf, block_size>();
         generate_query_structure(qs);
         return qs;
     }

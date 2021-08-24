@@ -25,8 +25,8 @@ void node_add_child_test(uint64_t b) {
     auto* counts = nd->child_sizes();
     auto* sums = nd->child_sums();
     for (uint64_t i = 0; i < b; i++) {
-        ASSERT_EQ((i + 1) * 128, (*counts)[i]);
-        ASSERT_EQ((i + 1) * 64, (*sums)[i]);
+        ASSERT_EQ((i + 1) * 128, counts->get(i));
+        ASSERT_EQ((i + 1) * 64, sums->get(i));
     }
 
     nd->deallocate(a);
@@ -56,8 +56,8 @@ void node_add_node_test(uint64_t b) {
     auto* counts = nd->child_sizes();
     auto* sums = nd->child_sums();
     for (uint64_t i = 0; i < b; i++) {
-        ASSERT_EQ((i + 1) * 128, (*counts)[i]);
-        ASSERT_EQ((i + 1) * 64, (*sums)[i]);
+        ASSERT_EQ((i + 1) * 128, counts->get(i));
+        ASSERT_EQ((i + 1) * 64, sums->get(i));
     }
 
     nd->deallocate(a);
@@ -88,15 +88,15 @@ void node_split_leaves_test(uint64_t b) {
     auto* counts = nd->child_sizes();
     auto* sums = nd->child_sums();
     for (uint64_t i = 0; i < b / 2; i++) {
-        ASSERT_EQ((i + 1) * 128, (*counts)[i]);
-        ASSERT_EQ((i + 1) * 64, (*sums)[i]);
+        ASSERT_EQ((i + 1) * 128, counts->get(i));
+        ASSERT_EQ((i + 1) * 64, sums->get(i));
     }
 
     counts = sibling->child_sizes();
     sums = sibling->child_sums();
     for (uint64_t i = 0; i < b / 2; i++) {
-        ASSERT_EQ((i + 1) * 128, (*counts)[i]);
-        ASSERT_EQ((i + 1) * 64, (*sums)[i]);
+        ASSERT_EQ((i + 1) * 128, counts->get(i));
+        ASSERT_EQ((i + 1) * 64, sums->get(i));
     }
 
     sibling->deallocate(a);
@@ -135,15 +135,15 @@ void node_split_nodes_test(uint64_t b) {
     auto* counts = nd->child_sizes();
     auto* sums = nd->child_sums();
     for (uint64_t i = 0; i < b / 2; i++) {
-        ASSERT_EQ((i + 1) * 128 * 2 * (b / 3), (*counts)[i]);
-        ASSERT_EQ((i + 1) * 64 * 2 * (b / 3), (*sums)[i]);
+        ASSERT_EQ((i + 1) * 128 * 2 * (b / 3), counts->get(i));
+        ASSERT_EQ((i + 1) * 64 * 2 * (b / 3), sums->get(i));
     }
 
     counts = sibling->child_sizes();
     sums = sibling->child_sums();
     for (uint64_t i = 0; i < b / 2; i++) {
-        ASSERT_EQ((i + 1) * 128 * 2 * (b / 3), (*counts)[i]);
-        ASSERT_EQ((i + 1) * 64 * 2 * (b / 3), (*sums)[i]);
+        ASSERT_EQ((i + 1) * 128 * 2 * (b / 3), counts->get(i));
+        ASSERT_EQ((i + 1) * 64 * 2 * (b / 3), sums->get(i));
     }
 
     sibling->deallocatealloc>(a);
@@ -188,8 +188,8 @@ void node_append_all_test(uint64_t b) {
     auto* p_sums = n1->child_sums();
     auto* sizes = n1->child_sizes();
     for (uint64_t i = 0; i < 2 * (b / 3); i++) {
-        ASSERT_EQ(i >= (b / 3) ? (i - (b / 3 - 1)) * 64 : 0, (*p_sums)[i]);
-        ASSERT_EQ((i + 1) * 128, (*sizes)[i]);
+        ASSERT_EQ(i >= (b / 3) ? (i - (b / 3 - 1)) * 64 : 0, p_sums->get(i));
+        ASSERT_EQ((i + 1) * 128, sizes->get(i));
     }
 
     n1->deallocate(a);

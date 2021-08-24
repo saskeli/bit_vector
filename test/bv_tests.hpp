@@ -190,6 +190,9 @@ void bv_remove_node_node_test(uint64_t size) {
     ASSERT_EQ(size * 70, bv->size());
     ASSERT_EQ((size * 70) / 2, bv->sum());
     ASSERT_LE(70u, a->live_allocations());
+    for (uint64_t i = 0; i < size * 70; i++) {
+        ASSERT_EQ(bv->at(i), i % 2) << "i = " << i;
+    }
 
     for (uint64_t i = 0; i < size * 64; i++) {
         bv->remove(0);
@@ -197,7 +200,7 @@ void bv_remove_node_node_test(uint64_t size) {
 
     ASSERT_EQ(size * 6, bv->size());
     for (uint64_t i = 0; i < size * 6; i++) {
-        ASSERT_EQ(i % 2, bv->at(i));
+        ASSERT_EQ(i % 2, bv->at(i)) << "i = " << i;
     }
     ASSERT_EQ(size * 3, bv->sum());
 

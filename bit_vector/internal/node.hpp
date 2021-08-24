@@ -335,17 +335,9 @@ class node {
      */
     template <class child>
     void append_child(child* new_child) {
-        if (child_count_ == 0) {
-            child_sizes_.set(0, new_child->size());
-            child_sums_.set(0, new_child->p_sum());
-            [[unlikely]] children_[0] = new_child;
-        } else {
-            child_sizes_.set(child_count_, child_sizes_[child_count_ - 1] +
-                                               new_child->size());
-            child_sums_.set(child_count_,
-                            child_sums_[child_count_ - 1] + new_child->p_sum());
-            children_[child_count_] = new_child;
-        }
+        child_sizes_.append(child_count_, new_child->size());
+        child_sums_.append(child_count_, new_child->p_sum());
+        children_[child_count_] = new_child;
         child_count_++;
     }
 
@@ -730,24 +722,13 @@ class node {
             }
             // Update cumulative sizes and sums.
             for (uint8_t i = child_count_; i > index; i--) {
-                child_sizes_.set(i, child_sizes_.get(i - 1));
-                child_sums_.set(i, child_sums_.get(i - 1));
                 children_[i] = children_[i - 1];
             }
-            if (index == 1) {
-                child_sizes_.set(0, a_child->size());
-                [[unlikely]] child_sums_.set(0, a_child->p_sum());
-            } else {
-                child_sizes_.set(index - 1,
-                                 child_sizes_.get(index - 2) + a_child->size());
-                child_sums_.set(index - 1,
-                                child_sums_.get(index - 2) + a_child->p_sum());
-            }
-            child_sizes_.set(index,
-                             child_sizes_.get(index - 1) + new_child->size());
-            child_sums_.set(index,
-                            child_sums_.get(index - 1) + new_child->p_sum());
             children_[index] = new_child;
+            child_sizes_.insert(index, child_count_, a_child->size(),
+                                new_child->size());
+            child_sums_.insert(index, child_count_, a_child->p_sum(),
+                               new_child->p_sum());
             [[unlikely]] child_count_++;
         } else if (r_cap > l_cap) {
             // Right sibling has more space than the left sibling. Move elements
@@ -890,21 +871,12 @@ class node {
             new_child->transfer_append(b_node, branches / 3);
             new_child->transfer_prepend(a_node, branches / 3);
             for (size_t i = child_count_; i > index; i--) {
-                child_sizes_.set(i, child_sizes_.get(i - 1));
-                child_sums_.set(i, child_sums_.get(i - 1));
                 children_[i] = children_[i - 1];
             }
-            if (index == 1) {
-                child_sizes_.set(0, a_node->size());
-                [[unlikely]] child_sums_.set(0, a_node->p_sum());
-            } else {
-                child_sizes_.set(index - 2,
-                    child_sizes_.get(index - 2) + a_node->size());
-                child_sums_.set(index - 1,
-                    child_sums_.get(index - 2) + a_node->p_sum());
-            }
-            child_sizes_.set(index, child_sizes_.get(index - 1) + new_child->size());
-            child_sums_.set(index, child_sums_.get(index - 1) + new_child->p_sum());
+            child_sizes_.insert(index, child_count_, a_node->size(),
+                                new_child->size());
+            child_sums_.insert(index, child_count_, a_node->p_sum(),
+                               new_child->p_sum());
             children_[index] = new_child;
             child_count_++;
             [[unlikely]] return;
@@ -925,8 +897,10 @@ class node {
             child_sizes_.set(0, a_node->size());
             [[unlikely]] child_sums_.set(0, a_node->p_sum());
         } else {
-            child_sizes_.set(index, child_sizes_.get(index - 1) + a_node->size());
-            child_sums_.set(index, child_sums_.get(index - 1) + a_node->p_sum());
+            child_sizes_.set(index,
+                             child_sizes_.get(index - 1) + a_node->size());
+            child_sums_.set(index,
+                            child_sums_.get(index - 1) + a_node->p_sum());
         }
     }
 
@@ -959,12 +933,10 @@ class node {
                 reinterpret_cast<node*>(children_[child_index]);
         }
         if (child_index != 0) {
-            [[likely]] index -= child_sizes_[child_index - 1];
+            [[likely]] index -= child_sizes_.get(child_index - 1);
         }
-        for (uint8_t i = child_index; i < child_count_; i++) {
-            child_sizes_[i]++;
-            child_sums_[i] += value;
-        }
+        child_sizes_.increment(child_index, child_count_, 1u);
+        child_sums_.increment(child_index, child_count_, value);
         child->insert(index, value, alloc);
     }
 
@@ -996,8 +968,8 @@ class node {
             children_[0] = a;
         }
         a->transfer_append(b, addition);
-        child_sizes_[0] = a->size();
-        child_sums_[0] = a->p_sum();
+        child_sizes_.set(0, a->size());
+        child_sums_.set(0, a->p_sum());
     }
 
     /**
@@ -1028,11 +1000,11 @@ class node {
         }
         b->transfer_prepend(a, addition);
         if (idx == 0) {
-            child_sizes_[0] = a->size();
-            [[unlikely]] child_sums_[0] = a->p_sum();
+            child_sizes_.set(0, a->size());
+            [[unlikely]] child_sums_.set(0, a->p_sum());
         } else {
-            child_sizes_[idx] = child_sizes_[idx - 1] + a->size();
-            child_sums_[idx] = child_sums_[idx - 1] + a->p_sum();
+            child_sizes_.set(idx, child_sizes_.get(idx - 1) + a->size());
+            child_sums_.set(idx, child_sums_.get(idx - 1) + a->p_sum());
         }
     }
 
@@ -1064,13 +1036,11 @@ class node {
         a->append_all(b);
         alloc->deallocate_leaf(b);
         for (uint8_t i = idx; i < child_count_ - 1; i++) {
-            child_sums_[i] = child_sums_[i + 1];
-            child_sizes_[i] = child_sizes_[i + 1];
             children_[i] = children_[i + 1];
         }
         children_[idx] = a;
-        child_sums_[child_count_ - 1] = (~dtype(0)) >> 1;
-        child_sizes_[child_count_ - 1] = (~dtype(0)) >> 1;
+        child_sizes_.remove(idx, child_count_);
+        child_sums_.remove(idx, child_count_);
         child_count_--;
     }
 
@@ -1115,13 +1085,11 @@ class node {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
         }
         if (child_index != 0) {
-            [[likely]] index -= child_sizes_[child_index - 1];
+            [[likely]] index -= child_sizes_.get(child_index - 1);
         }
         bool value = child->remove(index);
-        for (uint8_t i = child_index; i < child_count_; i++) {
-            child_sizes_[i]--;
-            child_sums_[i] -= value;
-        }
+        child_sizes_.increment(child_index, child_count_, -1);
+        child_sums_.increment(child_index, child_count_, -int(value));
         return value;
     }
 
@@ -1143,8 +1111,8 @@ class node {
      */
     void rebalance_nodes_right(node* a, node* b, uint8_t idx) {
         a->transfer_append(b, (b->child_count() - branches / 3) / 2);
-        child_sizes_[idx] = a->size();
-        [[unlikely]] child_sums_[idx] = a->p_sum();
+        child_sizes_.set(idx, a->size());
+        [[unlikely]] child_sums_.set(idx, a->p_sum());
     }
 
     /**
@@ -1164,11 +1132,11 @@ class node {
     void rebalance_nodes_left(node* a, node* b, uint8_t idx) {
         b->transfer_prepend(a, (a->child_count() - branches / 3) / 2);
         if (idx == 0) {
-            child_sizes_[0] = a->size();
-            [[unlikely]] child_sums_[0] = a->p_sum();
+            child_sizes_.set(0, a->size());
+            [[unlikely]] child_sums_.set(0, a->p_sum());
         } else {
-            child_sizes_[idx] = child_sizes_[idx - 1] + a->size();
-            child_sums_[idx] = child_sums_[idx - 1] + a->p_sum();
+            child_sizes_.set(idx, child_sizes_.get(idx - 1) + a->size());
+            child_sums_.set(idx, child_sums_.get(idx - 1) + a->p_sum());
         }
     }
 
@@ -1192,13 +1160,11 @@ class node {
         a->append_all(b);
         alloc->deallocate_node(b);
         for (uint8_t i = idx; i < child_count_ - 1; i++) {
-            child_sums_[i] = child_sums_[i + 1];
-            child_sizes_[i] = child_sizes_[i + 1];
             children_[i] = children_[i + 1];
         }
         children_[idx] = a;
-        child_sums_[child_count_ - 1] = (~dtype(0)) >> 1;
-        child_sizes_[child_count_ - 1] = (~dtype(0)) >> 1;
+        child_sizes_.remove(idx, child_count_);
+        child_sums_.remove(idx, child_count_);
         child_count_--;
     }
 
@@ -1242,13 +1208,11 @@ class node {
                 reinterpret_cast<node*>(children_[child_index]);
         }
         if (child_index != 0) {
-            [[likely]] index -= child_sizes_[child_index - 1];
+            [[likely]] index -= child_sizes_.get(child_index - 1);
         }
         bool value = child->remove(index, alloc);
-        for (uint8_t i = child_index; i < child_count_; i++) {
-            child_sizes_[i]--;
-            child_sums_[i] -= value;
-        }
+        child_sizes_.increment(child_index, child_count_, -1);
+        child_sums_.increment(child_index, child_count_, -int(value));
         return value;
     }
 };

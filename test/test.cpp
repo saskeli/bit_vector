@@ -91,6 +91,12 @@ TEST(SimpleBranch, Prepending) { branching_prepend_n_test<branch, BRANCH>(); }
 
 TEST(SimpleBranch, TransferPrepend) { branching_transfer_prepend_n_test<branch, BRANCH>(); }
 
+TEST(SimpleBranch, Insert) { branching_insert_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, Remove) { branch_remove_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, AppendElem) { branch_append_elem_test<branch, BRANCH>(); }
+
 // Node tests
 TEST(SimpleNode, AddLeaf) { node_add_child_test<nd, sl, ma>(BRANCH); }
 

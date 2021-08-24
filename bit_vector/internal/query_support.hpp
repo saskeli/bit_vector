@@ -8,6 +8,9 @@
 
 namespace bv {
 
+/**
+ * @brief Block storage used by the query support structure.
+ */
 template <class dtype, class leaf_type>
 struct r_elem {
     dtype p_size;
@@ -25,6 +28,15 @@ struct r_elem {
     }
 };
 
+/**
+ * @brief Support strucutre for bv::bit_vector to enable fast queries.
+ *
+ * Precalculates results for rank, select and access queries along with leaf
+ * pointers to enable faster queries while the bit vector remains unmodified.
+ * 
+ * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
+ * @tparam leaf_type Leaf type used by the relevant bv::bit_vector.
+ */
 template <class dtype, class leaf_type, dtype block_size>
 class query_support {
    protected:
@@ -55,7 +67,8 @@ class query_support {
             [[unlikely]] (void(0));
         } else {
             for (size_t i = 0; i < elems_.size(); i++) {
-                elems_[i].select_index = s_select(1 + (i * sum_) / elems_.size());
+                elems_[i].select_index =
+                    s_select(1 + (i * sum_) / elems_.size());
             }
         }
     }
@@ -91,11 +104,13 @@ class query_support {
             [[unlikely]] return elems_[i - 1].select_index;
         }
         dtype idx = elems_.size() * i / (sum_ + 1);
-        if (idx == elems_.size()) [[unlikely]] idx--;
+        if (idx == elems_.size()) [[unlikely]]
+            idx--;
         dtype a_idx = elems_[idx].select_index;
         dtype b_idx = a_idx == elems_.size() - 1 ? elems_.size() - 1
                                                  : elems_[idx + 1].select_index;
-        if (b_idx - a_idx > 1) [[unlikely]] return dumb_select(i);
+        if (b_idx - a_idx > 1) [[unlikely]]
+            return dumb_select(i);
         r_elem<dtype, leaf_type> e = elems_[a_idx];
         if (e.p_sum + e.leaf->p_sum() < i) {
             [[unlikely]] e = elems_[a_idx + 1];
