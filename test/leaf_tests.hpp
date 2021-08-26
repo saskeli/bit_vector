@@ -71,7 +71,8 @@ void leaf_append_test(uint8_t buffer_size) {
     for (uint64_t i = l->size(); i < 4 * 64; i++) {
         l->insert(i, i % 2);
     }
-    ASSERT_TRUE(l->need_realloc()) << l->size() << " < " << (l->capacity() * 64);
+    ASSERT_TRUE(l->need_realloc())
+        << l->size() << " < " << (l->capacity() * 64);
     for (uint64_t i = 0; i < 4 * 64; i++) {
         ASSERT_EQ(i % 2, l->at(i));
     }
@@ -173,8 +174,10 @@ void leaf_rank_offset_test(uint64_t n) {
     uint64_t block_start = 0;
     uint64_t prefix_ones = 0;
     while (block_start < n) {
-        for (uint64_t i = block_start + 1; i < min(block_start + block_size, n); i++) {
-            ASSERT_EQ(prefix_ones + l->rank(i, block_start), l->rank(i)) << "Rank(" << i << ") failed";
+        for (uint64_t i = block_start + 1; i < min(block_start + block_size, n);
+             i++) {
+            ASSERT_EQ(prefix_ones + l->rank(i, block_start), l->rank(i))
+                << "Rank(" << i << ") failed";
         }
         block_start += block_size;
         prefix_ones = l->rank(block_start);
@@ -201,6 +204,31 @@ void leaf_select_test(uint64_t n) {
         uint64_t ex = (i - is_first) * 2 + is_first - 1;
         uint64_t val = l->select(i);
         ASSERT_EQ(val, ex) << "Select(" << i << ") should be " << ex;
+    }
+
+    allocator->template deallocate_leaf<leaf>(l);
+    delete allocator;
+}
+
+template <class leaf, class alloc>
+void leaf_select_offset_test(uint64_t n) {
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>(8);
+    for (uint64_t i = 0; i < n; i++) {
+        l->insert(0, bool(i & uint64_t(1)));
+        if (l->need_realloc()) {
+            uint64_t cap = l->capacity();
+            l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
+        }
+    }
+
+    uint64_t lim = l->p_sum();
+    for (uint64_t i = 1; i < lim; i += 50) {
+        for (uint64_t j = i + 1; j <= lim; j++) {
+            uint64_t i_pos = l->select(i);
+            ASSERT_EQ(l->select(j), l->select(j, i_pos, i))
+                << "i = " << i << ", j = " << j;
+        }
     }
 
     allocator->template deallocate_leaf<leaf>(l);

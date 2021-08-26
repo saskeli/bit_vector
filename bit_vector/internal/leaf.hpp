@@ -488,6 +488,126 @@ class leaf {
             pop -= at(pos);
             pos--;
         }
+        //std::cout << "simple select: " << pos + 1 << std::endl;
+        return ++pos;
+    }
+
+    /**
+     * @brief Index of the x<sup>th</sup> 1-bit in the data structure starting
+     * at `pos` with `pop`
+     *
+     * @param x Selection target.
+     * @param pos Start position of Select calculation.
+     * @param pop Start population as `pos`
+     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) = x\f$.
+     */
+    uint32_t select(const uint32_t x, uint32_t pos, uint32_t pop) const {
+        //std::cout << "select(" << x << ", " << pos << ", " << pop << ")" << std::endl;
+        //pos++;
+        uint8_t current_buffer = 0;
+        int8_t a_pos_offset = 0;
+        // Scroll the buffer to the start position and calculate offset.
+        if constexpr (buffer_size != 0) {
+            while (current_buffer < buffer_count_) {
+                uint32_t b_index = buffer_index(buffer_[current_buffer]);
+                if (b_index < pos) {
+                    if (buffer_is_insertion(buffer_[current_buffer])) {
+                        a_pos_offset--;
+                    } else {
+                        a_pos_offset++;
+                    }
+                    [[unlikely]] current_buffer++;
+                } else {
+                    [[likely]] break;
+                }
+            }
+        }
+
+        // Step to the next 64-bit word boundary
+        uint64_t pop_idx = (pos + a_pos_offset) / WORD_BITS;
+        uint64_t offset = (pos + a_pos_offset) % WORD_BITS;
+#ifdef DEBUG
+        if (pop_idx >= capacity_) {
+            std::cerr << "Invalid select query apparently\n"
+                      << "x = " << x << ", pos = " << pos 
+                      << ", pop = " << pop 
+                      << "\npop_idx = " << pop_idx
+                      << ", capacity_ = " << capacity_ 
+                      << std::endl;
+            assert(pop_idx < capacity_);
+        }
+#endif
+        if (offset != 0) {
+            pop += __builtin_popcountll(data_[pop_idx++] >> offset);
+            pos += 64 - offset;
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                    uint64_t b_index = buffer_index(buffer_[b]);
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer_[b])) {
+                            pop += buffer_value(buffer_[b]);
+                            pos++;
+                            a_pos_offset--;
+                        } else {
+                            pop -=
+                                (data_[(b_index + a_pos_offset) / WORD_BITS] >>
+                                 ((b_index + a_pos_offset) % WORD_BITS)) &
+                                MASK;
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        [[unlikely]] current_buffer++;
+                    } else {
+                        [[likely]] break;
+                    }
+                    [[unlikely]] (void(0));
+                }
+            }
+        }
+
+        // Step one 64-bit word at a time considering the buffer until pop >= x
+        for (uint64_t j = pop_idx; j < capacity_; j++) {
+            pop += __builtin_popcountll(data_[j]);
+            pos += 64;
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                    uint64_t b_index = buffer_index(buffer_[b]);
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer_[b])) {
+                            pop += buffer_value(buffer_[b]);
+                            pos++;
+                            a_pos_offset--;
+                        } else {
+                            pop -=
+                                (data_[(b_index + a_pos_offset) / WORD_BITS] >>
+                                 ((b_index + a_pos_offset) % WORD_BITS)) &
+                                MASK;
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        [[unlikely]] current_buffer++;
+                    } else {
+                        [[likely]] break;
+                    }
+                    [[unlikely]] (void(0));
+                }
+            }
+            if (pop >= x) [[unlikely]]
+                break;
+        }
+
+        // Make sure we have not overshot the logical end of the structure.
+        pos = size_ < pos ? size_ : pos;
+
+        // Decrement one bit at a time until we can't anymore without going
+        // under x.
+        pos--;
+        while (pop >= x && pos < capacity_ * 64) {
+            pop -= at(pos);
+            pos--;
+        }
+        //std::cout << "block select: " << pos + 1 << std::endl;
         return ++pos;
     }
 

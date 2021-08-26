@@ -1,18 +1,18 @@
 #include "../bit_vector/bv.hpp"
 #include "../bit_vector/internal/allocator.hpp"
 #include "../bit_vector/internal/bit_vector.hpp"
-#include "../bit_vector/internal/leaf.hpp"
 #include "../bit_vector/internal/branch_selection.hpp"
+#include "../bit_vector/internal/leaf.hpp"
 #include "../bit_vector/internal/node.hpp"
 #include "../bit_vector/internal/query_support.hpp"
 #include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
+#include "branch_selection_test.hpp"
 #include "bv_tests.hpp"
 #include "leaf_tests.hpp"
-#include "branch_selection_test.hpp"
 #include "node_tests.hpp"
-#include "run_tests.hpp"
 #include "query_support_test.hpp"
+#include "run_tests.hpp"
 
 #define SIZE 16384
 #define BRANCH 16
@@ -26,7 +26,7 @@ typedef leaf<0> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef branchless_scan<uint64_t, BRANCH> branch;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
-typedef query_support<uint64_t, sl, SIZE / 3> qs;
+typedef query_support<uint64_t, sl, 2048> qs;
 
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
@@ -44,6 +44,8 @@ TEST(SimpleLeaf, RankBlock) { leaf_rank_offset_test<sl, ma>(10000); }
 TEST(SimpleLeaf, Select) { leaf_select_test<sl, ma>(10000); }
 
 TEST(SimpleLeaf, SelectOffset) { leaf_select_test<sl, ma>(11); }
+
+TEST(SimpleLeaf, SelectBlock) { leaf_select_offset_test<sl, ma>(3000); }
 
 TEST(SimpleLeaf, Set) { leaf_set_test<sl, ma>(10000); }
 
@@ -81,15 +83,21 @@ TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }
 
 TEST(SimpleBranch, Increment) { branching_increment_test<branch, BRANCH>(); }
 
-TEST(SimpleBranch, ClearFirst) { branching_delete_first_n_test<branch, BRANCH>(); }
+TEST(SimpleBranch, ClearFirst) {
+    branching_delete_first_n_test<branch, BRANCH>();
+}
 
 TEST(SimpleBranch, Appending) { branching_append_n_test<branch, BRANCH>(); }
 
-TEST(SimpleBranch, ClearLast) { branching_delete_last_n_test<branch, BRANCH>(); }
+TEST(SimpleBranch, ClearLast) {
+    branching_delete_last_n_test<branch, BRANCH>();
+}
 
 TEST(SimpleBranch, Prepending) { branching_prepend_n_test<branch, BRANCH>(); }
 
-TEST(SimpleBranch, TransferPrepend) { branching_transfer_prepend_n_test<branch, BRANCH>(); }
+TEST(SimpleBranch, TransferPrepend) {
+    branching_transfer_prepend_n_test<branch, BRANCH>();
+}
 
 TEST(SimpleBranch, Insert) { branching_insert_test<branch, BRANCH>(); }
 
@@ -162,7 +170,9 @@ TEST(SimpleNode, InsertLeafRebalance) {
 
 TEST(SimpleNode, InsertNode) { node_insert_node_test<nd, sl, ma>(); }
 
-TEST(SimpleNode, InsertNodeSplit) { node_insert_node_split_test<nd, sl, ma>(BRANCH); }
+TEST(SimpleNode, InsertNodeSplit) {
+    node_insert_node_split_test<nd, sl, ma>(BRANCH);
+}
 
 TEST(SimpleNode, RemoveLeafSimple) {
     node_remove_leaf_simple_test<nd, sl, ma>(SIZE);
@@ -231,9 +241,7 @@ TEST(SimpleBV, RemoveLeaf) { bv_remove_leaf_test<ma, test_bv>(SIZE); }
 
 TEST(SimpleBV, RemoveNode) { bv_remove_node_test<ma, test_bv>(SIZE); }
 
-TEST(SimpleBV, RemoveNodeNode) {
-    bv_remove_node_node_test<ma, test_bv>(SIZE);
-}
+TEST(SimpleBV, RemoveNodeNode) { bv_remove_node_node_test<ma, test_bv>(SIZE); }
 
 TEST(SimpleBV, SetLeaf) { bv_set_leaf_test<ma, test_bv>(SIZE); }
 
@@ -248,29 +256,17 @@ TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE); }
 TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
 
 // Query support structure tests
-TEST(QuerySupport, SingleAccess) {
-    qs_access_single_leaf<qs, sl, ma>(SIZE);
-}
+TEST(QuerySupport, SingleAccess) { qs_access_single_leaf<qs, sl, ma>(SIZE); }
 
-TEST(QuerySupport, SingleRank) {
-    qs_rank_single_leaf<qs, sl, ma>(SIZE);
-}
+TEST(QuerySupport, SingleRank) { qs_rank_single_leaf<qs, sl, ma>(SIZE); }
 
-TEST(QuerySupport, SingleSelect) {
-    qs_select_single_leaf<qs, sl, ma>(SIZE);
-}
+TEST(QuerySupport, SingleSelect) { qs_select_single_leaf<qs, sl, ma>(SIZE); }
 
-TEST(QuerySupport, DoubleAccess) {
-    qs_access_two_leaves<qs, sl, nd, ma>(SIZE);
-}
+TEST(QuerySupport, DoubleAccess) { qs_access_two_leaves<qs, sl, nd, ma>(SIZE); }
 
-TEST(QuerySupport, DoubleRank) {
-    qs_rank_two_leaves<qs, sl, nd, ma>(SIZE);
-}
+TEST(QuerySupport, DoubleRank) { qs_rank_two_leaves<qs, sl, nd, ma>(SIZE); }
 
-TEST(QuerySupport, DoubleSelect) {
-    qs_select_two_leaves<qs, sl, nd, ma>(SIZE);
-}
+TEST(QuerySupport, DoubleSelect) { qs_select_two_leaves<qs, sl, nd, ma>(SIZE); }
 
 TEST(QuerySupport, DoubleSelect2) {
     qs_select_two_leaves_two<qs, sl, nd, ma>(SIZE);
@@ -344,4 +340,22 @@ TEST(Run, D) {
         332, 2,   305, 0,   0,   254, 1,   0,   251, 1,   1,   236, 1,   83,
         2,   75,  0,   0,   133, 1,   2,   306, 1,   1,   23,  0,   10,  1};
     run_test<simple_bv<8, 256, 8>, dyn::suc_bv>(a, 378);
+}
+
+TEST(RunSup, A) {
+    uint64_t a[] = {326};
+    run_sup_test<bv::bv>(a, 1);
+}
+
+TEST(RunSup, B) {
+    uint64_t a[] = {83736};
+    run_sup_test<bv::bv>(a, 1);
+}
+
+TEST(RunSup, C) {
+    uint64_t a[] = {16387, 2,     7184, 1,    1,    9890,  1,    10662,
+                    1,     11795, 1,    7332, 0,    14649, 1,    2,
+                    14480, 1,     2,    6282, 0,    2,     4190, 1,
+                    2,     16170, 0,    1,    12969};
+    run_sup_test<bv::bv>(a, 29);
 }

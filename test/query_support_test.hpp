@@ -55,7 +55,7 @@ void qs_select_single_leaf(uint64_t size) {
     q->append(l);
     q->finalize();
     for (size_t i = 0; i < size / 2; i++) {
-        ASSERT_EQ(q->select(i + 1), l->select(i + 1));
+        ASSERT_EQ(q->select(i + 1), l->select(i + 1)) << "i = " << i;
     }
 
     a->deallocate_leaf(l);

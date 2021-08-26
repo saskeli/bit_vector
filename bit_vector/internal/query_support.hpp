@@ -29,11 +29,19 @@ struct r_elem {
 };
 
 /**
- * @brief Support strucutre for bv::bit_vector to enable fast queries.
+ * @brief Support structure for bv::bit_vector to enable fast queries.
  *
  * Precalculates results for rank, select and access queries along with leaf
  * pointers to enable faster queries while the bit vector remains unmodified.
- * 
+ *
+ * Leaves should be appended in natural order. After all leaves have been added,
+ * the structure should be finalized to ensure properly precalculated select
+ * blocks.
+ *
+ * If the underlying structure changes, querying the support structure may lead
+ * to undefined behaviour. The support structure should be discarded
+ * (`delete(q)`) as it becomes outdated.
+ *
  * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
  * @tparam leaf_type Leaf type used by the relevant bv::bit_vector.
  */
@@ -46,6 +54,15 @@ class query_support {
         std::vector<r_elem<dtype, leaf_type>>();
 
    public:
+    /**
+     * @brief Add leaf reference to the support structure.
+     *
+     * Block results are calculated and stored for \f$\approx
+     * \frac{\mathrm{leaf->size()}}{\mathrm{block\_size}}\f$ positions for the
+     * leaf.
+     *
+     * @param leaf Pointer to the leaf to add.
+     */
     void append(leaf_type* leaf) {
         dtype i = elems_.size();
         dtype a_size = leaf->size();
@@ -59,6 +76,15 @@ class query_support {
         sum_ += leaf->p_sum();
     }
 
+    /**
+     * @brief Prepare the structure for querying
+     *
+     * Precalculates and stores results for some select queries to speed up
+     * subsequent select queries.
+     *
+     * For sparse bit vectors where p_sum < size / block_size, locations for all
+     * 1-bits are precalculated, to allow constant time select queries.
+     */
     void finalize() {
         if (sum_ <= elems_.size()) {
             for (size_t i = 0; i < sum_; i++) {
@@ -73,9 +99,28 @@ class query_support {
         }
     }
 
+    /**
+     * @brief Number of bits stored in the bit vector.
+     *
+     * @return Number of bits stored in the bit vector.
+     */
     dtype size() const { return size_; }
+    /**
+     * @brief Number of 1-bits stored in the bit vector.
+     *
+     * @return Number of 1-bits stored in the bit vector.
+     */
     dtype p_sum() const { return sum_; }
 
+    /**
+     * @brief Return value of bit at index \f$i\f$ in the underlying bit vector.
+     *
+     * Uses precalculated partial block sums to locate the leaf containing the
+     * \f$i\f$<sup>th</sup> bit in constant time.
+     *
+     * @param i Index to query.
+     * @return Value of bit at index \f$i\f$.
+     */
     bool at(dtype i) const {
         dtype idx = i / block_size;
         r_elem<dtype, leaf_type> e = elems_[idx];
@@ -85,6 +130,19 @@ class query_support {
         return e.leaf->at(i - e.p_size);
     }
 
+    /**
+     * @brief Number of 1-bits up to position \f$i\f$ in the underlying bit
+     * vector.
+     *
+     * Precalculated results are used to locate the the leaf containing the
+     * \f$i\f$<sup>th</sup> bit in constant time. at most
+     * \f$\mathrm{block\_size}\f$ are read from the leaf, to calculate the
+     * result for the rank query based on precalculated block results.
+     *
+     * @param i Number of elements to include in the "summation".
+     *
+     * @return \f$\sum_{i = 0}^{i - 1} \mathrm{bv}[i]\f$.
+     */
     dtype rank(dtype i) const {
         dtype idx = block_size;
         idx = i / idx;
@@ -97,6 +155,26 @@ class query_support {
         return e.p_sum + e.internal_offset + e.leaf->rank(i - e.p_size, offs);
     }
 
+    /**
+     * @brief Index of the \f$i\f$<sup>th</sup> 1-bit in the data structure.
+     *
+     * For fairly dense approximately uniformly distributed bit vectors, the
+     * block containing the \f$i\f$<sup>th</sup> 1-bit can be located in
+     * constant time. For less dense or non-uniformly distributed bit vectors
+     * the block containing the \f$i\f$<sup>th</sup> 1-bit can be located either
+     * in constant time or logarithmic time depending on the local bit
+     * distribution in the vicinity of the \f$i\f$<sup>th</sup> bit.
+     *
+     * After the correct block is located, at most `block_size` bits are scanned
+     * for a single leaf.
+     *
+     * For sparse bit vectors where p_sum < size / block_size, locations for all
+     * 1-bits have been precalculated, allowing constant time select queries.
+     *
+     * @param i Selection target.
+     * @return \f$\underset{j \in [0..n)}{\mathrm{arg min}}\left(\sum_{k = 0}^j
+     * \mathrm{bv}[k]\right) =  i\f$.
+     */
     dtype select(dtype i) const {
         if (i == 0) [[unlikely]]
             return -1;
@@ -104,26 +182,48 @@ class query_support {
             [[unlikely]] return elems_[i - 1].select_index;
         }
         dtype idx = elems_.size() * i / (sum_ + 1);
-        if (idx == elems_.size()) [[unlikely]]
-            idx--;
+        if (idx == elems_.size()) {
+            [[unlikely]] idx--;
+        }
         dtype a_idx = elems_[idx].select_index;
-        dtype b_idx = a_idx == elems_.size() - 1 ? elems_.size() - 1
-                                                 : elems_[idx + 1].select_index;
-        if (b_idx - a_idx > 1) [[unlikely]]
-            return dumb_select(i);
+        dtype b_idx =
+            idx < elems_.size() - 1 ? elems_[idx + 1].select_index : a_idx;
+        if (b_idx - a_idx > 1) {
+            [[unlikely]] return dumb_select(i);
+        }
         r_elem<dtype, leaf_type> e = elems_[a_idx];
         if (e.p_sum + e.leaf->p_sum() < i) {
-            [[unlikely]] e = elems_[a_idx + 1];
+            e = elems_[a_idx + 1];
+            [[unlikely]] return e.p_size + e.leaf->select(i - e.p_sum);
         }
-        return e.p_size + e.leaf->select(i - e.p_sum);
+        dtype s_pos = a_idx * block_size - e.p_size;
+        if (s_pos == 0) {
+            [[unlikely]] return e.p_size + e.leaf->select(i - e.p_sum);
+        }
+        return e.p_size + e.leaf->select(i - e.p_sum,
+                                         a_idx * block_size - e.p_size,
+                                         e.internal_offset);
     }
 
+    /**
+     * @brief Number of bits allocated for the support structure.
+     *
+     * The space allocated for the leaves is not included in the total as those
+     * are accounted for by the bv.bit_size().
+     *
+     * @return Number of bits allocated for the support structure.
+     */
     uint64_t bit_size() const {
         return (sizeof(query_support) +
                 elems_.capacity() * sizeof(r_elem<dtype, leaf_type>)) *
                8;
     }
 
+    /**
+     * @brief Outputs json representation of the support structure.
+     *
+     * @param internal_only Should raw leaf data be omitted from the output.
+     */
     void print(bool internal_only) const {
         std::cout << "{\n\"type\": \"rank_support\",\n"
                   << "\"size\": " << size_ << ",\n"
@@ -173,6 +273,15 @@ class query_support {
     }
 
    protected:
+    /**
+     * @brief Locate the block containing the \f$i\f$<sup>th</sup> 1-bit.
+     *
+     * Used for building the select support index for dense bit vectors.
+     *
+     * @param i Selection target.
+     *
+     * @return The index of the block containing the \f$i\f$<sup>th</sup> 1-bit.
+     */
     dtype s_select(dtype i) const {
         dtype idx = 0;
         dtype b = elems_.size() - 1;
@@ -192,6 +301,17 @@ class query_support {
         return idx;
     }
 
+    /**
+     * @brief Index of the \f$i\f$<sup>th</sup> 1-bit in the data structure.
+     *
+     * Used for sparse or non-uniformly distributed bit vectors where direct
+     * indexing fails to calculate the correct target block in constant time.
+     *
+     * @param i Selection target.
+     *
+     * @return @return \f$\underset{j \in [0..n)}{\mathrm{arg min}}\left(\sum_{k
+     * = 0}^j \mathrm{bv}[k]\right) =  i\f$.
+     */
     dtype dumb_select(dtype i) const {
         dtype idx = 0;
         dtype b = elems_.size() - 1;

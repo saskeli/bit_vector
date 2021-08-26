@@ -13,6 +13,83 @@ typedef bv::malloc_alloc alloc;
 typedef bv::leaf<16> leaf;
 typedef bv::node<leaf, uint64_t, 16384, 16> node;
 typedef bv::simple_bv<8, 16384, 64> bit_vector;
+typedef bv::query_support<uint64_t, leaf, 2048> qs;
+
+template<class bit_vector>
+void check_sup(bit_vector* bv, uint64_t size) {
+    auto* q = bv->generate_query_structure();
+    assert(q->size() == size);
+    assert(bv->size() == size);
+    bv->print(true);
+    std::cout << std::endl;
+    q->print(true);
+    std::cout << std::endl;
+
+    for (uint64_t i = 0; i < size; i++) {
+        assert(q->at(i) == bv->at(i));
+        assert(q->rank(i) == bv->rank(i));
+    }
+
+    uint64_t ones = bv->rank(size);
+    assert(q->rank(size) == ones);
+
+    for (uint64_t i = 1; i <= ones; i++) {
+        uint64_t ex = bv->select(i);
+        uint64_t ac = q->select(i);
+        if (ex != ac) {
+            std::cout << "select(" << i << "): ex = " << ex << ", ac = " << ac << std::endl;
+            assert(ac == ex);
+        }
+    }
+    delete(q);
+}
+
+template<class bit_vector>
+void insert_sup(bit_vector* bv, uint64_t loc, bool val) {
+    bv->insert(loc, val);
+}
+
+template<class bit_vector>
+void remove_sup(bit_vector* bv, uint64_t loc) {
+    bv->remove(loc);
+}
+
+template<class bit_vector>
+void set_sup(bit_vector* bv, uint64_t loc, bool val) {
+    bv->set(loc, val);
+}
+
+template<class bit_vector>
+void run_sup_test(uint64_t* input, uint64_t len) {
+    bit_vector bv;
+    uint64_t size = input[0];
+    for (uint64_t i = 0; i < size; i++) {
+        bv.insert(0, i % 2);
+    }
+
+    check_sup(&bv, size);
+
+    uint64_t index = 1;
+    while (index < len) {
+        switch (input[index])
+        {
+        case 0:
+            insert_sup(&bv, input[index + 1], input[index + 2]);
+            size++;
+            index += 3;
+            break;
+        case 1:
+            remove_sup(&bv, input[index + 1]);
+            size--;
+            index += 2;
+            break;
+        default:
+            set_sup(&bv, input[index + 1], input[index + 2]);
+            index += 2;
+        }
+        check_sup(&bv, size);
+    }
+}
 
 template <class bva, class bvb>
 void check(bva* a, bvb* b, uint64_t size) {
@@ -96,46 +173,21 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
 }
 
 int main() {
-    uint64_t size = 16384;
-    alloc* a = new alloc();
-    node* n = a->template allocate_node<node>();
-    n->has_leaves(true);
-    for (uint8_t i = 0; i < 2; i++) {
-        leaf* l = a->template allocate_leaf<leaf>(size / 64);
-        for (uint64_t i = 0; i < size - 2; i++) {
-            l->insert(i, i % 2);
-        }
-        n->append_child(l);
+
+    bit_vector bv;
+    uint64_t size = 83736;
+    for (uint64_t i = 0; i < size; i++) {
+        bv.insert(0, i % 2);
     }
+    auto* q = bv.generate_query_structure();
+    bv.print(true);
+    q->print(true);
+    uint64_t ac = q->select(28785);
+    uint64_t ex = bv.select(28785);
+    assert(ac == ex);
 
-    assert((size - 2) == (n->p_sum()));
-    assert((size * 2 - 4) == (n->size()));
-    assert((2u) == (n->child_count()));
-
-    for (uint64_t i = 0; i < 2 * size - 4; i++) {
-        assert((i % 2) == n->at(i));
-    }
-    n->print(false);
-    for (uint64_t i = 0; i < 4; i++) {
-        n->insert(i, i % 2, a);
-    }
-    n->print(false);
-
-    assert((size) == (n->p_sum()));
-    assert((size * 2) == (n->size()));
-    assert((3u) == (n->child_count()));
-
-    for (uint64_t i = 0; i < 2 * size; i++) {
-        if ((i % 2) != n->at(i)) {
-            std::cout << "i = " << i << std::endl;
-            assert((i % 2) == n->at(i));
-        }
-    }
-
-    n->deallocate(a);
-    a->deallocate_node(n);
-    assert((0u) == (a->live_allocations()));
-    delete (a);
+    /*uint64_t a[] = {83736};
+    run_sup_test<bv::bv>(a, 1);*/
 
     /*uint64_t a[] = {
         377, 0,   50,  0,   0,   284, 0,   2,   357, 1,   2,   233, 1,   2,

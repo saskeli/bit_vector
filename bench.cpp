@@ -181,7 +181,7 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
     }
 }
 
-template <class bit_vector, uint64_t select_offset, uint8_t type,
+template <class bit_vector, uint64_t select_offset,
           uint8_t buffer, uint8_t branch, uint32_t leaf_size,
           bool flush = false, bool rank_support = false,
           class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>>
@@ -385,33 +385,33 @@ int main(int argc, char const* argv[]) {
 
     if (type == 0) {
         std::cerr << "DYNAMIC, 8, 0, 8192" << std::endl;
-        test<dyn::suc_bv, 0, 0, 0, 8, 8192>(size, steps, seed);
+        test<dyn::suc_bv, 0, 0, 8, 8192>(size, steps, seed);
     } else if (type == 1) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384>(size, steps,
+        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384>(size, steps,
                                                                 seed);
     } else if (type == 2) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, true>(
+        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true>(
             size, steps, seed);
     } else if (type == 3) {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
-        test<bv::simple_bv<0, 16384, 64>, 1, 3, 0, 64, 16384>(size, steps,
+        test<bv::simple_bv<0, 16384, 64>, 1, 0, 64, 16384>(size, steps,
                                                               seed);
     } else if (type == 4) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
     } else if (type == 5) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, false, true>(
+        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false, true>(
             size, steps, seed);
     } else if (type == 6) {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, true, true>(
+        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true, true>(
             size, steps, seed);
     } else {
         std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::small_bv<16, 16384, 64>, 1, 3, 16, 64, 16384, false, true,
+        test<bv::small_bv<16, 16384, 64>, 1, 16, 64, 16384, false, true,
              bv::query_support<uint32_t, bv::leaf<16>, 512>>(size, steps, seed);
     }
 

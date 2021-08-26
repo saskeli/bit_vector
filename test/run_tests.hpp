@@ -79,4 +79,71 @@ void run_test(uint64_t* input, uint64_t len) {
     }
 }
 
+template<class bit_vector>
+void check_sup(bit_vector* bv, uint64_t size) {
+    auto* q = bv->generate_query_structure();
+    ASSERT_EQ(q->size(), size);
+    ASSERT_EQ(bv->size(), size);
+
+    for (uint64_t i = 0; i < size; i++) {
+        ASSERT_EQ(q->at(i), bv->at(i));
+        ASSERT_EQ(q->rank(i), bv->rank(i));
+    }
+
+    uint64_t ones = bv->rank(size);
+    ASSERT_EQ(q->rank(size), ones);
+
+    for (uint64_t i = 1; i <= ones; i++) {
+        ASSERT_EQ(q->select(i), bv->select(i)) << "i = " << i;
+    }
+    delete(q);
+}
+
+template<class bit_vector>
+void insert_sup(bit_vector* bv, uint64_t loc, bool val) {
+    bv->insert(loc, val);
+}
+
+template<class bit_vector>
+void remove_sup(bit_vector* bv, uint64_t loc) {
+    bv->remove(loc);
+}
+
+template<class bit_vector>
+void set_sup(bit_vector* bv, uint64_t loc, bool val) {
+    bv->set(loc, val);
+}
+
+template<class bit_vector>
+void run_sup_test(uint64_t* input, uint64_t len) {
+    bit_vector bv;
+    uint64_t size = input[0];
+    for (uint64_t i = 0; i < size; i++) {
+        bv.insert(0, i % 2);
+    }
+
+    check_sup(&bv, size);
+
+    uint64_t index = 1;
+    while (index < len) {
+        switch (input[index])
+        {
+        case 0:
+            insert_sup(&bv, input[index + 1], input[index + 2]);
+            size++;
+            index += 3;
+            break;
+        case 1:
+            remove_sup(&bv, input[index + 1]);
+            size--;
+            index += 2;
+            break;
+        default:
+            set_sup(&bv, input[index + 1], input[index + 2]);
+            index += 2;
+        }
+        check_sup(&bv, size);
+    }
+}
+
 #endif

@@ -5,50 +5,41 @@
 #include <random>
 
 #include "bit_vector/bv.hpp"
-#include "deps/valgrind/callgrind.h"
-#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 
-#define SIZE 256
-#define BRANCH 8
+typedef bv::bv bit_vector;
 
-typedef bv::malloc_alloc alloc;
-typedef bv::simple_bv<8, SIZE, BRANCH> bit_vector;
-
-void check(dyn::suc_bv* bva, bit_vector* bvb, uint64_t size) {
-    assert(bva->size() == size);
-    assert(bvb->size() == size);
+void check(bit_vector* bv, uint64_t size) {
+    auto* q = bv->generate_query_structure();
+    assert(q->size() == size);
+    assert(bv->size() == size);
 
     for (uint64_t i = 0; i < size; i++) {
-        assert(bva->at(i) == bvb->at(i));
-        assert(bva->rank(i) == bvb->rank(i));
+        assert(q->at(i) == bv->at(i));
+        assert(q->rank(i) == bv->rank(i));
     }
 
-    uint64_t ones = bva->rank(size);
-    assert(bvb->rank(size) == ones);
+    uint64_t ones = bv->rank(size);
+    assert(q->rank(size) == ones);
 
-    for (uint64_t i = 0; i < ones; i++) {
-        assert(bva->select(i) == bvb->select(i + 1));
+    for (uint64_t i = 1; i <= ones; i++) {
+        assert(q->select(i) == bv->select(i));
     }
+    delete(q);
 }
 
-void insert(dyn::suc_bv* bva, bit_vector* bvb, uint64_t loc, bool val) {
+void insert(bit_vector* bv, uint64_t loc, bool val) {
     std::cout << loc << ", " << val << ", " << std::flush;
-    val = val ? true : false;
-    bva->insert(loc, val);
-    bvb->insert(loc, val);
+    bv->insert(loc, val);
 }
 
-void remove(dyn::suc_bv* bva, bit_vector* bvb, uint64_t loc) {
+void remove(bit_vector* bv, uint64_t loc) {
     std::cout << loc << ", " << std::flush;
-    bva->remove(loc);
-    bvb->remove(loc);
+    bv->remove(loc);
 }
 
-void bv_set(dyn::suc_bv* bva, bit_vector* bvb, uint64_t loc, bool val) {
+void bv_set(bit_vector* bv, uint64_t loc, bool val) {
     std::cout << loc << ", " << val << ", " << std::flush;
-    val = val ? true : false;
-    bva->set(loc, val);
-    bvb->set(loc, val);
+    bv->set(loc, val);
 }
 
 int main() {
@@ -60,20 +51,18 @@ int main() {
         std::numeric_limits<std::uint64_t>::max());
 
     uint64_t counter = 1;
-    uint64_t ops = 100000;
+    uint64_t ops = 100;
     while (true) {
-        dyn::suc_bv bva;
-        bit_vector bvb;
-        uint64_t size = ops + (gen(mt) % (2 * BRANCH * BRANCH * SIZE));
+        bit_vector bv;
+        uint64_t size = ops + (gen(mt) % 100000);
 
         std::cout << counter++ << ": " << size << ", " << std::flush;
 
         for (uint64_t i = 0; i < size; i++) {
-            bva.insert(0, i % 2);
-            bvb.insert(0, i % 2);
+            bv.insert(0, i % 2);
         }
 
-        check(&bva, &bvb, size);
+        check(&bv, size);
 
         for (uint64_t i = 0; i < ops; i++) {
             uint64_t op = gen(mt) % 3;
@@ -81,16 +70,16 @@ int main() {
             switch (op)
             {
             case 0:
-                insert(&bva, &bvb, gen(mt) % (size + 1), gen(mt) % 2);
-                check(&bva, &bvb, ++size);
+                insert(&bv, gen(mt) % (size + 1), gen(mt) % 2);
+                check(&bv, ++size);
                 break;
             case 1:
-                remove(&bva, &bvb, gen(mt) % size);
-                check(&bva, &bvb, --size);
+                remove(&bv, gen(mt) % size);
+                check(&bv, --size);
                 break;
             default:
-                bv_set(&bva, &bvb, gen(mt) % size, gen(mt) % 2);
-                check(&bva, &bvb, size);
+                bv_set(&bv, gen(mt) % size, gen(mt) % 2);
+                check(&bv, size);
             }
         }
         std::cout << std::endl;
