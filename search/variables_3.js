@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['data_5f_191',['data_',['../classbv_1_1leaf.html#a5538dd6fe3f924c98ccbed4965dae198',1,'bv::leaf']]]
+  ['data_5f_197',['data_',['../classbv_1_1leaf.html#a5538dd6fe3f924c98ccbed4965dae198',1,'bv::leaf']]]
 ];

@@ -84,48 +84,48 @@ $(function() {
 </div><!--header-->
 <div class="contents">
 
-<p>Support strucutre for <a class="el" href="classbv_1_1bit__vector.html" title="Container class for dynamic b-tree bit vector stuctures.">bv::bit_vector</a> to enable fast queries.  
+<p>Support structure for <a class="el" href="classbv_1_1bit__vector.html" title="Container class for dynamic b-tree bit vector stuctures.">bv::bit_vector</a> to enable fast queries.  
  <a href="classbv_1_1query__support.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="query__support_8hpp_source.html">query_support.hpp</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aa91ec1d1a9dc4d1c97b67c605dda419a"><td class="memItemLeft" align="right" valign="top"><a id="aa91ec1d1a9dc4d1c97b67c605dda419a"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>append</b> (leaf_type *<a class="el" href="classbv_1_1leaf.html">leaf</a>)</td></tr>
+<tr class="memitem:aa91ec1d1a9dc4d1c97b67c605dda419a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#aa91ec1d1a9dc4d1c97b67c605dda419a">append</a> (leaf_type *<a class="el" href="classbv_1_1leaf.html">leaf</a>)</td></tr>
+<tr class="memdesc:aa91ec1d1a9dc4d1c97b67c605dda419a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add leaf reference to the support structure.  <a href="classbv_1_1query__support.html#aa91ec1d1a9dc4d1c97b67c605dda419a">More...</a><br /></td></tr>
 <tr class="separator:aa91ec1d1a9dc4d1c97b67c605dda419a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7e0240ab931bdb7ebd27afcf4a8db1d3"><td class="memItemLeft" align="right" valign="top"><a id="a7e0240ab931bdb7ebd27afcf4a8db1d3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>finalize</b> ()</td></tr>
+<tr class="memitem:a7e0240ab931bdb7ebd27afcf4a8db1d3"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#a7e0240ab931bdb7ebd27afcf4a8db1d3">finalize</a> ()</td></tr>
+<tr class="memdesc:a7e0240ab931bdb7ebd27afcf4a8db1d3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prepare the structure for querying.  <a href="classbv_1_1query__support.html#a7e0240ab931bdb7ebd27afcf4a8db1d3">More...</a><br /></td></tr>
 <tr class="separator:a7e0240ab931bdb7ebd27afcf4a8db1d3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5ba7a95000cdc189841200d120092c7d"><td class="memItemLeft" align="right" valign="top"><a id="a5ba7a95000cdc189841200d120092c7d"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><b>size</b> () const</td></tr>
+<tr class="memitem:a5ba7a95000cdc189841200d120092c7d"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#a5ba7a95000cdc189841200d120092c7d">size</a> () const</td></tr>
+<tr class="memdesc:a5ba7a95000cdc189841200d120092c7d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of bits stored in the bit vector.  <a href="classbv_1_1query__support.html#a5ba7a95000cdc189841200d120092c7d">More...</a><br /></td></tr>
 <tr class="separator:a5ba7a95000cdc189841200d120092c7d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a48a97154d0d42d17a4e7d370fcf06c32"><td class="memItemLeft" align="right" valign="top"><a id="a48a97154d0d42d17a4e7d370fcf06c32"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><b>p_sum</b> () const</td></tr>
+<tr class="memitem:a48a97154d0d42d17a4e7d370fcf06c32"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#a48a97154d0d42d17a4e7d370fcf06c32">p_sum</a> () const</td></tr>
+<tr class="memdesc:a48a97154d0d42d17a4e7d370fcf06c32"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits stored in the bit vector.  <a href="classbv_1_1query__support.html#a48a97154d0d42d17a4e7d370fcf06c32">More...</a><br /></td></tr>
 <tr class="separator:a48a97154d0d42d17a4e7d370fcf06c32"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a802b66979f4ad08b4757b6cf0824e912"><td class="memItemLeft" align="right" valign="top"><a id="a802b66979f4ad08b4757b6cf0824e912"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>at</b> (dtype i) const</td></tr>
+<tr class="memitem:a802b66979f4ad08b4757b6cf0824e912"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#a802b66979f4ad08b4757b6cf0824e912">at</a> (dtype i) const</td></tr>
+<tr class="memdesc:a802b66979f4ad08b4757b6cf0824e912"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return value of bit at index \(i\) in the underlying bit vector.  <a href="classbv_1_1query__support.html#a802b66979f4ad08b4757b6cf0824e912">More...</a><br /></td></tr>
 <tr class="separator:a802b66979f4ad08b4757b6cf0824e912"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a739740d663b77afbba4fab508d834596"><td class="memItemLeft" align="right" valign="top"><a id="a739740d663b77afbba4fab508d834596"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><b>rank</b> (dtype i) const</td></tr>
+<tr class="memitem:a739740d663b77afbba4fab508d834596"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#a739740d663b77afbba4fab508d834596">rank</a> (dtype i) const</td></tr>
+<tr class="memdesc:a739740d663b77afbba4fab508d834596"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of 1-bits up to position \(i\) in the underlying bit vector.  <a href="classbv_1_1query__support.html#a739740d663b77afbba4fab508d834596">More...</a><br /></td></tr>
 <tr class="separator:a739740d663b77afbba4fab508d834596"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:add11b3d1ee6862bdab3ff6b30fdd9974"><td class="memItemLeft" align="right" valign="top"><a id="add11b3d1ee6862bdab3ff6b30fdd9974"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><b>select</b> (dtype i) const</td></tr>
+<tr class="memitem:add11b3d1ee6862bdab3ff6b30fdd9974"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#add11b3d1ee6862bdab3ff6b30fdd9974">select</a> (dtype i) const</td></tr>
+<tr class="memdesc:add11b3d1ee6862bdab3ff6b30fdd9974"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the \(i\)<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1query__support.html#add11b3d1ee6862bdab3ff6b30fdd9974">More...</a><br /></td></tr>
 <tr class="separator:add11b3d1ee6862bdab3ff6b30fdd9974"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a0977a78f8dad4dedb453040d1a9b8e82"><td class="memItemLeft" align="right" valign="top"><a id="a0977a78f8dad4dedb453040d1a9b8e82"></a>
-uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>bit_size</b> () const</td></tr>
+<tr class="memitem:a0977a78f8dad4dedb453040d1a9b8e82"><td class="memItemLeft" align="right" valign="top">uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#a0977a78f8dad4dedb453040d1a9b8e82">bit_size</a> () const</td></tr>
+<tr class="memdesc:a0977a78f8dad4dedb453040d1a9b8e82"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of bits allocated for the support structure.  <a href="classbv_1_1query__support.html#a0977a78f8dad4dedb453040d1a9b8e82">More...</a><br /></td></tr>
 <tr class="separator:a0977a78f8dad4dedb453040d1a9b8e82"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:abba7264c4f252d96ad30b0c730ce5e28"><td class="memItemLeft" align="right" valign="top"><a id="abba7264c4f252d96ad30b0c730ce5e28"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>print</b> (bool internal_only) const</td></tr>
+<tr class="memitem:abba7264c4f252d96ad30b0c730ce5e28"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#abba7264c4f252d96ad30b0c730ce5e28">print</a> (bool internal_only) const</td></tr>
+<tr class="memdesc:abba7264c4f252d96ad30b0c730ce5e28"><td class="mdescLeft">&#160;</td><td class="mdescRight">Outputs json representation of the support structure.  <a href="classbv_1_1query__support.html#abba7264c4f252d96ad30b0c730ce5e28">More...</a><br /></td></tr>
 <tr class="separator:abba7264c4f252d96ad30b0c730ce5e28"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
 Protected Member Functions</h2></td></tr>
-<tr class="memitem:ad568f0e67e8f28094c78db91a9398cc6"><td class="memItemLeft" align="right" valign="top"><a id="ad568f0e67e8f28094c78db91a9398cc6"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><b>s_select</b> (dtype i) const</td></tr>
+<tr class="memitem:ad568f0e67e8f28094c78db91a9398cc6"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#ad568f0e67e8f28094c78db91a9398cc6">s_select</a> (dtype i) const</td></tr>
+<tr class="memdesc:ad568f0e67e8f28094c78db91a9398cc6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Locate the block containing the \(i\)<sup>th</sup> 1-bit.  <a href="classbv_1_1query__support.html#ad568f0e67e8f28094c78db91a9398cc6">More...</a><br /></td></tr>
 <tr class="separator:ad568f0e67e8f28094c78db91a9398cc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab2d108004c697947986fb1a91f69a51c"><td class="memItemLeft" align="right" valign="top"><a id="ab2d108004c697947986fb1a91f69a51c"></a>
-dtype&#160;</td><td class="memItemRight" valign="bottom"><b>dumb_select</b> (dtype i) const</td></tr>
+<tr class="memitem:ab2d108004c697947986fb1a91f69a51c"><td class="memItemLeft" align="right" valign="top">dtype&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1query__support.html#ab2d108004c697947986fb1a91f69a51c">dumb_select</a> (dtype i) const</td></tr>
+<tr class="memdesc:ab2d108004c697947986fb1a91f69a51c"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the \(i\)<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1query__support.html#ab2d108004c697947986fb1a91f69a51c">More...</a><br /></td></tr>
 <tr class="separator:ab2d108004c697947986fb1a91f69a51c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
@@ -143,8 +143,10 @@ dtype&#160;</td><td class="memItemRight" valign="bottom"><b>sum_</b> = 0</td></t
 <div class="textblock"><h3>template&lt;class dtype, class leaf_type, dtype block_size&gt;<br />
 class bv::query_support&lt; dtype, leaf_type, block_size &gt;</h3>
 
-<p>Support strucutre for <a class="el" href="classbv_1_1bit__vector.html" title="Container class for dynamic b-tree bit vector stuctures.">bv::bit_vector</a> to enable fast queries. </p>
+<p>Support structure for <a class="el" href="classbv_1_1bit__vector.html" title="Container class for dynamic b-tree bit vector stuctures.">bv::bit_vector</a> to enable fast queries. </p>
 <p>Precalculates results for rank, select and access queries along with leaf pointers to enable faster queries while the bit vector remains unmodified.</p>
+<p>Leaves should be appended in natural order. After all leaves have been added, the structure should be finalized to ensure properly precalculated select blocks.</p>
+<p>If the underlying structure changes, querying the support structure may lead to undefined behaviour. The support structure should be discarded (<code>delete(q)</code>) as it becomes outdated.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
     <tr><td class="paramname">dtype</td><td>Integer type to use for indexing (uint32_t or uint64_t). </td></tr>
@@ -152,7 +154,397 @@ class bv::query_support&lt; dtype, leaf_type, block_size &gt;</h3>
   </table>
   </dd>
 </dl>
-</div><h2 class="groupheader">Member Data Documentation</h2>
+</div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="aa91ec1d1a9dc4d1c97b67c605dda419a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa91ec1d1a9dc4d1c97b67c605dda419a">&#9670;&nbsp;</a></span>append()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::append </td>
+          <td>(</td>
+          <td class="paramtype">leaf_type *&#160;</td>
+          <td class="paramname"><em>leaf</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Add leaf reference to the support structure. </p>
+<p>Block results are calculated and stored for \(\approx \frac{\mathrm{leaf-&gt;size()}}{\mathrm{block\_size}}\) positions for the leaf.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">leaf</td><td>Pointer to the leaf to add. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a802b66979f4ad08b4757b6cf0824e912"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a802b66979f4ad08b4757b6cf0824e912">&#9670;&nbsp;</a></span>at()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::at </td>
+          <td>(</td>
+          <td class="paramtype">dtype&#160;</td>
+          <td class="paramname"><em>i</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Return value of bit at index \(i\) in the underlying bit vector. </p>
+<p>Uses precalculated partial block sums to locate the leaf containing the \(i\)<sup>th</sup> bit in constant time.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">i</td><td>Index to query. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Value of bit at index \(i\). </dd></dl>
+
+</div>
+</div>
+<a id="a0977a78f8dad4dedb453040d1a9b8e82"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0977a78f8dad4dedb453040d1a9b8e82">&#9670;&nbsp;</a></span>bit_size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint64_t <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::bit_size </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Number of bits allocated for the support structure. </p>
+<p>The space allocated for the leaves is not included in the total as those are accounted for by the <a class="el" href="classbv_1_1bit__vector.html#a852e5ff9b92c149b3a6698fb53e918f6" title="Total size of data structure allocations in bits.">bv.bit_size()</a>.</p>
+<dl class="section return"><dt>Returns</dt><dd>Number of bits allocated for the support structure. </dd></dl>
+
+</div>
+</div>
+<a id="ab2d108004c697947986fb1a91f69a51c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ab2d108004c697947986fb1a91f69a51c">&#9670;&nbsp;</a></span>dumb_select()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">dtype <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::dumb_select </td>
+          <td>(</td>
+          <td class="paramtype">dtype&#160;</td>
+          <td class="paramname"><em>i</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Index of the \(i\)<sup>th</sup> 1-bit in the data structure. </p>
+<p>Used for sparse or non-uniformly distributed bit vectors where direct indexing fails to calculate the correct target block in constant time.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">i</td><td>Selection target.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd></dd>
+<dd>
+\(\underset{j \in [0..n)}{\mathrm{arg min}}\left(\sum_{k = 0}^j \mathrm{bv}[k]\right) = i\). </dd></dl>
+
+</div>
+</div>
+<a id="a7e0240ab931bdb7ebd27afcf4a8db1d3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7e0240ab931bdb7ebd27afcf4a8db1d3">&#9670;&nbsp;</a></span>finalize()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::finalize </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Prepare the structure for querying. </p>
+<p>Precalculates and stores results for some select queries to speed up subsequent select queries.</p>
+<p>For sparse bit vectors where p_sum &lt; size / block_size, locations for all 1-bits are precalculated, to allow constant time select queries. </p>
+
+</div>
+</div>
+<a id="a48a97154d0d42d17a4e7d370fcf06c32"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a48a97154d0d42d17a4e7d370fcf06c32">&#9670;&nbsp;</a></span>p_sum()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">dtype <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::p_sum </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Number of 1-bits stored in the bit vector. </p>
+<dl class="section return"><dt>Returns</dt><dd>Number of 1-bits stored in the bit vector. </dd></dl>
+
+</div>
+</div>
+<a id="abba7264c4f252d96ad30b0c730ce5e28"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#abba7264c4f252d96ad30b0c730ce5e28">&#9670;&nbsp;</a></span>print()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::print </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>internal_only</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Outputs json representation of the support structure. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">internal_only</td><td>Should raw leaf data be omitted from the output. </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a739740d663b77afbba4fab508d834596"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a739740d663b77afbba4fab508d834596">&#9670;&nbsp;</a></span>rank()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">dtype <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::rank </td>
+          <td>(</td>
+          <td class="paramtype">dtype&#160;</td>
+          <td class="paramname"><em>i</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Number of 1-bits up to position \(i\) in the underlying bit vector. </p>
+<p>Precalculated results are used to locate the the leaf containing the \(i\)<sup>th</sup> bit in constant time. at most \(\mathrm{block\_size}\) are read from the leaf, to calculate the result for the rank query based on precalculated block results.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">i</td><td>Number of elements to include in the "summation".</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>\(\sum_{i = 0}^{i - 1} \mathrm{bv}[i]\). </dd></dl>
+
+</div>
+</div>
+<a id="ad568f0e67e8f28094c78db91a9398cc6"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad568f0e67e8f28094c78db91a9398cc6">&#9670;&nbsp;</a></span>s_select()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">dtype <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::s_select </td>
+          <td>(</td>
+          <td class="paramtype">dtype&#160;</td>
+          <td class="paramname"><em>i</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Locate the block containing the \(i\)<sup>th</sup> 1-bit. </p>
+<p>Used for building the select support index for dense bit vectors.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">i</td><td>Selection target.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>The index of the block containing the \(i\)<sup>th</sup> 1-bit. </dd></dl>
+
+</div>
+</div>
+<a id="add11b3d1ee6862bdab3ff6b30fdd9974"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#add11b3d1ee6862bdab3ff6b30fdd9974">&#9670;&nbsp;</a></span>select()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">dtype <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::select </td>
+          <td>(</td>
+          <td class="paramtype">dtype&#160;</td>
+          <td class="paramname"><em>i</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Index of the \(i\)<sup>th</sup> 1-bit in the data structure. </p>
+<p>For fairly dense approximately uniformly distributed bit vectors, the block containing the \(i\)<sup>th</sup> 1-bit can be located in constant time. For less dense or non-uniformly distributed bit vectors the block containing the \(i\)<sup>th</sup> 1-bit can be located either in constant time or logarithmic time depending on the local bit distribution in the vicinity of the \(i\)<sup>th</sup> bit.</p>
+<p>After the correct block is located, at most <code>block_size</code> bits are scanned for a single leaf.</p>
+<p>For sparse bit vectors where p_sum &lt; size / block_size, locations for all 1-bits have been precalculated, allowing constant time select queries.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">i</td><td>Selection target. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>\(\underset{j \in [0..n)}{\mathrm{arg min}}\left(\sum_{k = 0}^j \mathrm{bv}[k]\right) = i\). </dd></dl>
+
+</div>
+</div>
+<a id="a5ba7a95000cdc189841200d120092c7d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5ba7a95000cdc189841200d120092c7d">&#9670;&nbsp;</a></span>size()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">dtype <a class="el" href="classbv_1_1query__support.html">bv::query_support</a>&lt; dtype, leaf_type, block_size &gt;::size </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Number of bits stored in the bit vector. </p>
+<dl class="section return"><dt>Returns</dt><dd>Number of bits stored in the bit vector. </dd></dl>
+
+</div>
+</div>
+<h2 class="groupheader">Member Data Documentation</h2>
 <a id="a3c3236ac1ba09f396dbf14d9f37ac8fc"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a3c3236ac1ba09f396dbf14d9f37ac8fc">&#9670;&nbsp;</a></span>elems_</h2>
 
@@ -185,7 +577,7 @@ template&lt;class dtype , class leaf_type , dtype block_size&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Aug 24 2021 14:19:39 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Aug 26 2021 14:20:52 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

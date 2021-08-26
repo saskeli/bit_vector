@@ -124,6 +124,9 @@ uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="
 <tr class="memitem:aae36d25acec747b82fb12da32c347661"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#aae36d25acec747b82fb12da32c347661">select</a> (const uint32_t x) const</td></tr>
 <tr class="memdesc:aae36d25acec747b82fb12da32c347661"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the x<sup>th</sup> 1-bit in the data structure.  <a href="classbv_1_1leaf.html#aae36d25acec747b82fb12da32c347661">More...</a><br /></td></tr>
 <tr class="separator:aae36d25acec747b82fb12da32c347661"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc299f0c4cb4a2115ae8ec0e7714f0fa"><td class="memItemLeft" align="right" valign="top">uint32_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#adc299f0c4cb4a2115ae8ec0e7714f0fa">select</a> (const uint32_t x, uint32_t pos, uint32_t pop) const</td></tr>
+<tr class="memdesc:adc299f0c4cb4a2115ae8ec0e7714f0fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Index of the x<sup>th</sup> 1-bit in the data structure starting at <code>pos</code> with <code>pop</code>  <a href="classbv_1_1leaf.html#adc299f0c4cb4a2115ae8ec0e7714f0fa">More...</a><br /></td></tr>
+<tr class="separator:adc299f0c4cb4a2115ae8ec0e7714f0fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7104583e1fed9975f0313b771cf78d07"><td class="memItemLeft" align="right" valign="top"><a id="a7104583e1fed9975f0313b771cf78d07"></a>
 uint64_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classbv_1_1leaf.html#a7104583e1fed9975f0313b771cf78d07">bits_size</a> () const</td></tr>
 <tr class="memdesc:a7104583e1fed9975f0313b771cf78d07"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of the leaf and associated data in bits. <br /></td></tr>
@@ -1130,7 +1133,7 @@ template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 </div>
 </div>
 <a id="aae36d25acec747b82fb12da32c347661"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#aae36d25acec747b82fb12da32c347661">&#9670;&nbsp;</a></span>select()</h2>
+<h2 class="memtitle"><span class="permalink"><a href="#aae36d25acec747b82fb12da32c347661">&#9670;&nbsp;</a></span>select() <span class="overload">[1/2]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1160,6 +1163,61 @@ template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 <dl class="params"><dt>Parameters</dt><dd>
   <table class="params">
     <tr><td class="paramname">x</td><td>Selection target.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>\(\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i \mathrm{bv}[j]\right) = x\). </dd></dl>
+
+</div>
+</div>
+<a id="adc299f0c4cb4a2115ae8ec0e7714f0fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#adc299f0c4cb4a2115ae8ec0e7714f0fa">&#9670;&nbsp;</a></span>select() <span class="overload">[2/2]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">uint32_t <a class="el" href="classbv_1_1leaf.html">bv::leaf</a>&lt; buffer_size, avx &gt;::select </td>
+          <td>(</td>
+          <td class="paramtype">const uint32_t&#160;</td>
+          <td class="paramname"><em>x</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>pos</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">uint32_t&#160;</td>
+          <td class="paramname"><em>pop</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Index of the x<sup>th</sup> 1-bit in the data structure starting at <code>pos</code> with <code>pop</code> </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">x</td><td>Selection target. </td></tr>
+    <tr><td class="paramname">pos</td><td>Start position of Select calculation. </td></tr>
+    <tr><td class="paramname">pop</td><td>Start population as <code>pos</code> </td></tr>
   </table>
   </dd>
 </dl>
@@ -1437,7 +1495,7 @@ template&lt;uint8_t buffer_size, bool avx = true&gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Tue Aug 24 2021 14:19:39 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Thu Aug 26 2021 14:20:52 for Bit vector by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.17
 </small></address>

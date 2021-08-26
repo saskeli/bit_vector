@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['bit_5fsize_8',['bit_size',['../classbv_1_1bit__vector.html#a852e5ff9b92c149b3a6698fb53e918f6',1,'bv::bit_vector']]],
+  ['bit_5fsize_8',['bit_size',['../classbv_1_1bit__vector.html#a852e5ff9b92c149b3a6698fb53e918f6',1,'bv::bit_vector::bit_size()'],['../classbv_1_1query__support.html#a0977a78f8dad4dedb453040d1a9b8e82',1,'bv::query_support::bit_size()']]],
   ['bit_5fvector_9',['bit_vector',['../classbv_1_1bit__vector.html',1,'bv::bit_vector&lt; leaf, node, allocator, leaf_size, branches, dtype &gt;'],['../classbv_1_1bit__vector.html#afa31ef41be5f20c1ac67260a14877160',1,'bv::bit_vector::bit_vector(allocator *alloc)'],['../classbv_1_1bit__vector.html#aed34138f9c8bc42e139a4737a978a1cd',1,'bv::bit_vector::bit_vector()']]],
   ['bits_5fsize_10',['bits_size',['../classbv_1_1leaf.html#a7104583e1fed9975f0313b771cf78d07',1,'bv::leaf::bits_size()'],['../classbv_1_1node.html#ac8058dc416614319ee5c00c473dc8146',1,'bv::node::bits_size()']]],
   ['branchless_5fscan_11',['branchless_scan',['../classbv_1_1branchless__scan.html',1,'bv::branchless_scan&lt; dtype, branches &gt;'],['../classbv_1_1branchless__scan.html#affab69f8448e7f3b1b064134c1af7247',1,'bv::branchless_scan::branchless_scan()']]],
