@@ -15,7 +15,7 @@ typedef bv::node<leaf, uint64_t, 16384, 16> node;
 typedef bv::simple_bv<8, 16384, 64> bit_vector;
 typedef bv::query_support<uint64_t, leaf, 2048> qs;
 
-template<class bit_vector>
+template <class bit_vector>
 void check_sup(bit_vector* bv, uint64_t size) {
     auto* q = bv->generate_query_structure();
     assert(q->size() == size);
@@ -37,29 +37,30 @@ void check_sup(bit_vector* bv, uint64_t size) {
         uint64_t ex = bv->select(i);
         uint64_t ac = q->select(i);
         if (ex != ac) {
-            std::cout << "select(" << i << "): ex = " << ex << ", ac = " << ac << std::endl;
+            std::cout << "select(" << i << "): ex = " << ex << ", ac = " << ac
+                      << std::endl;
             assert(ac == ex);
         }
     }
-    delete(q);
+    delete (q);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void insert_sup(bit_vector* bv, uint64_t loc, bool val) {
     bv->insert(loc, val);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void remove_sup(bit_vector* bv, uint64_t loc) {
     bv->remove(loc);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void set_sup(bit_vector* bv, uint64_t loc, bool val) {
     bv->set(loc, val);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void run_sup_test(uint64_t* input, uint64_t len) {
     bit_vector bv;
     uint64_t size = input[0];
@@ -71,21 +72,20 @@ void run_sup_test(uint64_t* input, uint64_t len) {
 
     uint64_t index = 1;
     while (index < len) {
-        switch (input[index])
-        {
-        case 0:
-            insert_sup(&bv, input[index + 1], input[index + 2]);
-            size++;
-            index += 3;
-            break;
-        case 1:
-            remove_sup(&bv, input[index + 1]);
-            size--;
-            index += 2;
-            break;
-        default:
-            set_sup(&bv, input[index + 1], input[index + 2]);
-            index += 2;
+        switch (input[index]) {
+            case 0:
+                insert_sup(&bv, input[index + 1], input[index + 2]);
+                size++;
+                index += 3;
+                break;
+            case 1:
+                remove_sup(&bv, input[index + 1]);
+                size--;
+                index += 2;
+                break;
+            default:
+                set_sup(&bv, input[index + 1], input[index + 2]);
+                index += 2;
         }
         check_sup(&bv, size);
     }
@@ -99,7 +99,8 @@ void check(bva* a, bvb* b, uint64_t size) {
     for (uint64_t i = 0; i < size; i++) {
         if (a->at(i) != b->at(i)) {
             std::cout << "Problem at i = " << i << std::endl;
-            std::cout << "at(" << i << ") = " << a->at(i) << ", " << b->at(i) << std::endl;
+            std::cout << "at(" << i << ") = " << a->at(i) << ", " << b->at(i)
+                      << std::endl;
             assert(a->at(i) == b->at(i));
         }
         assert(a->rank(i) == b->rank(i));
@@ -133,7 +134,7 @@ void bv_set(bva* a, bvb* b, uint64_t loc, bool val) {
     b->set(loc, val);
 }
 
-template<class bit_vector, class c_bv>
+template <class bit_vector, class c_bv>
 void run_test(uint64_t* input, uint64_t len, bool show_index) {
     bit_vector bv;
     c_bv cbv;
@@ -147,47 +148,49 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
         check(&bv, &cbv, i + 1);
     }
 
-    //bv.print(false);
+    // bv.print(false);
 
     uint64_t index = 1;
     while (index < len) {
-        switch (input[index])
-        {
-        case 0:
-            insert(&bv, &cbv, input[index + 1], input[index + 2]);
-            size++;
-            index += 3;
-            break;
-        case 1:
-            remove(&bv, &cbv, input[index + 1]);
-            size--;
-            index += 2;
-            break;
-        default:
-            bv_set(&bv, &cbv, input[index + 1], input[index + 2]);
-            index += 2;
+        switch (input[index]) {
+            case 0:
+                insert(&bv, &cbv, input[index + 1], input[index + 2]);
+                size++;
+                index += 3;
+                break;
+            case 1:
+                remove(&bv, &cbv, input[index + 1]);
+                size--;
+                index += 2;
+                break;
+            default:
+                bv_set(&bv, &cbv, input[index + 1], input[index + 2]);
+                index += 2;
         }
-        //bv.print(false);
+        // bv.print(false);
         check(&bv, &cbv, size);
     }
 }
 
 int main() {
-
-    bit_vector bv;
     uint64_t size = 83736;
+    bit_vector bv;
     for (uint64_t i = 0; i < size; i++) {
         bv.insert(0, i % 2);
     }
     auto* q = bv.generate_query_structure();
-    bv.print(true);
     q->print(true);
-    uint64_t ac = q->select(28785);
-    uint64_t ex = bv.select(28785);
-    assert(ac == ex);
+    uint64_t ac = q->select(5462);
+    uint64_t ex = bv.select(5462);
+    if (ac != ex) {
+        std::cout << ac << ", " << ex << std::endl;
+        assert(ac == ex);
+    }
 
-    /*uint64_t a[] = {83736};
-    run_sup_test<bv::bv>(a, 1);*/
+
+    delete(q);
+    
+
 
     /*uint64_t a[] = {
         377, 0,   50,  0,   0,   284, 0,   2,   357, 1,   2,   233, 1,   2,

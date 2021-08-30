@@ -359,3 +359,8 @@ TEST(RunSup, C) {
                     2,     16170, 0,    1,    12969};
     run_sup_test<bv::bv>(a, 29);
 }
+
+TEST(RunSup, D) {
+    uint64_t a[] = {10920, 0, 1316, 0, 2, 9930, 0, 0, 2561, 0};
+    run_sup_test<bv::bv>(a, 10);
+}

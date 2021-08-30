@@ -504,7 +504,7 @@ class leaf {
      */
     uint32_t select(const uint32_t x, uint32_t pos, uint32_t pop) const {
         //std::cout << "select(" << x << ", " << pos << ", " << pop << ")" << std::endl;
-        //pos++;
+        pos++;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
         // Scroll the buffer to the start position and calculate offset.
@@ -524,44 +524,47 @@ class leaf {
             }
         }
 
+        uint64_t pop_idx = 0;
         // Step to the next 64-bit word boundary
-        uint64_t pop_idx = (pos + a_pos_offset) / WORD_BITS;
-        uint64_t offset = (pos + a_pos_offset) % WORD_BITS;
+        if (pos + a_pos_offset > 0) {
+            pop_idx = (pos + a_pos_offset) / WORD_BITS;
+            uint64_t offset = (pos + a_pos_offset) % WORD_BITS;
 #ifdef DEBUG
-        if (pop_idx >= capacity_) {
-            std::cerr << "Invalid select query apparently\n"
-                      << "x = " << x << ", pos = " << pos 
-                      << ", pop = " << pop 
-                      << "\npop_idx = " << pop_idx
-                      << ", capacity_ = " << capacity_ 
-                      << std::endl;
-            assert(pop_idx < capacity_);
-        }
+            if (pop_idx >= capacity_) {
+                std::cerr << "Invalid select query apparently\n"
+                        << "x = " << x << ", pos = " << pos 
+                        << ", pop = " << pop 
+                        << "\npop_idx = " << pop_idx
+                        << ", capacity_ = " << capacity_ 
+                        << std::endl;
+                assert(pop_idx < capacity_);
+            }
 #endif
-        if (offset != 0) {
-            pop += __builtin_popcountll(data_[pop_idx++] >> offset);
-            pos += 64 - offset;
-            if constexpr (buffer_size != 0) {
-                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                    uint64_t b_index = buffer_index(buffer_[b]);
-                    if (b_index < pos) {
-                        if (buffer_is_insertion(buffer_[b])) {
-                            pop += buffer_value(buffer_[b]);
-                            pos++;
-                            a_pos_offset--;
+            if (offset != 0) {
+                pop += __builtin_popcountll(data_[pop_idx++] >> offset);
+                pos += 64 - offset;
+                if constexpr (buffer_size != 0) {
+                    for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                        uint64_t b_index = buffer_index(buffer_[b]);
+                        if (b_index < pos) {
+                            if (buffer_is_insertion(buffer_[b])) {
+                                pop += buffer_value(buffer_[b]);
+                                pos++;
+                                a_pos_offset--;
+                            } else {
+                                pop -=
+                                    (data_[(b_index + a_pos_offset) / WORD_BITS] >>
+                                    ((b_index + a_pos_offset) % WORD_BITS)) &
+                                    MASK;
+                                pos--;
+                                a_pos_offset++;
+                            }
+                            [[unlikely]] current_buffer++;
                         } else {
-                            pop -=
-                                (data_[(b_index + a_pos_offset) / WORD_BITS] >>
-                                 ((b_index + a_pos_offset) % WORD_BITS)) &
-                                MASK;
-                            pos--;
-                            a_pos_offset++;
+                            [[likely]] break;
                         }
-                        [[unlikely]] current_buffer++;
-                    } else {
-                        [[likely]] break;
+                        [[unlikely]] (void(0));
                     }
-                    [[unlikely]] (void(0));
                 }
             }
         }

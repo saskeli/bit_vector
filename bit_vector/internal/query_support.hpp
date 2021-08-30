@@ -189,7 +189,7 @@ class query_support {
         dtype b_idx =
             idx < elems_.size() - 1 ? elems_[idx + 1].select_index : a_idx;
         if (b_idx - a_idx > 1) {
-            [[unlikely]] return dumb_select(i);
+            [[unlikely]] a_idx = s_select(i);
         }
         r_elem<dtype, leaf_type> e = elems_[a_idx];
         if (e.p_sum + e.leaf->p_sum() < i) {
@@ -304,8 +304,7 @@ class query_support {
     /**
      * @brief Index of the \f$i\f$<sup>th</sup> 1-bit in the data structure.
      *
-     * Used for sparse or non-uniformly distributed bit vectors where direct
-     * indexing fails to calculate the correct target block in constant time.
+     * Used for populating precalculated sums for sparese vectors.
      *
      * @param i Selection target.
      *
