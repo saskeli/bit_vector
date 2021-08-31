@@ -43,7 +43,7 @@ void bv_set(bva* a, bvb* b, uint64_t loc, bool val) {
     b->set(loc, val);
 }
 
-template<class bit_vector, class c_bv>
+template <class bit_vector, class c_bv>
 void run_test(uint64_t* input, uint64_t len) {
     bit_vector bv;
     c_bv cbv;
@@ -59,27 +59,26 @@ void run_test(uint64_t* input, uint64_t len) {
 
     uint64_t index = 1;
     while (index < len) {
-        switch (input[index])
-        {
-        case 0:
-            insert(&bv, &cbv, input[index + 1], input[index + 2]);
-            size++;
-            index += 3;
-            break;
-        case 1:
-            remove(&bv, &cbv, input[index + 1]);
-            size--;
-            index += 2;
-            break;
-        default:
-            bv_set(&bv, &cbv, input[index + 1], input[index + 2]);
-            index += 2;
+        switch (input[index]) {
+            case 0:
+                insert(&bv, &cbv, input[index + 1], input[index + 2]);
+                size++;
+                index += 3;
+                break;
+            case 1:
+                remove(&bv, &cbv, input[index + 1]);
+                size--;
+                index += 2;
+                break;
+            default:
+                bv_set(&bv, &cbv, input[index + 1], input[index + 2]);
+                index += 3;
         }
         check(&bv, &cbv, size);
     }
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void check_sup(bit_vector* bv, uint64_t size) {
     auto* q = bv->generate_query_structure();
     ASSERT_EQ(q->size(), size);
@@ -96,25 +95,25 @@ void check_sup(bit_vector* bv, uint64_t size) {
     for (uint64_t i = 1; i <= ones; i++) {
         ASSERT_EQ(q->select(i), bv->select(i)) << "i = " << i;
     }
-    delete(q);
+    delete (q);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void insert_sup(bit_vector* bv, uint64_t loc, bool val) {
     bv->insert(loc, val);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void remove_sup(bit_vector* bv, uint64_t loc) {
     bv->remove(loc);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void set_sup(bit_vector* bv, uint64_t loc, bool val) {
     bv->set(loc, val);
 }
 
-template<class bit_vector>
+template <class bit_vector>
 void run_sup_test(uint64_t* input, uint64_t len) {
     bit_vector bv;
     uint64_t size = input[0];
@@ -126,21 +125,20 @@ void run_sup_test(uint64_t* input, uint64_t len) {
 
     uint64_t index = 1;
     while (index < len) {
-        switch (input[index])
-        {
-        case 0:
-            insert_sup(&bv, input[index + 1], input[index + 2]);
-            size++;
-            index += 3;
-            break;
-        case 1:
-            remove_sup(&bv, input[index + 1]);
-            size--;
-            index += 2;
-            break;
-        default:
-            set_sup(&bv, input[index + 1], input[index + 2]);
-            index += 2;
+        switch (input[index]) {
+            case 0:
+                insert_sup(&bv, input[index + 1], input[index + 2]);
+                size++;
+                index += 3;
+                break;
+            case 1:
+                remove_sup(&bv, input[index + 1]);
+                size--;
+                index += 2;
+                break;
+            default:
+                set_sup(&bv, input[index + 1], input[index + 2]);
+                index += 3;
         }
         check_sup(&bv, size);
     }

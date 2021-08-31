@@ -348,7 +348,7 @@ TEST(RunSup, A) {
 }
 
 TEST(RunSup, B) {
-    uint64_t a[] = {83736};
+    uint64_t a[] = {5000};
     run_sup_test<bv::bv>(a, 1);
 }
 

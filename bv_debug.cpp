@@ -20,10 +20,6 @@ void check_sup(bit_vector* bv, uint64_t size) {
     auto* q = bv->generate_query_structure();
     assert(q->size() == size);
     assert(bv->size() == size);
-    bv->print(true);
-    std::cout << std::endl;
-    q->print(true);
-    std::cout << std::endl;
 
     for (uint64_t i = 0; i < size; i++) {
         assert(q->at(i) == bv->at(i));
@@ -85,7 +81,7 @@ void run_sup_test(uint64_t* input, uint64_t len) {
                 break;
             default:
                 set_sup(&bv, input[index + 1], input[index + 2]);
-                index += 2;
+                index += 3;
         }
         check_sup(&bv, size);
     }
@@ -165,7 +161,7 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
                 break;
             default:
                 bv_set(&bv, &cbv, input[index + 1], input[index + 2]);
-                index += 2;
+                index += 3;
         }
         // bv.print(false);
         check(&bv, &cbv, size);
@@ -173,24 +169,11 @@ void run_test(uint64_t* input, uint64_t len, bool show_index) {
 }
 
 int main() {
-    uint64_t size = 83736;
-    bit_vector bv;
-    for (uint64_t i = 0; i < size; i++) {
-        bv.insert(0, i % 2);
-    }
-    auto* q = bv.generate_query_structure();
-    q->print(true);
-    uint64_t ac = q->select(5462);
-    uint64_t ex = bv.select(5462);
-    if (ac != ex) {
-        std::cout << ac << ", " << ex << std::endl;
-        assert(ac == ex);
-    }
-
-
-    delete(q);
-    
-
+    uint64_t a[] = {16387, 2,     7184, 1,    1,    9890,  1,    10662,
+                    1,     11795, 1,    7332, 0,    14649, 1,    2,
+                    14480, 1,     2,    6282, 0,    2,     4190, 1,
+                    2,     16170, 0,    1,    12969};
+    run_sup_test<bv::bv>(a, 29);
 
     /*uint64_t a[] = {
         377, 0,   50,  0,   0,   284, 0,   2,   357, 1,   2,   233, 1,   2,

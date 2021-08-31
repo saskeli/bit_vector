@@ -474,8 +474,9 @@ class leaf {
                     [[unlikely]] (void(0));
                 }
             }
-            if (pop >= x) [[unlikely]]
-                break;
+            if (pop >= x) {
+                [[unlikely]] break;
+            }
         }
 
         // Make sure we have not overshot the logical end of the structure.
@@ -504,7 +505,7 @@ class leaf {
      */
     uint32_t select(const uint32_t x, uint32_t pos, uint32_t pop) const {
         //std::cout << "select(" << x << ", " << pos << ", " << pop << ")" << std::endl;
-        pos++;
+        //pos++;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
         // Scroll the buffer to the start position and calculate offset.

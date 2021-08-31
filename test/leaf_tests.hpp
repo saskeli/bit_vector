@@ -223,10 +223,10 @@ void leaf_select_offset_test(uint64_t n) {
     }
 
     uint64_t lim = l->p_sum();
-    for (uint64_t i = 1; i < lim; i += 50) {
-        for (uint64_t j = i + 1; j <= lim; j++) {
-            uint64_t i_pos = l->select(i);
-            ASSERT_EQ(l->select(j), l->select(j, i_pos, i))
+    for (uint64_t i = 0; i < n; i += 50) {
+        uint64_t i_rank = l->rank(i);
+        for (uint64_t j = i_rank + 1; j <= lim; j++) {
+            ASSERT_EQ(l->select(j), l->select(j, i, i_rank))
                 << "i = " << i << ", j = " << j;
         }
     }

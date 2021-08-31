@@ -67,7 +67,7 @@ class query_support {
         dtype i = elems_.size();
         dtype a_size = leaf->size();
         while (size_ + a_size > i * block_size) {
-            dtype i_rank = leaf->rank(i * block_size - size_);
+        dtype i_rank = leaf->rank(i * block_size - size_);
             elems_.push_back(
                 r_elem<dtype, leaf_type>(size_, sum_, i_rank, leaf));
             i++;
@@ -93,8 +93,9 @@ class query_support {
             [[unlikely]] (void(0));
         } else {
             for (size_t i = 0; i < elems_.size(); i++) {
-                elems_[i].select_index =
-                    s_select(1 + (i * sum_) / elems_.size());
+                uint64_t s_trg = 1 + (i * sum_) / elems_.size();
+                uint64_t s_idx = s_select(s_trg);
+                elems_[i].select_index = s_idx;
             }
         }
     }
@@ -146,6 +147,7 @@ class query_support {
     dtype rank(dtype i) const {
         dtype idx = block_size;
         idx = i / idx;
+        if (idx == elems_.size()) idx--;
         r_elem<dtype, leaf_type> e = elems_[idx];
         if (e.p_size + e.leaf->size() < i) {
             e = elems_[++idx];
@@ -161,7 +163,7 @@ class query_support {
      * For fairly dense approximately uniformly distributed bit vectors, the
      * block containing the \f$i\f$<sup>th</sup> 1-bit can be located in
      * constant time. For less dense or non-uniformly distributed bit vectors
-     * the block containing the \f$i\f$<sup>th</sup> 1-bit can be located either
+     * the block containing the \f$i\f$<sup>th</sup> 1-bit is located either
      * in constant time or logarithmic time depending on the local bit
      * distribution in the vicinity of the \f$i\f$<sup>th</sup> bit.
      *
@@ -176,8 +178,6 @@ class query_support {
      * \mathrm{bv}[k]\right) =  i\f$.
      */
     dtype select(dtype i) const {
-        if (i == 0) [[unlikely]]
-            return -1;
         if (sum_ <= elems_.size()) {
             [[unlikely]] return elems_[i - 1].select_index;
         }
@@ -188,7 +188,7 @@ class query_support {
         dtype a_idx = elems_[idx].select_index;
         dtype b_idx =
             idx < elems_.size() - 1 ? elems_[idx + 1].select_index : a_idx;
-        if (b_idx - a_idx > 1) {
+        if (b_idx - a_idx > 1 || idx  == elems_.size() - 1) {
             [[unlikely]] a_idx = s_select(i);
         }
         r_elem<dtype, leaf_type> e = elems_[a_idx];
