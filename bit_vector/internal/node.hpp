@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 
 #ifndef CACHE_LINE
 // Apparently the most common cache line size is 64.
@@ -60,8 +61,9 @@ namespace bv {
  * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
  * @tparam leaf_size Maximum size of a leaf node.
  * @tparam branches  Maximum branching factor of internal nodes.
+ * @tparam aggressive_realloc If true, leaves will only be allowed to have at most 256 elements of unused capacity
  */
-template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches>
+template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches, bool aggressive_realloc = false>
 class node {
    protected:
     typedef branchless_scan<dtype, branches> branching;
@@ -413,7 +415,7 @@ class node {
     }
 
     /**
-     * @brief Moves the fist "elems" elements from "other" to the end of "this".
+     * @brief Moves the first "elems" elements from "other" to the end of "this".
      *
      * Elements are first copied to this node, after which `clear_firs(elems)`
      * will be called on "other". Cumulative sizes and sums will be updated
@@ -649,6 +651,27 @@ class node {
         std::cout << "]}";
     }
 
+    std::pair<uint64_t, uint64_t> leaf_usage() const {
+        std::pair<uint64_t, uint64_t> p(0, 0);
+        if (has_leaves()) {
+            leaf_type* const* children =
+                reinterpret_cast<leaf_type* const*>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                auto op = children[i]->leaf_usage();
+                p.first += op.first;
+                p.second += op.second;
+            }
+        } else {
+            node* const* children = reinterpret_cast<node* const*>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                auto op = children[i]->leaf_usage();
+                p.first += op.first;
+                p.second += op.second;
+            }
+        }
+        return p;
+    }
+
    protected:
     /**
      * @brief Ensure that there is space for insertion in the child leaves.
@@ -658,7 +681,7 @@ class node {
      * in the siblings, a new leaf is allocated and elements are transferred
      * from the target leaf to one of the siblings.
      *
-     * Generally delays allocation of a new leaf as long as posisble, and when
+     * Generally delays allocation of a new leaf as long as possible, and when
      * reallocating, generates a new leaf that is \f$\approx \frac{2}{3}\f$
      * full.
      *
@@ -688,7 +711,7 @@ class node {
         }
         if (l_cap < 2 * leaf_size / 9 && r_cap < 2 * leaf_size / 9) {
             // Rebalancing without creating a new leaf is impossible
-            // (impracitcal).
+            // (impractical).
             leaf_type* a_child;
             leaf_type* b_child;
             leaf_type* new_child;
@@ -720,6 +743,18 @@ class node {
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
             }
+            if constexpr (aggressive_realloc) {
+                uint64_t cap = a_child->capacity();
+                if (cap * WORD_BITS > a_child->size() + 4 * WORD_BITS) {
+                    a_child = alloc->reallocate_leaf(a_child, cap, cap - 2);
+                    [[unlikely]] children_[index - 1] = a_child;
+                }
+                cap = b_child->capacity();
+                if (cap * WORD_BITS > b_child->size() + 4 * WORD_BITS) {
+                    b_child = alloc->reallocate_leaf(b_child, cap, cap - 2);
+                    [[unlikely]] children_[index + 1] = b_child;
+                }
+            }
             // Update cumulative sizes and sums.
             for (uint8_t i = child_count_; i > index; i--) {
                 children_[i] = children_[i - 1];
@@ -747,6 +782,13 @@ class node {
                 sibling = reinterpret_cast<leaf_type*>(children_[index + 1]);
             }
             sibling->transfer_prepend(leaf, r_cap / 2);
+            if constexpr (aggressive_realloc) {
+                uint64_t cap = leaf->capacity();
+                if (cap * WORD_BITS > leaf->size() + 4 * WORD_BITS) {
+                    leaf = alloc->reallocate_leaf(leaf, cap, cap - 2);
+                    [[unlikely]] children_[index] = leaf;
+                }
+            }
             child_sizes_.set(
                 index, index != 0 ? child_sizes_.get(index - 1) + leaf->size()
                                   : leaf->size());
@@ -770,6 +812,13 @@ class node {
                 sibling = reinterpret_cast<leaf_type*>(children_[index - 1]);
             }
             sibling->transfer_append(leaf, l_cap / 2);
+            if constexpr (aggressive_realloc) {
+                uint64_t cap = leaf->capacity();
+                if (cap * WORD_BITS > leaf->size() + 4 * WORD_BITS) {
+                    leaf = alloc->reallocate_leaf(leaf, cap, cap - 2);
+                    [[unlikely]] children_[index] = leaf;
+                }
+            }
             child_sizes_.set(index - 1,
                              index > 1
                                  ? child_sizes_.get(index - 2) + sibling->size()
@@ -968,6 +1017,13 @@ class node {
             children_[0] = a;
         }
         a->transfer_append(b, addition);
+        if constexpr (aggressive_realloc) {
+            uint64_t cap = b->capacity();
+            if (cap * WORD_BITS > b->size() + 4 * WORD_BITS) {
+                b = alloc->reallocate_leaf(b, cap, cap - 2);
+                [[unlikely]] children_[1] = b;
+            }
+        }
         child_sizes_.set(0, a->size());
         child_sums_.set(0, a->p_sum());
     }
@@ -999,6 +1055,13 @@ class node {
             children_[idx + 1] = b;
         }
         b->transfer_prepend(a, addition);
+        if constexpr (aggressive_realloc) {
+            uint64_t cap = a->capacity();
+            if (cap * WORD_BITS > a->size() + 4 * WORD_BITS) {
+                a = alloc->reallocate_leaf(a, cap, cap - 2);
+                [[unlikely]] children_[idx] = a;
+            }
+        }
         if (idx == 0) {
             child_sizes_.set(0, a->size());
             [[unlikely]] child_sums_.set(0, a->p_sum());
@@ -1012,7 +1075,7 @@ class node {
      * @brief Merge the right leaf into the left leaf.
      *
      * Intended for when a removal would break structural invariant and there
-     * are not enough elements in siblings to transfer elements wilhe
+     * are not enough elements in siblings to transfer elements while
      * maintaining invariants.
      *
      * @tparam allocator Type of `alloc`
@@ -1088,6 +1151,13 @@ class node {
             [[likely]] index -= child_sizes_.get(child_index - 1);
         }
         bool value = child->remove(index);
+        if constexpr (aggressive_realloc) {
+            uint64_t cap = child->capacity();
+            if (cap * WORD_BITS > child->size() + 4 * WORD_BITS) {
+                child = alloc->reallocate_leaf(child, cap, cap - 2);
+                [[unlikely]] children_[child_index] = child;
+            }
+        }
         child_sizes_.increment(child_index, child_count_, -1);
         child_sums_.increment(child_index, child_count_, -int(value));
         return value;

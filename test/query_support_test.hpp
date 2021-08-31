@@ -13,7 +13,7 @@ void qs_access_single_leaf(uint64_t size) {
     for (size_t i = 0; i < size; i++) {
         l->insert(i, i % 2);
     }
-    qs* q = new qs();
+    qs* q = new qs(size);
     q->append(l);
     q->finalize();
     for (size_t i = 0; i < size; i++) {
@@ -32,7 +32,7 @@ void qs_rank_single_leaf(uint64_t size) {
     for (size_t i = 0; i < size; i++) {
         l->insert(i, i % 2);
     }
-    qs* q = new qs();
+    qs* q = new qs(size);
     q->append(l);
     q->finalize();
     for (size_t i = 0; i < size; i++) {
@@ -51,7 +51,7 @@ void qs_select_single_leaf(uint64_t size) {
     for (size_t i = 0; i < size; i++) {
         l->insert(i, i % 2);
     }
-    qs* q = new qs();
+    qs* q = new qs(size);
     q->append(l);
     q->finalize();
     for (size_t i = 0; i < size / 2; i++) {
@@ -79,7 +79,7 @@ void qs_access_two_leaves(uint64_t size) {
     }
     n->append_child(l);
 
-    qs* q = new qs();
+    qs* q = new qs(size * 2);
     n->generate_query_structure(q);
     q->finalize();
     for (size_t i = 0; i < n->size(); i++) {
@@ -108,7 +108,7 @@ void qs_rank_two_leaves(uint64_t size) {
     }
     n->append_child(l);
 
-    qs* q = new qs();
+    qs* q = new qs(size * 2);
     n->generate_query_structure(q);
     q->finalize();
     for (size_t i = 0; i < n->size(); i++) {
@@ -136,7 +136,7 @@ void qs_select_two_leaves(uint64_t size) {
     }
     n->append_child(l);
 
-    qs* q = new qs();
+    qs* q = new qs(size * 2);
     n->generate_query_structure(q);
     q->finalize();
     for (size_t i = 0; i < n->size() / 2; i++) {
@@ -164,7 +164,7 @@ void qs_select_two_leaves_two(uint64_t size) {
     }
     n->append_child(l);
 
-    qs* q = new qs();
+    qs* q = new qs(size * 2);
     n->generate_query_structure(q);
     q->finalize();
     for (size_t i = 0; i < n->size() / 2; i++) {
@@ -172,8 +172,26 @@ void qs_select_two_leaves_two(uint64_t size) {
     }
     n->deallocate(a);
     a->deallocate_node(n);
-    delete(a);
-    delete(q);
+    delete a;
+    delete q;
+}
+
+template<class bit_vector>
+void qs_sparse_bv_select_test(uint64_t size, uint64_t ones) {
+    bit_vector bv;
+    uint64_t gap = 1 + size / ones;
+    for (uint64_t i = 0; i < size; i++) {
+        bool val = i % gap == 0;
+        val = i == 0 ? false : val;
+        bv.insert(0, val);
+    }
+    auto* qs = bv.generate_query_structure();
+    ones = bv.sum();
+    for (uint64_t i = 1; i <= ones; i++) {
+        ASSERT_EQ(bv.select(i), qs->select(i));
+    }
+
+    delete qs;
 }
 
 #endif

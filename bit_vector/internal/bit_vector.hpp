@@ -7,6 +7,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <utility>
 
 #include "query_support.hpp"
 
@@ -31,9 +32,10 @@ namespace bv {
  * @tparam allocator Allocator type. For example bv::malloc_alloc.
  * @tparam leaf_size Maximum number of elements in leaf.
  * @tparam branches  Maximum branching factor of internal node.
+ * @tparam aggressive_realloc If true, leaves will only be allowed to have at most 256 elements of unused capacity
  */
 template <class leaf, class node, class allocator, uint64_t leaf_size,
-          uint8_t branches, class dtype>
+          uint8_t branches, class dtype, bool aggressive_realloc = false>
 class bit_vector {
    protected:
     bool root_is_leaf_ = true;      ///< Value indicating whether the root is in
@@ -150,7 +152,7 @@ class bit_vector {
     query_support<dtype, leaf, block_size>* generate_query_structure() const {
         static_assert(block_size * 3 <= leaf_size);
         query_support<dtype, leaf, block_size>* qs =
-            new query_support<dtype, leaf, block_size>();
+            new query_support<dtype, leaf, block_size>(size());
         generate_query_structure(qs);
         return qs;
     }
@@ -183,8 +185,11 @@ class bit_vector {
             if (l_root_->need_realloc()) {
                 if (l_root_->size() >= leaf_size) {
                     leaf* sibling = allocator_->template allocate_leaf<leaf>(
-                        leaf_size / (2 * WORD_BITS));
+                        2 + leaf_size / (2 * WORD_BITS));
                     sibling->transfer_append(l_root_, leaf_size / 2);
+                    if constexpr (aggressive_realloc) {
+                        l_root_ = allocator_->reallocate_leaf(l_root_, l_root_->capacity(), 2 * leaf_size / (2 * WORD_BITS));
+                    }
                     n_root_ = allocator_->template allocate_node<node>();
                     n_root_->has_leaves(true);
                     n_root_->append_child(sibling);
@@ -212,7 +217,7 @@ class bit_vector {
      * @brief Remove element at "index".
      *
      * Removes a bit from the underlying data structure, decreasing the tree
-     * height as appropriate. Tree height is decreased if `n_roor_` is the
+     * height as appropriate. Tree height is decreased if `n_root_` is the
      * active root and has exactly one child.
      *
      * Remove operations take \f$\mathcal{O}\left(b\log_b(n / l) + l\right)\f$
@@ -232,6 +237,12 @@ class bit_vector {
      */
     bool remove(uint64_t index) {
         if (root_is_leaf_) {
+            if constexpr (aggressive_realloc) {
+                uint64_t cap = l_root_->capacity();
+                if (cap * WORD_BITS > l_root_->size() + 4 * WORD_BITS) {
+                    [[unlikely]] l_root_ = allocator_->reallocate_leaf(l_root_, cap, cap - 2);
+                }
+            }
             [[unlikely]] return l_root_->remove(index);
         } else {
             bool v = n_root_->remove(index, allocator_);
@@ -417,6 +428,16 @@ class bit_vector {
         root_is_leaf_ ? l_root_->print(internal_only)
                       : n_root_->print(internal_only);
         std::cout << std::endl;
+    }
+
+    double leaf_usage() const {
+        std::pair<uint64_t, uint64_t> p;
+        if (root_is_leaf_) {
+            p = l_root_->leaf_usage();
+        } else {
+            p = n_root_->leaf_usage();
+        }
+        return double(p.second) / p.first;
     }
 };
 }  // namespace bv

@@ -50,11 +50,11 @@ namespace bv {
  * @tparam avx              Should avx population counting be used for rank.
  */
 template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
-          bool avx = true>
+          bool avx = true, bool aggressive_realloc = false>
 using simple_bv =
     bit_vector<leaf<buffer_size, avx>,
-               node<leaf<buffer_size>, uint64_t, leaf_size, branching_factor>,
-               malloc_alloc, leaf_size, branching_factor, uint64_t>;
+               node<leaf<buffer_size>, uint64_t, leaf_size, branching_factor, aggressive_realloc>,
+               malloc_alloc, leaf_size, branching_factor, uint64_t, aggressive_realloc>;
 
 /**
  * @brief Helper type definition template for bit vector with at most 2^31
@@ -77,11 +77,11 @@ using simple_bv =
  * @tparam avx              Should avx population counting be used for rank.
  */
 template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
-          bool avx = true>
+          bool avx = true, bool aggressive_realloc = false>
 using small_bv =
     bit_vector<leaf<buffer_size, avx>,
-               node<leaf<buffer_size>, uint32_t, leaf_size, branching_factor>,
-               malloc_alloc, leaf_size, branching_factor, uint32_t>;
+               node<leaf<buffer_size, avx>, uint32_t, leaf_size, branching_factor, aggressive_realloc>,
+               malloc_alloc, leaf_size, branching_factor, uint32_t, aggressive_realloc>;
 
 /**
  * @brief Default dynamic bit vector type.

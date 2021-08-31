@@ -110,8 +110,10 @@ class malloc_alloc {
 #pragma GCC diagnostic pop
         uint8_t* data_ptr =
             reinterpret_cast<uint8_t*>(n_leaf) + leaf_bytes;
-        memset(data_ptr + sizeof(uint64_t) * old_size, 0,
-               sizeof(uint64_t) * (new_size - old_size));
+        if (old_size < new_size) {
+            memset(data_ptr + sizeof(uint64_t) * old_size, 0,
+                sizeof(uint64_t) * (new_size - old_size));
+        }
         n_leaf->set_data_ptr(reinterpret_cast<uint64_t*>(data_ptr));
         n_leaf->capacity(new_size);
         return n_leaf;

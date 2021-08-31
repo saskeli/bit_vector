@@ -272,6 +272,8 @@ TEST(QuerySupport, DoubleSelect2) {
     qs_select_two_leaves_two<qs, sl, nd, ma>(SIZE);
 }
 
+TEST(QuerySupport, SparseSelect) { qs_sparse_bv_select_test<bv::bv>(100000, 34); }
+
 // Run tests
 TEST(Run, A) {
     uint64_t a[] = {1570};

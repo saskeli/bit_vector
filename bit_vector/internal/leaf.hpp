@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <utility>
 
 #include "libpopcnt.h"
 
@@ -1130,6 +1131,10 @@ class leaf {
         } else {
             std::cout << "]}";
         }
+    }
+
+    std::pair<uint64_t, uint64_t> leaf_usage() const {
+        return std::pair<uint64_t, uint64_t>(capacity_ * 64, size_);
     }
 
    protected:

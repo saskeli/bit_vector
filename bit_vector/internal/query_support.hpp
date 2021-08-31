@@ -54,6 +54,18 @@ class query_support {
         std::vector<r_elem<dtype, leaf_type>>();
 
    public:
+    template<class bit_vector>
+    query_support(const bit_vector * const bv) 
+      : size_(0), sum_(0), elems_() {
+        elems_.reserve(1 + bv->size() / block_size);
+        bv->generate_query_structure(this);
+    }
+
+    query_support(const size_t size) 
+      : size_(0), sum_(0), elems_() {
+        elems_.reserve(1 + size / block_size);
+    }
+
     /**
      * @brief Add leaf reference to the support structure.
      *

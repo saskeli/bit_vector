@@ -90,12 +90,14 @@ test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
 	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) -c test/test.cpp -o test/test.o
 
 test: clean_test test/test.o test/gtest_main.a
+	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
 	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE) -lpthread test/test.o test/gtest_main.a -o test/test
 	test/test
 
 cover: clean_test test/test.o test/gtest_main.a
+	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
 	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
