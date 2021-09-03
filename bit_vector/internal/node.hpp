@@ -715,19 +715,18 @@ class node {
             leaf_type* a_child;
             leaf_type* b_child;
             leaf_type* new_child;
+            dtype n_cap;
             if (index == 0) {
                 // If the full leaf is the first child, a new leaf is created
                 // between indexes 0 and 1.
-                dtype n_elem = child_sizes_.get(1) / 3;
-                dtype n_cap = (n_elem + 2 * WORD_BITS) / WORD_BITS;
-                n_cap += n_cap % 2;
-                n_cap = n_cap * WORD_BITS > leaf_size ? leaf_size / WORD_BITS
-                                                      : n_cap;
                 a_child = reinterpret_cast<leaf_type*>(children_[0]);
-                new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 b_child = reinterpret_cast<leaf_type*>(children_[1]);
-                new_child->transfer_append(b_child, b_child->size() - n_elem);
+                dtype n_elem = (a_child->size() + b_child->size()) / 3;
+                n_cap = 2 + n_elem / WORD_BITS;
+                n_cap += n_cap % 2;
+                new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
+                new_child->transfer_append(b_child, b_child->size() - n_elem);
                 [[unlikely]] index++;
             } else {
                 // If the full leaf is not the first child, a new leaf is
@@ -735,24 +734,22 @@ class node {
                 a_child = reinterpret_cast<leaf_type*>(children_[index - 1]);
                 b_child = reinterpret_cast<leaf_type*>(children_[index]);
                 dtype n_elem = (a_child->size() + b_child->size()) / 3;
-                dtype n_cap = (n_elem + 2 * WORD_BITS) / WORD_BITS;
+                n_cap = 2 + n_elem / WORD_BITS;
                 n_cap += n_cap % 2;
-                n_cap = n_cap * WORD_BITS > leaf_size ? leaf_size / WORD_BITS
-                                                      : n_cap;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
             }
             if constexpr (aggressive_realloc) {
                 uint64_t cap = a_child->capacity();
-                if (cap * WORD_BITS > a_child->size() + 4 * WORD_BITS) {
-                    a_child = alloc->reallocate_leaf(a_child, cap, cap - 2);
+                if (cap > n_cap) {
+                    a_child = alloc->reallocate_leaf(a_child, cap, n_cap);
                     [[unlikely]] children_[index - 1] = a_child;
                 }
                 cap = b_child->capacity();
-                if (cap * WORD_BITS > b_child->size() + 4 * WORD_BITS) {
-                    b_child = alloc->reallocate_leaf(b_child, cap, cap - 2);
-                    [[unlikely]] children_[index + 1] = b_child;
+                if (cap > n_cap) {
+                    b_child = alloc->reallocate_leaf(b_child, cap, n_cap);
+                    [[unlikely]] children_[index] = b_child;
                 }
             }
             // Update cumulative sizes and sums.
@@ -783,9 +780,12 @@ class node {
             }
             sibling->transfer_prepend(leaf, r_cap / 2);
             if constexpr (aggressive_realloc) {
-                uint64_t cap = leaf->capacity();
-                if (cap * WORD_BITS > leaf->size() + 4 * WORD_BITS) {
-                    leaf = alloc->reallocate_leaf(leaf, cap, cap - 2);
+                uint32_t cap = leaf->capacity();
+                uint32_t l_size = leaf->size();
+                if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
+                    uint32_t n_cap = 2 + l_size / WORD_BITS;
+                    n_cap += n_cap % 2;
+                    leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
                     [[unlikely]] children_[index] = leaf;
                 }
             }
@@ -813,9 +813,12 @@ class node {
             }
             sibling->transfer_append(leaf, l_cap / 2);
             if constexpr (aggressive_realloc) {
-                uint64_t cap = leaf->capacity();
-                if (cap * WORD_BITS > leaf->size() + 4 * WORD_BITS) {
-                    leaf = alloc->reallocate_leaf(leaf, cap, cap - 2);
+                uint32_t cap = leaf->capacity();
+                uint32_t l_size = leaf->size();
+                if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
+                    uint32_t n_cap = 2 + l_size / WORD_BITS;
+                    n_cap += n_cap % 2;
+                    leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
                     [[unlikely]] children_[index] = leaf;
                 }
             }
@@ -1009,7 +1012,7 @@ class node {
         dtype a_cap = a->capacity();
         dtype addition = (b->size() - leaf_size / 3) / 2;
         if (a_cap * WORD_BITS < a->size() + addition) {
-            dtype n_cap = 1 + (a->size() + addition) / WORD_BITS;
+            dtype n_cap = 2 + (a->size() + addition) / WORD_BITS;
             n_cap += n_cap % 2;
             n_cap =
                 n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
@@ -1018,9 +1021,12 @@ class node {
         }
         a->transfer_append(b, addition);
         if constexpr (aggressive_realloc) {
-            uint64_t cap = b->capacity();
-            if (cap * WORD_BITS > b->size() + 4 * WORD_BITS) {
-                b = alloc->reallocate_leaf(b, cap, cap - 2);
+            uint32_t cap = b->capacity();
+            uint32_t l_size = b->size();
+            if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
+                uint32_t n_cap = 2 + l_size / WORD_BITS;
+                n_cap += n_cap % 2;
+                b = alloc->reallocate_leaf(b, cap, n_cap);
                 [[unlikely]] children_[1] = b;
             }
         }
@@ -1047,7 +1053,7 @@ class node {
         dtype b_cap = b->capacity();
         dtype addition = (a->size() - leaf_size / 3) / 2;
         if (b_cap * WORD_BITS < b->size() + addition) {
-            dtype n_cap = 1 + (b->size() + addition) / WORD_BITS;
+            dtype n_cap = 2 + (b->size() + addition) / WORD_BITS;
             n_cap += n_cap % 2;
             n_cap =
                 n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;
@@ -1056,9 +1062,12 @@ class node {
         }
         b->transfer_prepend(a, addition);
         if constexpr (aggressive_realloc) {
-            uint64_t cap = a->capacity();
-            if (cap * WORD_BITS > a->size() + 4 * WORD_BITS) {
-                a = alloc->reallocate_leaf(a, cap, cap - 2);
+            uint32_t cap = a->capacity();
+            uint32_t l_size = a->size();
+            if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
+                uint32_t n_cap = 2 + l_size / WORD_BITS;
+                n_cap += n_cap % 2;
+                a = alloc->reallocate_leaf(a, cap, n_cap);
                 [[unlikely]] children_[idx] = a;
             }
         }
@@ -1090,7 +1099,7 @@ class node {
                       allocator* alloc) {
         dtype a_cap = a->capacity();
         if (a_cap * WORD_BITS < a->size() + b->size()) {
-            dtype n_cap = 1 + (a->size() + b->size()) / WORD_BITS;
+            dtype n_cap = 2 + (a->size() + b->size()) / WORD_BITS;
             n_cap += n_cap % 2;
             n_cap =
                 n_cap * WORD_BITS <= leaf_size ? n_cap : leaf_size / WORD_BITS;

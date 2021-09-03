@@ -39,7 +39,7 @@ bench: bench.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -Ideps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
 
 brute: brute_force.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -O0 -g -o brute brute_force.cpp
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -Ofast -o brute brute_force.cpp
 
 queries: queries.cpp $(HEADERS)
 	g++ $(CFLAGS) -g -DDEBUG -O0 -o queries queries.cpp

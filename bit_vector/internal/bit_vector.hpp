@@ -188,7 +188,7 @@ class bit_vector {
                         2 + leaf_size / (2 * WORD_BITS));
                     sibling->transfer_append(l_root_, leaf_size / 2);
                     if constexpr (aggressive_realloc) {
-                        l_root_ = allocator_->reallocate_leaf(l_root_, l_root_->capacity(), 2 * leaf_size / (2 * WORD_BITS));
+                        l_root_ = allocator_->reallocate_leaf(l_root_, l_root_->capacity(), 2 + leaf_size / (2 * WORD_BITS));
                     }
                     n_root_ = allocator_->template allocate_node<node>();
                     n_root_->has_leaves(true);
@@ -237,12 +237,6 @@ class bit_vector {
      */
     bool remove(uint64_t index) {
         if (root_is_leaf_) {
-            if constexpr (aggressive_realloc) {
-                uint64_t cap = l_root_->capacity();
-                if (cap * WORD_BITS > l_root_->size() + 4 * WORD_BITS) {
-                    [[unlikely]] l_root_ = allocator_->reallocate_leaf(l_root_, cap, cap - 2);
-                }
-            }
             [[unlikely]] return l_root_->remove(index);
         } else {
             bool v = n_root_->remove(index, allocator_);

@@ -490,7 +490,7 @@ class leaf {
             pop -= at(pos);
             pos--;
         }
-        //std::cout << "simple select: " << pos + 1 << std::endl;
+        // std::cout << "simple select: " << pos + 1 << std::endl;
         return ++pos;
     }
 
@@ -505,8 +505,8 @@ class leaf {
      * \mathrm{bv}[j]\right) = x\f$.
      */
     uint32_t select(const uint32_t x, uint32_t pos, uint32_t pop) const {
-        //std::cout << "select(" << x << ", " << pos << ", " << pop << ")" << std::endl;
-        //pos++;
+        // std::cout << "select(" << x << ", " << pos << ", " << pop << ")" <<
+        // std::endl; pos++;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
         // Scroll the buffer to the start position and calculate offset.
@@ -534,11 +534,9 @@ class leaf {
 #ifdef DEBUG
             if (pop_idx >= capacity_) {
                 std::cerr << "Invalid select query apparently\n"
-                        << "x = " << x << ", pos = " << pos 
-                        << ", pop = " << pop 
-                        << "\npop_idx = " << pop_idx
-                        << ", capacity_ = " << capacity_ 
-                        << std::endl;
+                          << "x = " << x << ", pos = " << pos
+                          << ", pop = " << pop << "\npop_idx = " << pop_idx
+                          << ", capacity_ = " << capacity_ << std::endl;
                 assert(pop_idx < capacity_);
             }
 #endif
@@ -555,8 +553,9 @@ class leaf {
                                 a_pos_offset--;
                             } else {
                                 pop -=
-                                    (data_[(b_index + a_pos_offset) / WORD_BITS] >>
-                                    ((b_index + a_pos_offset) % WORD_BITS)) &
+                                    (data_[(b_index + a_pos_offset) /
+                                           WORD_BITS] >>
+                                     ((b_index + a_pos_offset) % WORD_BITS)) &
                                     MASK;
                                 pos--;
                                 a_pos_offset++;
@@ -612,7 +611,7 @@ class leaf {
             pop -= at(pos);
             pos--;
         }
-        //std::cout << "block select: " << pos + 1 << std::endl;
+        // std::cout << "block select: " << pos + 1 << std::endl;
         return ++pos;
     }
 
@@ -741,6 +740,15 @@ class leaf {
      * @param elems Number of elements to transfer.
      */
     void transfer_append(leaf* other, uint64_t elems) {
+#ifdef DEBUG
+        if (capacity_ * WORD_BITS < size_ + elems) {
+            std::cerr << "Invalid append! Leaf only has room for "
+                      << (capacity_ * WORD_BITS - size_)
+                      << " bits  and " << elems << " was appended."
+                      << std::endl;
+            //exit(1);
+        }
+#endif
         commit();
         other->commit();
 

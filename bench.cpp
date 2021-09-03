@@ -25,7 +25,14 @@ void help() {
               << "            5 for rank support structure\n"
               << "            6 for flushed rank support structure\n"
               << "            7 for rank support structure with small blocks\n"
-              << "            8 for new buffered implementation with aggressive refactoring\n";
+              << "            8 for new buffered implementation with "
+                 "aggressive reallocation\n"
+              << "            9 for new unbuffered implementation with "
+                 "aggressive reallocation\n"
+              << "            10 for new buffered implementation with "
+                 "aggressive reallocation and query support\n"
+              << "            11 for new buffered implementation with "
+                 "aggressive reallocation small block query support\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
@@ -58,7 +65,8 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
 
     std::cout
         << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tflush\tset\t"
-        << "access\trank\tselect\tsize(bits)\trss\tusage\tchecksum" << std::endl;
+        << "access\trank\tselect\tsize(bits)\trss\tusage\tchecksum"
+        << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
         uint64_t aloc = gen(mt) % (i + 1);
@@ -183,9 +191,8 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
     }
 }
 
-template <class bit_vector, uint64_t select_offset,
-          uint8_t buffer, uint8_t branch, uint32_t leaf_size,
-          bool flush = false, bool rank_support = false>
+template <class bit_vector, uint64_t select_offset, uint8_t buffer,
+          uint8_t branch, uint32_t leaf_size, bool flush = false>
 void test(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -210,7 +217,8 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
     std::cout
         << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\tflush\t"
-        << "access\trank\tselect\tsize(bits)\trss\tusage\tchecksum" << std::endl;
+        << "access\trank\tselect\tsize(bits)\trss\tusage\tchecksum"
+        << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
         uint64_t aloc = gen(mt) % (i + 1);
@@ -282,7 +290,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
                   << "\t";
 
         std::cout << f_timing << "\t";
-
+        
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
             loc.push_back(gen(mt) % target);
@@ -314,7 +322,8 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         uint64_t limit = bv.rank(target - 1);
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
-            loc.push_back(gen(mt) % limit);
+            uint64_t val = gen(mt) % limit;
+            loc.push_back(val);
         }
 
         t1 = high_resolution_clock::now();
@@ -329,7 +338,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         std::cout << bv.bit_size() << "\t";
         getrusage(RUSAGE_SELF, &ru);
         std::cout << ru.ru_maxrss * 8 * 1024 << "\t";
-        if constexpr(select_offset == 0) {
+        if constexpr (select_offset == 0) {
             std::cout << "0\t";
         } else {
             std::cout << bv.leaf_usage() << "\t";
@@ -339,9 +348,8 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     }
 }
 
-template <class bit_vector, uint64_t select_offset,
-          uint8_t buffer, uint8_t branch, uint32_t leaf_size,
-          bool flush = false, bool rank_support = false,
+template <class bit_vector, uint64_t select_offset, uint8_t buffer,
+          uint8_t branch, uint32_t leaf_size, bool flush = false,
           class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>>
 void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
@@ -367,7 +375,8 @@ void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
 
     std::cout
         << "buffer\tbranch\tleaf_size\tseed\tsize\tremove\tinsert\tset\tflush\t"
-        << "access\trank\tselect\tsize(bits)\trss\tusage\tchecksum" << std::endl;
+        << "access\trank\tselect\tsize(bits)\trss\tusage\tchecksum"
+        << std::endl;
 
     for (uint64_t i = 0; i < 900000; i++) {
         uint64_t aloc = gen(mt) % (i + 1);
@@ -475,7 +484,8 @@ void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
         uint64_t limit = bv.rank(target - 1);
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
-            loc.push_back(gen(mt) % limit);
+            uint64_t val = gen(mt) % limit;
+            loc.push_back(val);
         }
 
         t1 = high_resolution_clock::now();
@@ -528,35 +538,48 @@ int main(int argc, char const* argv[]) {
         std::cerr << "DYNAMIC, 8, 0, 8192" << std::endl;
         test<dyn::suc_bv, 0, 0, 8, 8192>(size, steps, seed);
     } else if (type == 1) {
-        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384>(size, steps,
-                                                                seed);
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384>(size, steps, seed);
     } else if (type == 2) {
-        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true>(
-            size, steps, seed);
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true>(size, steps,
+                                                                   seed);
     } else if (type == 3) {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
-        test<bv::simple_bv<0, 16384, 64>, 1, 0, 64, 16384>(size, steps,
-                                                              seed);
+        test<bv::simple_bv<0, 16384, 64>, 1, 0, 64, 16384>(size, steps, seed);
     } else if (type == 4) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
     } else if (type == 5) {
-        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false, true>(
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false>(
             size, steps, seed);
     } else if (type == 6) {
-        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true, true>(
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true>(
             size, steps, seed);
     } else if (type == 7) {
-        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test_qs<bv::small_bv<16, 16384, 64>, 1, 16, 64, 16384, false, true,
-             bv::query_support<uint32_t, bv::leaf<16>, 512>>(size, steps, seed);
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test_qs<bv::small_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
+                bv::query_support<uint32_t, bv::leaf<16>, 512>>(size, steps,
+                                                                seed);
+    } else if (type == 8) {
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
+            size, steps, seed);
+    } else if (type == 9) {
+        std::cerr << "uint32_t, 64, 0, 16384" << std::endl;
+        test<bv::small_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
+            size, steps, seed);
+    } else if (type == 10) {
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
+            size, steps, seed);
     } else {
-        std::cerr << "uint64_t, 64, 8, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(size, steps, seed);
+        std::cerr << "uint32_t, 64, 16, 16384" << std::endl;
+        test_qs<bv::small_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
+                false, bv::query_support<uint32_t, bv::leaf<16>, 512>>(
+            size, steps, seed);
     }
 
     return 0;

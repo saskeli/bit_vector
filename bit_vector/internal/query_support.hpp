@@ -54,15 +54,13 @@ class query_support {
         std::vector<r_elem<dtype, leaf_type>>();
 
    public:
-    template<class bit_vector>
-    query_support(const bit_vector * const bv) 
-      : size_(0), sum_(0), elems_() {
+    template <class bit_vector>
+    query_support(const bit_vector* const bv) : size_(0), sum_(0), elems_() {
         elems_.reserve(1 + bv->size() / block_size);
         bv->generate_query_structure(this);
     }
 
-    query_support(const size_t size) 
-      : size_(0), sum_(0), elems_() {
+    query_support(const size_t size) : size_(0), sum_(0), elems_() {
         elems_.reserve(1 + size / block_size);
     }
 
@@ -79,7 +77,7 @@ class query_support {
         dtype i = elems_.size();
         dtype a_size = leaf->size();
         while (size_ + a_size > i * block_size) {
-        dtype i_rank = leaf->rank(i * block_size - size_);
+            dtype i_rank = leaf->rank(i * block_size - size_);
             elems_.push_back(
                 r_elem<dtype, leaf_type>(size_, sum_, i_rank, leaf));
             i++;
@@ -200,7 +198,7 @@ class query_support {
         dtype a_idx = elems_[idx].select_index;
         dtype b_idx =
             idx < elems_.size() - 1 ? elems_[idx + 1].select_index : a_idx;
-        if (b_idx - a_idx > 1 || idx  == elems_.size() - 1) {
+        if (b_idx - a_idx > 1 || idx == elems_.size() - 1) {
             [[unlikely]] a_idx = s_select(i);
         }
         r_elem<dtype, leaf_type> e = elems_[a_idx];
@@ -308,6 +306,14 @@ class query_support {
         r_elem<dtype, leaf_type> e = elems_[idx];
         while (e.p_sum + e.leaf->p_sum() < i) {
             idx++;
+#ifdef DEBUG
+            if (idx >= elems_.size()) {
+                std::cerr << "\nInvalid block index: " << idx
+                          << ", for array of size " << elems_.size()
+                          << " when looking for " << i << std::endl;
+                //exit(1);
+            }
+#endif
             [[unlikely]] e = elems_[idx];
         }
         return idx;
