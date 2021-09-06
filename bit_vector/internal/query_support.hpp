@@ -57,7 +57,7 @@ class query_support {
     template <class bit_vector>
     query_support(const bit_vector* const bv) : size_(0), sum_(0), elems_() {
         elems_.reserve(1 + bv->size() / block_size);
-        bv->generate_query_structure(this);
+        bv->template generate_query_structure<block_size>(this);
     }
 
     query_support(const size_t size) : size_(0), sum_(0), elems_() {

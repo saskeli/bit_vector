@@ -350,7 +350,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
 template <class bit_vector, uint64_t select_offset, uint8_t buffer,
           uint8_t branch, uint32_t leaf_size, bool flush = false,
-          class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>>
+          class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>, uint32_t block = 2048>
 void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -561,14 +561,14 @@ int main(int argc, char const* argv[]) {
     } else if (type == 7) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
-                bv::query_support<uint32_t, bv::leaf<16>, 512>>(size, steps,
+                bv::query_support<uint64_t, bv::leaf<16>, 512>, 512>(size, steps,
                                                                 seed);
     } else if (type == 8) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
             size, steps, seed);
     } else if (type == 9) {
-        std::cerr << "uint32_t, 64, 0, 16384" << std::endl;
+        std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
         test<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
             size, steps, seed);
     } else if (type == 10) {
@@ -576,9 +576,9 @@ int main(int argc, char const* argv[]) {
         test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
             size, steps, seed);
     } else {
-        std::cerr << "uint32_t, 64, 16, 16384" << std::endl;
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
-                false, bv::query_support<uint32_t, bv::leaf<16>, 512>>(
+                false, bv::query_support<uint64_t, bv::leaf<16>, 512>, 512>(
             size, steps, seed);
     }
 

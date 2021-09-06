@@ -127,7 +127,7 @@ class bit_vector {
      * @tparam block_size Size of blocks used in the query support structure.
      * @param qs Query support structure.
      */
-    template <dtype block_size = 2048>
+    template <uint32_t block_size = 2048>
     void generate_query_structure(
         query_support<dtype, leaf, block_size>* qs) const {
         static_assert(block_size * 3 <= leaf_size);
@@ -148,7 +148,7 @@ class bit_vector {
      * @tparam block_size Size of blocks used in the query support structure.
      * @return A new query support strucutre.
      */
-    template <dtype block_size = 2048>
+    template <uint32_t block_size = 2048>
     query_support<dtype, leaf, block_size>* generate_query_structure() const {
         static_assert(block_size * 3 <= leaf_size);
         query_support<dtype, leaf, block_size>* qs =
