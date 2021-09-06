@@ -560,7 +560,7 @@ int main(int argc, char const* argv[]) {
             size, steps, seed);
     } else if (type == 7) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::small_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
+        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
                 bv::query_support<uint32_t, bv::leaf<16>, 512>>(size, steps,
                                                                 seed);
     } else if (type == 8) {
@@ -569,7 +569,7 @@ int main(int argc, char const* argv[]) {
             size, steps, seed);
     } else if (type == 9) {
         std::cerr << "uint32_t, 64, 0, 16384" << std::endl;
-        test<bv::small_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
+        test<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
             size, steps, seed);
     } else if (type == 10) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
@@ -577,7 +577,7 @@ int main(int argc, char const* argv[]) {
             size, steps, seed);
     } else {
         std::cerr << "uint32_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::small_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
+        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
                 false, bv::query_support<uint32_t, bv::leaf<16>, 512>>(
             size, steps, seed);
     }
