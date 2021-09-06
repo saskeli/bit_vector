@@ -1,15 +1,12 @@
 #ifndef BV_BIT_VECTOR_HPP
 #define BV_BIT_VECTOR_HPP
 
-#ifndef WORD_BITS
-#define WORD_BITS 64
-#endif
-
 #include <cassert>
 #include <cstdint>
 #include <utility>
 
 #include "query_support.hpp"
+#include "uncopyable.hpp"
 
 namespace bv {
 
@@ -34,9 +31,9 @@ namespace bv {
  * @tparam branches  Maximum branching factor of internal node.
  * @tparam aggressive_realloc If true, leaves will only be allowed to have at most 256 elements of unused capacity
  */
-template <class leaf, class node, class allocator, uint64_t leaf_size,
+template <class leaf, class node, class allocator, uint32_t leaf_size,
           uint8_t branches, class dtype, bool aggressive_realloc = false>
-class bit_vector {
+class bit_vector : uncopyable {
    protected:
     bool root_is_leaf_ = true;      ///< Value indicating whether the root is in
                                     ///< `n_root_` or `l_root_`.
@@ -48,6 +45,9 @@ class bit_vector {
     leaf* l_root_;  ///< Root if a single leaf is sufficient.
     allocator* allocator_;  ///< Pointer to allocator used for allocating
                             ///< internal nodes and leaves.
+
+    /** @brief Number of bits in a computer word. */
+    static const constexpr uint64_t WORD_BITS = 64;
 
     /**
      * @brief Increases the height of the tree by one level.
@@ -153,7 +153,7 @@ class bit_vector {
         static_assert(block_size * 3 <= leaf_size);
         query_support<dtype, leaf, block_size>* qs =
             new query_support<dtype, leaf, block_size>(size());
-        generate_query_structure(qs);
+        generate_query_structure<block_size>(qs);
         return qs;
     }
 
@@ -173,7 +173,7 @@ class bit_vector {
      * @param index Where should `value` be inserted.
      * @param value What should be inserted at `index`.
      */
-    void insert(uint64_t index, bool value) {
+    void insert(dtype index, bool value) {
 #ifdef DEBUG
         if (index > size()) {
             std::cerr << "Invalid insertion to index " << index << " for "
@@ -197,7 +197,7 @@ class bit_vector {
                     root_is_leaf_ = false;
                     n_root_->insert(index, value, allocator_);
                 } else {
-                    uint64_t cap = l_root_->capacity();
+                    dtype cap = l_root_->capacity();
                     l_root_ =
                         allocator_->reallocate_leaf(l_root_, cap, cap + 2);
                     [[likely]] l_root_->insert(index, value);
@@ -235,7 +235,7 @@ class bit_vector {
      *
      * @return Value of the removed bit.
      */
-    bool remove(uint64_t index) {
+    bool remove(dtype index) {
         if (root_is_leaf_) {
             [[unlikely]] return l_root_->remove(index);
         } else {
@@ -265,7 +265,7 @@ class bit_vector {
      * @return \f$\sum_{i = 0}^{n - 1} \mathrm{bv}[i]\f$ for \f$n\f$
      * element bit vector.
      */
-    uint64_t sum() const {
+    dtype sum() const {
         return !root_is_leaf_ ? n_root_->p_sum() : l_root_->p_sum();
     }
 
@@ -277,7 +277,7 @@ class bit_vector {
      *
      * @return \f$n\f$.
      */
-    uint64_t size() const {
+    dtype size() const {
         return !root_is_leaf_ ? n_root_->size() : l_root_->size();
     }
 
@@ -299,7 +299,7 @@ class bit_vector {
      * @return Boolean value indicating if the index<sup>th</sup> element is
      * set.
      */
-    bool at(uint64_t index) const {
+    bool at(dtype index) const {
         return !root_is_leaf_ ? n_root_->at(index) : l_root_->at(index);
     }
 
@@ -317,7 +317,7 @@ class bit_vector {
      *
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
-    uint64_t rank(uint64_t index) const {
+    dtype rank(dtype index) const {
         return !root_is_leaf_ ? n_root_->rank(index) : l_root_->rank(index);
     }
 
@@ -335,7 +335,7 @@ class bit_vector {
      * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
      * \mathrm{bv}[j]\right) =  \f$ count.
      */
-    uint64_t select(uint64_t count) const {
+    dtype select(dtype count) const {
         return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
     }
 
@@ -351,7 +351,7 @@ class bit_vector {
      * @param index Index to set.
      * @param value value to set the index<sup>th</sup> bit to.
      */
-    void set(uint64_t index, bool value) {
+    void set(dtype index, bool value) {
         !root_is_leaf_ ? n_root_->set(index, value)
                        : l_root_->set(index, value);
     }

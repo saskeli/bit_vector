@@ -176,7 +176,7 @@ class branchless_scan {
      * @param array_size Number of elements stored in `this`.
      * @param other      Other cumulative size structure to copy from.
      */
-    void append(uint8_t n_elems, uint8_t array_size, branchless_scan* other) {
+    void append(uint8_t n_elems, uint8_t array_size, const branchless_scan* const other) {
         dtype addend = array_size != 0 ? elems_[array_size - 1] : 0;
         for (uint8_t i = 0; i < n_elems; i++) {
             elems_[i + array_size] = addend + other->get(i);
@@ -212,7 +212,7 @@ class branchless_scan {
      * @param other      Other cumulative size structure to copy from.
      */
     void prepend(uint8_t n_elems, uint8_t array_size, uint8_t o_size,
-                 branchless_scan* other) {
+                 const branchless_scan* const other) {
         memmove(elems_ + n_elems, elems_, array_size * sizeof(dtype));
         dtype subtrahend =
             n_elems < o_size ? other->get(o_size - n_elems - 1) : 0;

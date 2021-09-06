@@ -11,10 +11,9 @@
 #include <utility>
 
 #include "libpopcnt.h"
+#include "uncopyable.hpp"
 
 namespace bv {
-
-#define WORD_BITS 64
 
 /**
  * @brief Simple flat dynamic bit vector for use as a leaf for a dynamic b-tree
@@ -45,7 +44,7 @@ namespace bv {
  * @tparam Use avx population counts for rank operations.
  */
 template <uint8_t buffer_size, bool avx = true>
-class leaf {
+class leaf : uncopyable {
    protected:
     uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
@@ -63,13 +62,14 @@ class leaf {
     static const constexpr uint32_t TYPE_MASK = 8;
     /** @brief Mask for accessing buffer index value. */
     static const constexpr uint32_t INDEX_MASK = ((uint32_t(1) << 8) - 1);
+    /** @brief Number of bits in a computer word. */
+    static const constexpr uint64_t WORD_BITS = 64;
 
-    // The buffer fill rate is stored in part of an 8-bit word
-    // where the rest is reserved for future meta-data use.
+    // The buffer fill rate is stored in part of an 8-bit word.
     // This could be resolved with using 16 bits instead (without increasing the
     // sizeof(leaf) value but there does not really appear to be any reason to
     // do so.
-    static_assert(buffer_size < 64);
+    static_assert(buffer_size < WORD_BITS);
 
    public:
     /**
@@ -84,7 +84,7 @@ class leaf {
      * @param data     Pointer to a contiguous memory area available for
      * storage.
      */
-    leaf(uint64_t capacity, uint64_t* data) {
+    leaf(uint16_t capacity, uint64_t* data) {
         buffer_count_ = 0;
         capacity_ = capacity;
         size_ = 0;
@@ -99,7 +99,7 @@ class leaf {
      *
      * @return Value of bit at index i.
      */
-    bool at(const uint32_t i) const {
+    bool at(uint32_t i) const {
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
             for (uint8_t idx = 0; idx < buffer_count_; idx++) {
@@ -138,7 +138,7 @@ class leaf {
      * @param i Insertion index
      * @param x Value to insert
      */
-    void insert(const uint64_t i, const bool x) {
+    void insert(uint32_t i, bool x) {
 #ifdef DEBUG
         if (size_ >= capacity_ * WORD_BITS) {
             std::cerr << "Overflow. Reallocate before adding elements"
@@ -178,9 +178,9 @@ class leaf {
             // If there is no buffer, a simple linear time insertion is done
             // instead.
             size_++;
-            auto target_word = i / WORD_BITS;
-            auto target_offset = i % WORD_BITS;
-            for (size_t j = capacity_ - 1; j > target_word; j--) {
+            uint32_t target_word = i / WORD_BITS;
+            uint32_t target_offset = i % WORD_BITS;
+            for (uint32_t j = capacity_ - 1; j > target_word; j--) {
                 data_[j] <<= 1;
                 data_[j] |= (data_[j - 1] >> 63);
             }
@@ -205,14 +205,14 @@ class leaf {
      *
      * @return Value of removed element.
      */
-    bool remove(const uint64_t i) {
+    bool remove(uint32_t i) {
         if constexpr (buffer_size != 0) {
             bool x = this->at(i);
             p_sum_ -= x;
             --size_;
             uint8_t idx = buffer_count_;
             while (idx > 0) {
-                uint64_t b = buffer_index(buffer_[idx - 1]);
+                uint32_t b = buffer_index(buffer_[idx - 1]);
                 if (b == i) {
                     if (buffer_is_insertion(buffer_[idx - 1])) {
                         delete_buffer_element(idx - 1);
@@ -239,8 +239,8 @@ class leaf {
         } else {
             // If buffer does not exits. A simple linear time removal is done
             // instead.
-            uint64_t target_word = i / WORD_BITS;
-            uint64_t target_offset = i % WORD_BITS;
+            uint32_t target_word = i / WORD_BITS;
+            uint32_t target_offset = i % WORD_BITS;
             bool x = MASK & (data_[target_word] >> target_offset);
             p_sum_ -= x;
             data_[target_word] =
@@ -249,12 +249,12 @@ class leaf {
             data_[target_word] |= (uint32_t(capacity_ - 1) > target_word)
                                       ? (data_[target_word + 1] << 63)
                                       : 0;
-            for (size_t j = target_word + 1; j < uint32_t(capacity_ - 1); j++) {
+            for (uint32_t j = target_word + 1; j < uint32_t(capacity_ - 1); j++) {
                 data_[j] >>= 1;
                 data_[j] |= data_[j + 1] << 63;
             }
             data_[capacity_ - 1] >>=
-                (uint64_t(capacity_ - 1) > target_word) ? 1 : 0;
+                (uint32_t(capacity_ - 1) > target_word) ? 1 : 0;
             size_--;
             return x;
         }
@@ -272,14 +272,14 @@ class leaf {
      *
      * @return \f$x - \mathrm{bv}[i]\f$
      */
-    int set(const uint64_t i, const bool x) {
-        uint64_t idx = i;
+    int set(uint32_t i, bool x) {
+        uint32_t idx = i;
         if constexpr (buffer_size != 0) {
             // If buffer exists, the index needs for the underlying structure
             // needs to be modified. And if there exists an insertion to this
             // location in the buffer, the insertion can simply be amended.
             for (uint8_t j = 0; j < buffer_count_; j++) {
-                uint64_t b = buffer_index(buffer_[j]);
+                uint32_t b = buffer_index(buffer_[j]);
                 if (b < i) {
                     [[likely]] idx += buffer_is_insertion(buffer_[j]) ? -1 : 1;
                 } else if (b == i) {
@@ -298,8 +298,8 @@ class leaf {
                 }
             }
         }
-        uint64_t word_nr = idx / WORD_BITS;
-        uint64_t pos = idx % WORD_BITS;
+        uint32_t word_nr = idx / WORD_BITS;
+        uint32_t pos = idx % WORD_BITS;
 
         if ((data_[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)) {
             int change = x ? 1 : -1;
@@ -321,10 +321,10 @@ class leaf {
      *
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
-    uint32_t rank(const uint64_t n) const {
+    uint32_t rank(uint32_t n) const {
         uint32_t count = 0;
 
-        uint64_t idx = n;
+        uint32_t idx = n;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
                 if (buffer_index(buffer_[i]) >= n) {
@@ -341,14 +341,14 @@ class leaf {
                 }
             }
         }
-        uint64_t target_word = idx / WORD_BITS;
-        uint64_t target_offset = idx % WORD_BITS;
+        uint32_t target_word = idx / WORD_BITS;
+        uint32_t target_offset = idx % WORD_BITS;
         if constexpr (avx) {
             if (target_word) {
                 count += pop::popcnt(data_, target_word * 8);
             }
         } else {
-            for (size_t i = 0; i < target_word; i++) {
+            for (uint32_t i = 0; i < target_word; i++) {
                 count += __builtin_popcountll(data_[i]);
             }
         }
@@ -371,13 +371,13 @@ class leaf {
      *
      * @return \f$\sum_{i = \mathrm{offset}}^{\mathrm{n- 1}} \mathrm{bv}[i]\f$.
      */
-    uint32_t rank(const uint64_t n, const uint64_t offset) const {
+    uint32_t rank(uint32_t n, uint32_t offset) const {
         uint32_t count = 0;
-        uint64_t idx = n;
-        uint64_t o_idx = offset;
+        uint32_t idx = n;
+        uint32_t o_idx = offset;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
-                uint64_t b = buffer_index(buffer_[i]);
+                uint32_t b = buffer_index(buffer_[i]);
                 if (b >= n) {
                     [[unlikely]] break;
                 }
@@ -400,10 +400,10 @@ class leaf {
                 }
             }
         }
-        uint64_t target_word = idx / WORD_BITS;
-        uint64_t offset_word = o_idx / WORD_BITS;
-        uint64_t target_offset = idx % WORD_BITS;
-        uint64_t offset_offset = o_idx % WORD_BITS;
+        uint32_t target_word = idx / WORD_BITS;
+        uint32_t offset_word = o_idx / WORD_BITS;
+        uint32_t target_offset = idx % WORD_BITS;
+        uint32_t offset_offset = o_idx % WORD_BITS;
         if (target_word == offset_word) {
             count += __builtin_popcountll(data_[offset_word] &
                                           ~((MASK << offset_offset) - 1) &
@@ -421,7 +421,7 @@ class leaf {
                                      (target_word - offset_word) * 8);
             }
         } else {
-            for (size_t i = offset_word; i < target_word; i++) {
+            for (uint32_t i = offset_word; i < target_word; i++) {
                 count += __builtin_popcountll(data_[i]);
             }
         }
@@ -442,19 +442,19 @@ class leaf {
      * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
      * \mathrm{bv}[j]\right) = x\f$.
      */
-    uint32_t select(const uint32_t x) const {
+    uint32_t select(uint32_t x) const {
         uint32_t pop = 0;
         uint32_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
 
         // Step one 64-bit word at a time considering the buffer until pop >= x
-        for (uint64_t j = 0; j < capacity_; j++) {
+        for (uint32_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
-            pos += 64;
+            pos += WORD_BITS;
             if constexpr (buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                    uint64_t b_index = buffer_index(buffer_[b]);
+                    uint32_t b_index = buffer_index(buffer_[b]);
                     if (b_index < pos) {
                         if (buffer_is_insertion(buffer_[b])) {
                             pop += buffer_value(buffer_[b]);
@@ -486,7 +486,7 @@ class leaf {
         // Decrement one bit at a time until we can't anymore without going
         // under x.
         pos--;
-        while (pop >= x && pos < capacity_ * 64) {
+        while (pop >= x && pos < capacity_ * WORD_BITS) {
             pop -= at(pos);
             pos--;
         }
@@ -504,7 +504,7 @@ class leaf {
      * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
      * \mathrm{bv}[j]\right) = x\f$.
      */
-    uint32_t select(const uint32_t x, uint32_t pos, uint32_t pop) const {
+    uint32_t select(uint32_t x, uint32_t pos, uint32_t pop) const {
         // std::cout << "select(" << x << ", " << pos << ", " << pop << ")" <<
         // std::endl; pos++;
         uint8_t current_buffer = 0;
@@ -526,11 +526,11 @@ class leaf {
             }
         }
 
-        uint64_t pop_idx = 0;
+        uint32_t pop_idx = 0;
         // Step to the next 64-bit word boundary
         if (pos + a_pos_offset > 0) {
             pop_idx = (pos + a_pos_offset) / WORD_BITS;
-            uint64_t offset = (pos + a_pos_offset) % WORD_BITS;
+            uint32_t offset = (pos + a_pos_offset) % WORD_BITS;
 #ifdef DEBUG
             if (pop_idx >= capacity_) {
                 std::cerr << "Invalid select query apparently\n"
@@ -542,10 +542,10 @@ class leaf {
 #endif
             if (offset != 0) {
                 pop += __builtin_popcountll(data_[pop_idx++] >> offset);
-                pos += 64 - offset;
+                pos += WORD_BITS - offset;
                 if constexpr (buffer_size != 0) {
                     for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                        uint64_t b_index = buffer_index(buffer_[b]);
+                        uint32_t b_index = buffer_index(buffer_[b]);
                         if (b_index < pos) {
                             if (buffer_is_insertion(buffer_[b])) {
                                 pop += buffer_value(buffer_[b]);
@@ -571,12 +571,12 @@ class leaf {
         }
 
         // Step one 64-bit word at a time considering the buffer until pop >= x
-        for (uint64_t j = pop_idx; j < capacity_; j++) {
+        for (uint32_t j = pop_idx; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
-            pos += 64;
+            pos += WORD_BITS;
             if constexpr (buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                    uint64_t b_index = buffer_index(buffer_[b]);
+                    uint32_t b_index = buffer_index(buffer_[b]);
                     if (b_index < pos) {
                         if (buffer_is_insertion(buffer_[b])) {
                             pop += buffer_value(buffer_[b]);
@@ -607,7 +607,7 @@ class leaf {
         // Decrement one bit at a time until we can't anymore without going
         // under x.
         pos--;
-        while (pop >= x && pos < capacity_ * 64) {
+        while (pop >= x && pos < capacity_ * WORD_BITS) {
             pop -= at(pos);
             pos--;
         }
@@ -672,7 +672,7 @@ class leaf {
      *
      * @return Pointer to raw leaf data.
      */
-    uint64_t* data() { return data_; }
+    const uint64_t* data() { return data_; }
 
     /**
      * @brief Remove the fist "elems" elements from the leaf.
@@ -684,26 +684,26 @@ class leaf {
      *
      * @param elems number of elements to remove.
      */
-    void clear_first(uint64_t elems) {
+    void clear_first(uint32_t elems) {
         // Important to ensure that all trailing data gets zeroed out to not
         // cause undefined behaviour for select or copy operations.
-        uint64_t ones = rank(elems);
-        uint64_t words = elems / WORD_BITS;
+        uint32_t ones = rank(elems);
+        uint32_t words = elems / WORD_BITS;
 
         if (elems % WORD_BITS == 0) {
             // If the data to remove happens to align with 64-bit words the
             // removal can be done by simply shuffling elements. This could be
             // memmove instead but testing indicates that it's not actually
             // faster in this case.
-            for (uint64_t i = 0; i < capacity_ - words; i++) {
+            for (uint32_t i = 0; i < capacity_ - words; i++) {
                 data_[i] = data_[i + words];
             }
-            for (uint64_t i = capacity_ - words; i < capacity_; i++) {
+            for (uint32_t i = capacity_ - words; i < capacity_; i++) {
                 data_[i] = 0;
             }
         } else {
             // clear elem bits at start of data
-            for (uint64_t i = 0; i < words; i++) {
+            for (uint32_t i = 0; i < words; i++) {
                 data_[i] = 0;
             }
             uint64_t tail = elems % WORD_BITS;
@@ -711,13 +711,13 @@ class leaf {
             data_[words] &= ~tail_mask;
 
             // Copy data backwars by elem bits
-            uint64_t words_to_shuffle = capacity_ - words - 1;
-            for (uint64_t i = 0; i < words_to_shuffle; i++) {
+            uint32_t words_to_shuffle = capacity_ - words - 1;
+            for (uint32_t i = 0; i < words_to_shuffle; i++) {
                 data_[i] = data_[words + i] >> tail;
                 data_[i] |= (data_[words + i + 1]) << (WORD_BITS - tail);
             }
             data_[capacity_ - words - 1] = data_[capacity_ - 1] >> tail;
-            for (uint64_t i = capacity_ - words; i < capacity_; i++) {
+            for (uint32_t i = capacity_ - words; i < capacity_; i++) {
                 data_[i] = 0;
             }
             [[unlikely]] (void(0));
@@ -739,7 +739,7 @@ class leaf {
      * @param other Pointer to the next sibling.
      * @param elems Number of elements to transfer.
      */
-    void transfer_append(leaf* other, uint64_t elems) {
+    void transfer_append(leaf* other, uint32_t elems) {
 #ifdef DEBUG
         if (capacity_ * WORD_BITS < size_ + elems) {
             std::cerr << "Invalid append! Leaf only has room for "
@@ -752,15 +752,15 @@ class leaf {
         commit();
         other->commit();
 
-        uint64_t* o_data = other->data();
-        uint64_t split_point = size_ % WORD_BITS;
-        uint64_t target_word = size_ / WORD_BITS;
-        uint64_t copy_words = elems / WORD_BITS;
-        uint64_t overhang = elems % WORD_BITS;
+        const uint64_t* o_data = other->data();
+        uint32_t split_point = size_ % WORD_BITS;
+        uint32_t target_word = size_ / WORD_BITS;
+        uint32_t copy_words = elems / WORD_BITS;
+        uint32_t overhang = elems % WORD_BITS;
         // Branching depending on word alignment of source and target.
         if (split_point == 0) {
             // Copy target is word aligned
-            for (size_t i = 0; i < copy_words; i++) {
+            for (uint32_t i = 0; i < copy_words; i++) {
                 data_[target_word++] = o_data[i];
                 p_sum_ += __builtin_popcountll(o_data[i]);
             }
@@ -772,7 +772,7 @@ class leaf {
             }
         } else {
             // Copy target is not word aligned
-            for (size_t i = 0; i < copy_words; i++) {
+            for (uint32_t i = 0; i < copy_words; i++) {
                 data_[target_word++] |= o_data[i] << split_point;
                 data_[target_word] |= o_data[i] >> (WORD_BITS - split_point);
                 p_sum_ += __builtin_popcountll(o_data[i]);
@@ -803,17 +803,17 @@ class leaf {
      *
      * @param elems number of elements to remove.
      */
-    void clear_last(uint64_t elems) {
+    void clear_last(uint32_t elems) {
         size_ -= elems;
         p_sum_ = rank(size_);
-        uint64_t offset = size_ % 64;
-        uint64_t words = size_ / 64;
+        uint32_t offset = size_ % WORD_BITS;
+        uint32_t words = size_ / WORD_BITS;
         // Important to ensure that all trailing data gets zeroed out to not
         // cause undefined behaviour for select or copy operations.
         if (offset != 0) {
             [[likely]] data_[words++] &= (MASK << offset) - 1;
         }
-        for (uint64_t i = words; i < capacity_; i++) {
+        for (uint32_t i = words; i < capacity_; i++) {
             data_[i] = 0;
         }
     }
@@ -831,32 +831,32 @@ class leaf {
      * @param other Pointer to the previous sibling.
      * @param elems Number of elements to transfer.
      */
-    void transfer_prepend(leaf* other, uint64_t elems) {
+    void transfer_prepend(leaf* other, uint32_t elems) {
         commit();
         other->commit();
-        uint64_t* o_data = other->data();
-        uint64_t words = elems / 64;
+        const uint64_t* o_data = other->data();
+        uint32_t words = elems / WORD_BITS;
         // Make space for new data
-        for (uint64_t i = capacity_ - 1; i >= words; i--) {
+        for (uint32_t i = capacity_ - 1; i >= words; i--) {
             data_[i] = data_[i - words];
             if (i == 0) break;
         }
-        for (uint64_t i = 0; i < words; i++) {
+        for (uint32_t i = 0; i < words; i++) {
             data_[i] = 0;
         }
-        uint64_t overflow = elems % 64;
+        uint32_t overflow = elems % WORD_BITS;
         if (overflow > 0) {
-            for (uint64_t i = capacity_ - 1; i > words; i--) {
+            for (uint32_t i = capacity_ - 1; i > words; i--) {
                 data_[i] <<= overflow;
-                data_[i] |= data_[i - 1] >> (64 - overflow);
+                data_[i] |= data_[i - 1] >> (WORD_BITS - overflow);
             }
             data_[words] <<= overflow;
             [[likely]] (void(0));
         }
         // Copy over data from sibling
-        uint64_t source_word = other->size();
-        uint64_t source_offset = source_word % 64;
-        source_word /= 64;
+        uint32_t source_word = other->size();
+        uint32_t source_offset = source_word % WORD_BITS;
+        source_word /= WORD_BITS;
         // Somewhat complicated case handling based on target and source word
         // alignment. Additional complications compared to transfer append is
         // due to the both the start point and end point for the copy source not
@@ -865,19 +865,19 @@ class leaf {
             // Source is word aligned.
             if (overflow == 0) {
                 // Target is word aligned.
-                for (uint64_t i = words - 1; i < words; i--) {
+                for (uint32_t i = words - 1; i < words; i--) {
                     data_[i] = o_data[--source_word];
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
             } else {
                 // Target is not word aligned.
                 source_word--;
-                for (uint64_t i = words; i > 0; i--) {
+                for (uint32_t i = words; i > 0; i--) {
                     p_sum_ += __builtin_popcountll(o_data[source_word]);
-                    data_[i] |= o_data[source_word] >> (64 - overflow);
+                    data_[i] |= o_data[source_word] >> (WORD_BITS - overflow);
                     data_[i - 1] |= o_data[source_word--] << overflow;
                 }
-                uint64_t w = o_data[source_word] >> (64 - overflow);
+                uint64_t w = o_data[source_word] >> (WORD_BITS - overflow);
                 p_sum_ += __builtin_popcountll(w);
                 [[likely]] data_[0] |= w;
             }
@@ -886,24 +886,24 @@ class leaf {
             // Source is not word aligned
             if (overflow == 0) {
                 // Target is word aligned
-                for (uint64_t i = words - 1; i < words; i--) {
-                    data_[i] = o_data[source_word] << (64 - source_offset);
+                for (uint32_t i = words - 1; i < words; i--) {
+                    data_[i] = o_data[source_word] << (WORD_BITS - source_offset);
                     data_[i] |= o_data[--source_word] >> source_offset;
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
             } else {
                 // Target is not word aligned
                 uint64_t w;
-                for (uint64_t i = words; i > 0; i--) {
-                    w = o_data[source_word] << (64 - source_offset);
+                for (uint32_t i = words; i > 0; i--) {
+                    w = o_data[source_word] << (WORD_BITS - source_offset);
                     w |= o_data[--source_word] >> source_offset;
                     p_sum_ += __builtin_popcountll(w);
-                    data_[i] |= w >> (64 - overflow);
+                    data_[i] |= w >> (WORD_BITS - overflow);
                     data_[i - 1] |= w << overflow;
                 }
-                w = o_data[source_word] << (64 - source_offset);
+                w = o_data[source_word] << (WORD_BITS - source_offset);
                 w |= o_data[--source_word] >> source_offset;
-                w >>= 64 - overflow;
+                w >>= WORD_BITS - overflow;
                 p_sum_ += __builtin_popcountll(w);
                 [[likely]] data_[0] |= w;
             }
@@ -930,26 +930,26 @@ class leaf {
     void append_all(leaf* other) {
         commit();
         other->commit();
-        uint64_t* o_data = other->data();
-        uint64_t offset = size_ % 64;
-        uint64_t word = size_ / 64;
-        uint64_t o_size = other->size();
-        uint64_t o_p_sum = other->p_sum();
-        uint64_t o_words = o_size / 64;
-        o_words += o_size % 64 == 0 ? 0 : 1;
+        const uint64_t* o_data = other->data();
+        uint32_t offset = size_ % WORD_BITS;
+        uint32_t word = size_ / WORD_BITS;
+        uint32_t o_size = other->size();
+        uint32_t o_p_sum = other->p_sum();
+        uint32_t o_words = o_size / WORD_BITS;
+        o_words += o_size % WORD_BITS == 0 ? 0 : 1;
         // Elements are guaranteed to be fully word aligned in practice so
         // branching is only required for word alignment of the target leaf.
         if (offset == 0) {
             // Target is word aligned.
-            for (uint64_t i = 0; i < o_words; i++) {
+            for (uint32_t i = 0; i < o_words; i++) {
                 data_[word++] = o_data[i];
             }
             [[unlikely]] (void(0));
         } else {
             // Target is not word aligned.
-            for (uint64_t i = 0; i < o_words; i++) {
+            for (uint32_t i = 0; i < o_words; i++) {
                 data_[word++] |= o_data[i] << offset;
-                data_[word] |= o_data[i] >> (64 - offset);
+                data_[word] |= o_data[i] >> (WORD_BITS - offset);
             }
         }
         size_ += o_size;
@@ -972,23 +972,23 @@ class leaf {
         if (buffer_count_ == 0) [[unlikely]]
             return;
 
-        uint64_t overflow = 0;
+        uint32_t overflow = 0;
         uint8_t overflow_length = 0;
         uint8_t underflow_length = 0;
         uint8_t current_index = 0;
         uint32_t buf = buffer_[current_index];
-        uint64_t target_word = buffer_index(buf) / WORD_BITS;
-        uint64_t target_offset = buffer_index(buf) % WORD_BITS;
+        uint32_t target_word = buffer_index(buf) / WORD_BITS;
+        uint32_t target_offset = buffer_index(buf) % WORD_BITS;
 
-        uint64_t words = size_ / WORD_BITS;
+        uint32_t words = size_ / WORD_BITS;
         words += size_ % WORD_BITS > 0 ? 1 : 0;
-        for (uint64_t current_word = 0; current_word < words; current_word++) {
+        for (uint32_t current_word = 0; current_word < words; current_word++) {
             uint64_t underflow =
                 current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
             if (overflow_length) {
                 [[likely]] underflow =
                     (underflow << overflow_length) |
-                    (data_[current_word] >> (64 - overflow_length));
+                    (data_[current_word] >> (WORD_BITS - overflow_length));
             }
 
             uint64_t new_overflow = 0;
@@ -997,7 +997,7 @@ class leaf {
                 uint64_t word =
                     underflow_length
                         ? (data_[current_word] >> underflow_length) |
-                              (underflow << (64 - underflow_length))
+                              (underflow << (WORD_BITS - underflow_length))
                         : (data_[current_word] << overflow_length) | overflow;
                 underflow >>= underflow_length;
                 uint64_t new_word = 0;
@@ -1011,7 +1011,7 @@ class leaf {
                             : target_offset - start_offset == 0
                                 ? 0
                                 : (underflow
-                                   << (64 - (target_offset - start_offset))));
+                                   << (WORD_BITS - (target_offset - start_offset))));
                     underflow >>= target_offset - start_offset;
                     if (buffer_is_insertion(buf)) {
                         if (buffer_value(buf)) {
@@ -1040,19 +1040,19 @@ class leaf {
                     [[unlikely]] target_offset = buffer_index(buf) % WORD_BITS;
                 }
                 new_word |=
-                    start_offset < 64 ? (word << start_offset) : uint64_t(0);
+                    start_offset < WORD_BITS ? (word << start_offset) : uint64_t(0);
                 new_overflow = overflow_length ? data_[current_word] >>
-                                                     (64 - overflow_length)
+                                                     (WORD_BITS - overflow_length)
                                                : 0;
                 [[unlikely]] data_[current_word] = new_word;
             } else {
                 if (underflow_length) {
                     data_[current_word] =
                         (data_[current_word] >> underflow_length) |
-                        (underflow << (64 - underflow_length));
+                        (underflow << (WORD_BITS - underflow_length));
                 } else if (overflow_length) {
                     new_overflow =
-                        data_[current_word] >> (64 - overflow_length);
+                        data_[current_word] >> (WORD_BITS - overflow_length);
                     [[likely]] data_[current_word] =
                         (data_[current_word] << overflow_length) | overflow;
                 } else {
@@ -1079,20 +1079,20 @@ class leaf {
      *
      * @return 1 for calculating the number of nodes in the tree.
      */
-    uint64_t validate() const {
+    uint32_t validate() const {
         assert(size_ <= capacity_ * WORD_BITS);
         assert(p_sum_ <= size_);
         assert(p_sum_ == rank(size_));
-        uint64_t last_word = size_ / WORD_BITS;
-        uint64_t overflow = size_ % WORD_BITS;
+        uint32_t last_word = size_ / WORD_BITS;
+        uint32_t overflow = size_ % WORD_BITS;
         if (overflow != 0) {
-            for (uint64_t i = overflow; i < WORD_BITS; i++) {
+            for (uint32_t i = overflow; i < WORD_BITS; i++) {
                 uint64_t val = (MASK << i) & data_[last_word];
-                assert(val == 0);
+                assert(val == 0u);
             }
             last_word++;
         }
-        for (uint64_t i = last_word; i < capacity_; i++) {
+        for (uint32_t i = last_word; i < capacity_; i++) {
             assert(data_[i] == 0);
         }
         return 1;
@@ -1127,9 +1127,9 @@ class leaf {
             }
         }
         if (!internal_only) {
-            std::cout << "]\n\"data\": [\n";
+            std::cout << "],\n\"data\": [\n";
             for (uint64_t i = 0; i < capacity_; i++) {
-                std::bitset<64> b(data_[i]);
+                std::bitset<WORD_BITS> b(data_[i]);
                 std::cout << "\"" << b << "\"";
                 if (i != uint64_t(capacity_ - 1)) {
                     std::cout << ",\n";
@@ -1142,7 +1142,7 @@ class leaf {
     }
 
     std::pair<uint64_t, uint64_t> leaf_usage() const {
-        return std::pair<uint64_t, uint64_t>(capacity_ * 64, size_);
+        return std::pair<uint64_t, uint64_t>(capacity_ * WORD_BITS, size_);
     }
 
    protected:
@@ -1259,7 +1259,7 @@ class leaf {
      */
     void push_back(const bool x) {
         assert(size_ < capacity_ * WORD_BITS);
-        auto pb_size = size_;
+        uint32_t pb_size = size_;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
                 pb_size += buffer_is_insertion(buffer_[i]) ? -1 : 1;

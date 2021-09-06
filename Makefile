@@ -2,7 +2,7 @@ CL = $(shell getconf LEVEL1_DCACHE_LINESIZE)
 
 CFLAGS = -std=c++2a -Wall -Wextra -pedantic -DCACHE_LINE=$(CL) -march=native
 
-INCLUDE = -I deps/hopscotch-map/include/ -I deps/DYNAMIC/include/
+INCLUDE = -I deps/hopscotch-map/include/ -isystem deps/DYNAMIC/include/
 
 HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
           bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \
@@ -36,7 +36,7 @@ bv_debug: bv_debug.cpp $(HEADERS) update_git
 bench: bench.cpp $(HEADERS) update_git
 	(cd deps/sdsl-lite && cmake CMakeLists.txt)
 	make -C deps/sdsl-lite
-	g++ $(CFLAGS) $(INCLUDE) -Ideps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
+	g++ $(CFLAGS) $(INCLUDE) -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
 
 brute: brute_force.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -Ofast -o brute brute_force.cpp

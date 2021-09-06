@@ -12,6 +12,7 @@
 #endif
 
 #include "branch_selection.hpp"
+#include "uncopyable.hpp"
 
 namespace bv {
 
@@ -63,8 +64,8 @@ namespace bv {
  * @tparam branches  Maximum branching factor of internal nodes.
  * @tparam aggressive_realloc If true, leaves will only be allowed to have at most 256 elements of unused capacity
  */
-template <class leaf_type, class dtype, uint64_t leaf_size, uint8_t branches, bool aggressive_realloc = false>
-class node {
+template <class leaf_type, class dtype, uint32_t leaf_size, uint8_t branches, bool aggressive_realloc = false>
+class node : uncopyable {
    protected:
     typedef branchless_scan<dtype, branches> branching;
     /**
@@ -84,7 +85,10 @@ class node {
      * children.
      */
     branching child_sums_;
-    void* children_[branches];  ///< pointers to leaf_type or node children.
+    void* children_[branches];  ///< pointers to bv::leaf or bv::node children.
+
+    /** @brief Number of bits in a computer word. */
+    static const constexpr uint64_t WORD_BITS = 64;
 
     static_assert(leaf_size >= 256, "leaf size needs to be a at least 256");
     static_assert((leaf_size % 128) == 0,
@@ -98,19 +102,14 @@ class node {
     /**
      * @brief Constructor
      */
-    node() {
-        meta_data_ = 0;
-        child_count_ = 0;
-        child_sizes_ = branching();
-        child_sums_ = branching();
-    }
+    node() : meta_data_(0), child_count_(0), 
+             child_sizes_(), child_sums_() { }
 
     template <class qds>
     void generate_query_structure(qds* qs) {
         if (has_leaves()) {
             leaf_type** children = reinterpret_cast<leaf_type**>(children_);
             for (size_t i = 0; i < child_count_; i++) {
-                children[i]->commit();
                 qs->append(children[i]);
             }
         } else {
@@ -176,7 +175,7 @@ class node {
     int set(dtype index, bool v) {
         uint8_t child_index = child_sizes_.find(index + 1);
         index -= child_index != 0 ? child_sizes_.get(child_index - 1) : 0;
-        dtype change = 0;
+        int change = 0;
         if (has_leaves()) {
             leaf_type* child =
                 reinterpret_cast<leaf_type*>(children_[child_index]);
@@ -379,7 +378,7 @@ class node {
     /**
      * @brief Remove the index<sup>th</sup> element.
      *
-     * Removes element at "index" while ensuring that strctural invariants hold.
+     * Removes element at "index" while ensuring that structural invariants hold.
      * Children will be rebalanced and merger as necessary.
      *
      * @tparam allocator Type of `alloc`.

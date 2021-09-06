@@ -9,6 +9,8 @@
 #include <iostream>
 #include <new>
 
+#include "uncopyable.hpp"
+
 namespace bv {
 
 /**
@@ -19,7 +21,7 @@ namespace bv {
  * For leaves, a block is (re)allocated for housing both the leaf "struct" and
  * the associated data.
  */
-class malloc_alloc {
+class malloc_alloc : uncopyable {
    protected:
     uint64_t allocations_;  ///< Number of objects currently allocated.
 

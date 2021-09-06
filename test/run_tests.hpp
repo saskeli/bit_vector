@@ -11,7 +11,7 @@ void check(bva* a, bvb* b, uint64_t size) {
     ASSERT_EQ(b->size(), size);
 
     for (uint64_t i = 0; i < size; i++) {
-        ASSERT_EQ(a->at(i), b->at(i));
+        ASSERT_EQ(a->at(i), b->at(i)) << "Failed at " << i << " with size " << size;
         ASSERT_EQ(a->rank(i), b->rank(i));
     }
 
