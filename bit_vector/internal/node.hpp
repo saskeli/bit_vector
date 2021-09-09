@@ -191,15 +191,6 @@ class node : uncopyable {
         if (has_leaves()) {
             leaf_type* child =
                 reinterpret_cast<leaf_type*>(children_[child_index]);
-            if (!child->can_set()) {
-                dtype cap = child->capacity();
-                if (cap * WORD_BITS >= leaf_size) {
-                    rebalance_leaf(child_index, child, alloc);
-                    [[unlikely]] return set(index, v, alloc);
-                }
-                child = alloc->reallocate_leaf(child, cap, cap + 2);
-                [[unlikely]] children_[child_index] = child;
-            }
             [[unlikely]] change = child->set(index, v);
         } else {
             node* child = reinterpret_cast<node*>(children_[child_index]);
@@ -383,7 +374,7 @@ class node : uncopyable {
     /**
      * @brief Insert "value" at "index".
      *
-     * Inserts into the logical bit vector whlie ensuring that structural
+     * Inserts into the logical bit vector while ensuring that structural
      * invariants hold. Children will be rebalanced or split as necessary.
      *
      * @tparam allocator Type of `alloc`.
@@ -699,8 +690,6 @@ class node : uncopyable {
         return p;
     }
 
-    // TODO: Decouple balancing from leaf sizes and base it on excess capacity
-    // instead.
    protected:
     /**
      * @brief Ensure that there is space for insertion in the child leaves.
@@ -728,7 +717,8 @@ class node : uncopyable {
         if (index > 0) {
             l_cap = child_sizes_.get(index - 1);
             l_cap -= index > 1 ? child_sizes_.get(index - 2) : 0;
-            [[likely]] l_cap = leaf_size - l_cap;
+            l_cap = leaf_size - l_cap;
+            [[likely]] (void(0));
         }
         // Number of leaves that can fir in the "right" sibling (with potential
         // reallocation).
@@ -736,7 +726,8 @@ class node : uncopyable {
         if (index < child_count_ - 1) {
             r_cap = child_sizes_.get(index + 1);
             r_cap -= child_sizes_.get(index);
-            [[likely]] r_cap = leaf_size - r_cap;
+            r_cap = leaf_size - r_cap;
+            [[likely]] (void(0));
         }
         if (l_cap < 2 * leaf_size / 9 && r_cap < 2 * leaf_size / 9) {
             // Rebalancing without creating a new leaf is impossible
@@ -877,15 +868,8 @@ class node : uncopyable {
     void leaf_insert(dtype index, bool value, allocator* alloc) {
         uint8_t child_index = child_sizes_.find(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
-#ifdef DEBUG
-        if (child->size() > leaf_size) {
-            std::cerr << child->size() << " > " << leaf_size << "\n";
-            std::cerr << "invalid leaf size" << std::endl;
-            assert(child->size() <= leaf_size);
-        }
-#endif
         if (child->need_realloc()) {
-            if (child->size() >= leaf_size) {
+            if (child->capacity() * WORD_BITS >= leaf_size) {
                 rebalance_leaf(child_index, child, alloc);
             } else {
                 dtype cap = child->capacity();
@@ -1051,11 +1035,9 @@ class node : uncopyable {
         a->transfer_append(b, addition);
         if constexpr (aggressive_realloc) {
             uint32_t cap = b->capacity();
-            uint32_t l_size = b->size();
-            if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
-                uint32_t n_cap = 2 + l_size / WORD_BITS;
-                n_cap += n_cap % 2;
-                b = alloc->reallocate_leaf(b, cap, n_cap);
+            uint32_t d_cap = b->desired_capacity();
+            if (cap > d_cap) {
+                b = alloc->reallocate_leaf(b, cap, d_cap);
                 [[unlikely]] children_[1] = b;
             }
         }

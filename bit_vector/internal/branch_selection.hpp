@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstring>
 
+#include "uncopyable.hpp"
+
 #ifndef CACHE_LINE
 // Apparently the most common cache line size is 64.
 #define CACHE_LINE 64
@@ -24,7 +26,7 @@ namespace bv {
  * @tparam branches Maximum branching factor of nodes.
  */
 template <class dtype, dtype branches>
-class branchless_scan {
+class branchless_scan : uncopyable {
    protected:
     /**
      * Underlying storage for cumulative sums.
