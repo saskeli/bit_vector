@@ -62,9 +62,11 @@ namespace bv {
  * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
  * @tparam leaf_size Maximum size of a leaf node.
  * @tparam branches  Maximum branching factor of internal nodes.
- * @tparam aggressive_realloc If true, leaves will only be allowed to have at most 256 elements of unused capacity
+ * @tparam aggressive_realloc If true, leaves will only be allowed to have at
+ * most 256 elements of unused capacity
  */
-template <class leaf_type, class dtype, uint32_t leaf_size, uint8_t branches, bool aggressive_realloc = false>
+template <class leaf_type, class dtype, uint32_t leaf_size, uint8_t branches,
+          bool aggressive_realloc = false>
 class node : uncopyable {
    protected:
     typedef branchless_scan<dtype, branches> branching;
@@ -102,9 +104,18 @@ class node : uncopyable {
     /**
      * @brief Constructor
      */
-    node() : meta_data_(0), child_count_(0), 
-             child_sizes_(), child_sums_() { }
+    node() : meta_data_(0), child_count_(0), child_sizes_(), child_sums_() {}
 
+    /**
+     * @brief Adds elements in this subtree to the given query support
+     * structure.
+     *
+     * The subtree rooted at `this` is traversed and leaves encountered will be
+     * offered to the query support structure.
+     *
+     * @tparam qds Type of query support structure.
+     * @param qs   Pointer to query support structure.
+     */
     template <class qds>
     void generate_query_structure(qds* qs) {
         if (has_leaves()) {
@@ -172,17 +183,33 @@ class node : uncopyable {
      *
      * @return Change to data structure sum triggered by the set operation.
      */
-    int set(dtype index, bool v) {
+    template <class allocator>
+    int set(dtype index, bool v, allocator alloc) {
         uint8_t child_index = child_sizes_.find(index + 1);
         index -= child_index != 0 ? child_sizes_.get(child_index - 1) : 0;
         int change = 0;
         if (has_leaves()) {
             leaf_type* child =
                 reinterpret_cast<leaf_type*>(children_[child_index]);
+            if (!child->can_set()) {
+                dtype cap = child->capacity();
+                if (cap * WORD_BITS >= leaf_size) {
+                    rebalance_leaf(child_index, child, alloc);
+                    [[unlikely]] return set(index, v, alloc);
+                }
+                child = alloc->reallocate_leaf(child, cap, cap + 2);
+                [[unlikely]] children_[child_index] = child;
+            }
             [[unlikely]] change = child->set(index, v);
         } else {
             node* child = reinterpret_cast<node*>(children_[child_index]);
-            change = child->set(index, v);
+            if (child->child_count() == branches) {
+                rebalance_node(child_index, alloc);
+                child_index = child_sizes_.find(index);
+                [[unlikely]] child =
+                    reinterpret_cast<node*>(children_[child_index]);
+            }
+            change = child->set(index, v, alloc);
         }
         uint8_t c_count = child_count_;
         child_sums_.increment(child_index, c_count, change);
@@ -378,8 +405,8 @@ class node : uncopyable {
     /**
      * @brief Remove the index<sup>th</sup> element.
      *
-     * Removes element at "index" while ensuring that structural invariants hold.
-     * Children will be rebalanced and merger as necessary.
+     * Removes element at "index" while ensuring that structural invariants
+     * hold. Children will be rebalanced and merger as necessary.
      *
      * @tparam allocator Type of `alloc`.
      *
@@ -414,7 +441,8 @@ class node : uncopyable {
     }
 
     /**
-     * @brief Moves the first "elems" elements from "other" to the end of "this".
+     * @brief Moves the first "elems" elements from "other" to the end of
+     * "this".
      *
      * Elements are first copied to this node, after which `clear_firs(elems)`
      * will be called on "other". Cumulative sizes and sums will be updated
@@ -671,6 +699,8 @@ class node : uncopyable {
         return p;
     }
 
+    // TODO: Decouple balancing from leaf sizes and base it on excess capacity
+    // instead.
    protected:
     /**
      * @brief Ensure that there is space for insertion in the child leaves.
@@ -692,7 +722,7 @@ class node : uncopyable {
      */
     template <class allocator>
     void rebalance_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
-        // Number of leaves that can fit in the "left" sibling (with potential
+        // Number of elements that can fit in the "left" sibling (with potential
         // reallocation).
         uint32_t l_cap = 0;
         if (index > 0) {

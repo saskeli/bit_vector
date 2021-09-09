@@ -29,7 +29,8 @@ namespace bv {
  * @tparam allocator Allocator type. For example bv::malloc_alloc.
  * @tparam leaf_size Maximum number of elements in leaf.
  * @tparam branches  Maximum branching factor of internal node.
- * @tparam aggressive_realloc If true, leaves will only be allowed to have at most 256 elements of unused capacity
+ * @tparam aggressive_realloc If true, leaves will only be allowed to have at
+ * most 256 elements of unused capacity
  */
 template <class leaf, class node, class allocator, uint32_t leaf_size,
           uint8_t branches, class dtype, bool aggressive_realloc = false>
@@ -66,6 +67,34 @@ class bit_vector : uncopyable {
         new_root->append_child(n_root_);
         new_root->append_child(sibling);
         n_root_ = new_root;
+    }
+
+    /**
+     * @brief Increases the height of the tree by one level.
+     *
+     * A full leaf node will be split into two and leaves are set as children of
+     * a new root node.
+     *
+     * The root node will be kept as the only node with less than `branches/2`
+     * children.
+     */
+    void split_leaf() {
+        leaf* sibling = allocator_->template allocate_leaf<leaf>(
+            2 + leaf_size / (2 * WORD_BITS));
+        sibling->transfer_append(l_root_, leaf_size / 2);
+        if constexpr (aggressive_realloc) {
+            dtype cap = l_root_->capacity();
+            dtype n_cap = l_root_->desired_capacity();
+            if (n_cap < cap) {
+                l_root_ = allocator_->reallocate_leaf(l_root_, cap, n_cap);
+                [[likely]] (void(0));
+            }
+        }
+        n_root_ = allocator_->template allocate_node<node>();
+        n_root_->has_leaves(true);
+        n_root_->append_child(sibling);
+        n_root_->append_child(l_root_);
+        root_is_leaf_ = false;
     }
 
    public:
@@ -127,11 +156,8 @@ class bit_vector : uncopyable {
      * @tparam block_size Size of blocks used in the query support structure.
      * @param qs Query support structure.
      */
-    template <uint32_t block_size = 2048>
-    void generate_query_structure(
-        query_support<dtype, leaf, block_size>* qs) const {
-        static_assert(block_size * 3 <= leaf_size);
-        static_assert(block_size >= 2 * 64);
+    template <class Q>
+    void generate_query_structure(Q* qs) const {
         if (root_is_leaf_) {
             [[unlikely]] qs->append(l_root_);
         } else {
@@ -142,18 +168,20 @@ class bit_vector : uncopyable {
 
     /**
      * @brief Create and Populate a query support structure using `this`
-     * 
+     *
      * Creates a new support structure and adds leaves in order.
-     * 
+     *
      * @tparam block_size Size of blocks used in the query support structure.
      * @return A new query support strucutre.
      */
-    template <uint32_t block_size = 2048>
-    query_support<dtype, leaf, block_size>* generate_query_structure() const {
+    template <uint32_t block_size = 2048, bool flush = false>
+    query_support<dtype, leaf, block_size, flush>* generate_query_structure()
+        const {
         static_assert(block_size * 3 <= leaf_size);
+        static_assert(block_size >= 2 * 64);
         query_support<dtype, leaf, block_size>* qs =
             new query_support<dtype, leaf, block_size>(size());
-        generate_query_structure<block_size>(qs);
+        generate_query_structure(qs);
         return qs;
     }
 
@@ -183,21 +211,11 @@ class bit_vector : uncopyable {
 #endif
         if (root_is_leaf_) {
             if (l_root_->need_realloc()) {
-                if (l_root_->size() >= leaf_size) {
-                    leaf* sibling = allocator_->template allocate_leaf<leaf>(
-                        2 + leaf_size / (2 * WORD_BITS));
-                    sibling->transfer_append(l_root_, leaf_size / 2);
-                    if constexpr (aggressive_realloc) {
-                        l_root_ = allocator_->reallocate_leaf(l_root_, l_root_->capacity(), 2 + leaf_size / (2 * WORD_BITS));
-                    }
-                    n_root_ = allocator_->template allocate_node<node>();
-                    n_root_->has_leaves(true);
-                    n_root_->append_child(sibling);
-                    n_root_->append_child(l_root_);
-                    root_is_leaf_ = false;
+                dtype cap = l_root_->capacity();
+                if (cap >= leaf_size / WORD_BITS) {
+                    split_leaf();
                     n_root_->insert(index, value, allocator_);
                 } else {
-                    dtype cap = l_root_->capacity();
                     l_root_ =
                         allocator_->reallocate_leaf(l_root_, cap, cap + 2);
                     [[likely]] l_root_->insert(index, value);
@@ -352,8 +370,24 @@ class bit_vector : uncopyable {
      * @param value value to set the index<sup>th</sup> bit to.
      */
     void set(dtype index, bool value) {
-        !root_is_leaf_ ? n_root_->set(index, value)
-                       : l_root_->set(index, value);
+        if (root_is_leaf_) {
+            if (!l_root_->can_set()) {
+                dtype cap = l_root_->capacity();
+                if (cap * WORD_BITS >= leaf_size) {
+                    split_leaf();
+                    n_root_->set(index, value, allocator_);
+                    [[unlikely]] return;
+                }
+                l_root_ = allocator_->reallocate_leaf(l_root_, cap, cap + 2);
+                [[unlikely]] (void(0));
+            }
+            [[unlikely]] l_root_->set(index, value);
+        } else {
+            if (n_root_->child_count() == branches) {
+                [[unlikely]] split_root();
+            }
+            n_root_->set(index, value, allocator_);
+        }
     }
 
     /**

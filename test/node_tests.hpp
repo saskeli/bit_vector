@@ -497,7 +497,7 @@ void node_set_leaf_test(uint64_t b) {
 
     for (uint64_t i = 0; i < b / 3; i++) {
         for (uint64_t j = 0; j < 128; j++) {
-            n->set(i * 128 + j, (j % 2) ^ (i % 2));
+            n->set(i * 128 + j, (j % 2) ^ (i % 2), a);
         }
     }
 
@@ -539,7 +539,7 @@ void node_set_node_test(uint64_t b) {
 
     for (uint64_t i = 0; i < b / 3; i++) {
         for (uint64_t j = 0; j < 128; j++) {
-            n->set(i * 128 + j, (j % 2) ^ (i % 2));
+            n->set(i * 128 + j, (j % 2) ^ (i % 2), a);
         }
     }
 

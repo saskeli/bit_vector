@@ -249,7 +249,8 @@ class leaf : uncopyable {
             data_[target_word] |= (uint32_t(capacity_ - 1) > target_word)
                                       ? (data_[target_word + 1] << 63)
                                       : 0;
-            for (uint32_t j = target_word + 1; j < uint32_t(capacity_ - 1); j++) {
+            for (uint32_t j = target_word + 1; j < uint32_t(capacity_ - 1);
+                 j++) {
                 data_[j] >>= 1;
                 data_[j] |= data_[j + 1] << 63;
             }
@@ -638,7 +639,7 @@ class leaf : uncopyable {
      *
      * @return Size of internal data storage in 64-bit words.
      */
-    uint32_t capacity() const { return capacity_; }
+    uint16_t capacity() const { return capacity_; }
 
     /**
      * @brief Set the size of the leaf-associated data storage.
@@ -649,7 +650,37 @@ class leaf : uncopyable {
      *
      * @param cap New size for `data_`
      */
-    void capacity(uint32_t cap) { capacity_ = cap; }
+    void capacity(uint16_t cap) { capacity_ = cap; }
+
+    /**
+     * @brief Get the desired capacity for the leaf for potentially reducing
+     * capacity
+     *
+     * Intended for use when removing elements from the leaf. If there is more
+     * than 4 words of unused space a new smaller capacity will be returned,
+     * else the current capacity will be returned.
+     *
+     * @returns A suitable capacity for the leaf.
+     */
+    uint16_t desired_capacity() {
+        if (capacity_ * WORD_BITS > size_ + 4 * WORD_BITS) {
+            uint16_t n_cap = 2 + size_ / WORD_BITS;
+            n_cap += n_cap % 2;
+            [[unlikely]] return n_cap;
+        }
+        return capacity_;
+    }
+
+    /**
+     * @brief Ensure that leaf can support a set operations without increase in
+     * capacity
+     *
+     * For uncompressed leaves, this will always hold. For compressed leaves it
+     * may not.
+     *
+     * @return True, since setting is always supported by uncompressed leaves.
+     */
+    constexpr bool can_set() { return true; }
 
     /**
      * @brief Sets the pointer to the leaf-associated data storage.
@@ -743,10 +774,9 @@ class leaf : uncopyable {
 #ifdef DEBUG
         if (capacity_ * WORD_BITS < size_ + elems) {
             std::cerr << "Invalid append! Leaf only has room for "
-                      << (capacity_ * WORD_BITS - size_)
-                      << " bits  and " << elems << " was appended."
-                      << std::endl;
-            //exit(1);
+                      << (capacity_ * WORD_BITS - size_) << " bits  and "
+                      << elems << " was appended." << std::endl;
+            // exit(1);
         }
 #endif
         commit();
@@ -887,7 +917,8 @@ class leaf : uncopyable {
             if (overflow == 0) {
                 // Target is word aligned
                 for (uint32_t i = words - 1; i < words; i--) {
-                    data_[i] = o_data[source_word] << (WORD_BITS - source_offset);
+                    data_[i] = o_data[source_word]
+                               << (WORD_BITS - source_offset);
                     data_[i] |= o_data[--source_word] >> source_offset;
                     p_sum_ += __builtin_popcountll(data_[i]);
                 }
@@ -1010,8 +1041,8 @@ class leaf : uncopyable {
                            (target_offset == 0 ? 0
                             : target_offset - start_offset == 0
                                 ? 0
-                                : (underflow
-                                   << (WORD_BITS - (target_offset - start_offset))));
+                                : (underflow << (WORD_BITS - (target_offset -
+                                                              start_offset))));
                     underflow >>= target_offset - start_offset;
                     if (buffer_is_insertion(buf)) {
                         if (buffer_value(buf)) {
@@ -1039,11 +1070,12 @@ class leaf : uncopyable {
                     target_word = buffer_index(buf) / WORD_BITS;
                     [[unlikely]] target_offset = buffer_index(buf) % WORD_BITS;
                 }
-                new_word |=
-                    start_offset < WORD_BITS ? (word << start_offset) : uint64_t(0);
-                new_overflow = overflow_length ? data_[current_word] >>
-                                                     (WORD_BITS - overflow_length)
-                                               : 0;
+                new_word |= start_offset < WORD_BITS ? (word << start_offset)
+                                                     : uint64_t(0);
+                new_overflow =
+                    overflow_length
+                        ? data_[current_word] >> (WORD_BITS - overflow_length)
+                        : 0;
                 [[unlikely]] data_[current_word] = new_word;
             } else {
                 if (underflow_length) {

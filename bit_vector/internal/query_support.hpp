@@ -21,11 +21,11 @@ struct r_elem : uncopyable {
     dtype internal_offset;
     const leaf_type* leaf;
 
-    inline void set(dtype size, dtype sum, dtype offset, const leaf_type* const leaf_p) {
+    inline void set(dtype size, dtype sum, dtype offset, leaf_type* leaf_p) {
         p_size = size; 
         p_sum = sum;
         internal_offset = offset;
-        leaf = const_cast<const leaf_type*>(leaf_p);
+        leaf = leaf_p;
     }
 };
 
@@ -46,7 +46,7 @@ struct r_elem : uncopyable {
  * @tparam dtype     Integer type to use for indexing (uint32_t or uint64_t).
  * @tparam leaf_type Leaf type used by the relevant bv::bit_vector.
  */
-template <class dtype, class leaf_type, dtype block_size>
+template <class dtype, class leaf_type, dtype block_size, bool flush = false>
 class query_support : uncopyable {
    protected:
     typedef r_elem<dtype, leaf_type> E;
@@ -69,7 +69,7 @@ class query_support : uncopyable {
     template <class bit_vector>
     query_support(const bit_vector* const bv) : size_(0), sum_(0), n_elems_(0) {
         elems_ = (E*)malloc(sizeof(E) * (1 + bv->size() / block_size));
-        bv->template generate_query_structure<block_size>(this);
+        bv->template generate_query_structure(this);
     }
 
     /**
@@ -98,8 +98,11 @@ class query_support : uncopyable {
      *
      * @param leaf Pointer to the leaf to add.
      */
-    void append(const leaf_type* const leaf) {
+    void append(leaf_type* leaf) {
         dtype a_size = leaf->size();
+        if constexpr (flush) {
+            leaf->commit();
+        }
         while (size_ + a_size > n_elems_ * block_size) {
             dtype i_rank = leaf->rank(n_elems_ * block_size - size_);
             elems_[n_elems_].set(size_, sum_, i_rank, leaf);

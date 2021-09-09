@@ -11,36 +11,6 @@
 #include "dynamic/dynamic.hpp"
 #include "sdsl/bit_vectors.hpp"
 
-void help() {
-    std::cout << "Benchmark some dynamic bit vectors.\n"
-              << "Type and seed is required.\n"
-              << "Size should be at least 10^7 and defaults to 10^7\n"
-              << "Steps defaults to 100.\n\n";
-    std::cout << "Usage: bench <type> <seed> <size> <steps>\n";
-    std::cout << "   <type>   0 for dynamic\n"
-              << "            1 for new implementation\n"
-              << "            2 for new implementation with flushing\n"
-              << "            3 for new implementation with no buffer\n"
-              << "            4 for sdsl bit_vector\n"
-              << "            5 for rank support structure\n"
-              << "            6 for flushed rank support structure\n"
-              << "            7 for rank support structure with small blocks\n"
-              << "            8 for new buffered implementation with "
-                 "aggressive reallocation\n"
-              << "            9 for new unbuffered implementation with "
-                 "aggressive reallocation\n"
-              << "            10 for new buffered implementation with "
-                 "aggressive reallocation and query support\n"
-              << "            11 for new buffered implementation with "
-                 "aggressive reallocation small block query support\n";
-    std::cout << "   <seed>   seed to use for running the test\n";
-    std::cout << "   <size>   number of bits in the bitvector\n";
-    std::cout << "   <steps>  How many data points to generate in the "
-                 "[10^6..size] range\n\n";
-    std::cout << "Example: bench 1 1337 1000000 100" << std::endl;
-    exit(0);
-}
-
 void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
     bv::simple_bv<16, 16384, 64> bv;
 
@@ -290,7 +260,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
                   << "\t";
 
         std::cout << f_timing << "\t";
-        
+
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
             loc.push_back(gen(mt) % target);
@@ -350,7 +320,8 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
 template <class bit_vector, uint64_t select_offset, uint8_t buffer,
           uint8_t branch, uint32_t leaf_size, bool flush = false,
-          class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>, uint32_t block = 2048>
+          class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>,
+          uint32_t block = 2048>
 void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -508,6 +479,36 @@ void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
     }
 }
 
+void help() {
+    std::cout << "Benchmark some dynamic bit vectors.\n"
+              << "Type and seed is required.\n"
+              << "Size should be at least 10^7 and defaults to 10^7\n"
+              << "Steps defaults to 100.\n\n";
+    std::cout << "Usage: bench <type> <seed> <size> <steps>\n";
+    std::cout << "   <type>   0 for dynamic\n"
+              << "            1 for new implementation\n"
+              << "            2 for new implementation with flushing\n"
+              << "            3 for new implementation with no buffer\n"
+              << "            4 for sdsl bit_vector\n"
+              << "            5 for rank support structure\n"
+              << "            6 for flushed rank support structure\n"
+              << "            7 for rank support structure with small blocks\n"
+              << "            8 for new buffered implementation with "
+                 "aggressive reallocation\n"
+              << "            9 for new unbuffered implementation with "
+                 "aggressive reallocation\n"
+              << "            10 for new buffered implementation with "
+                 "aggressive reallocation and query support\n"
+              << "            11 for new buffered implementation with "
+                 "aggressive reallocation small block query support\n";
+    std::cout << "   <seed>   seed to use for running the test\n";
+    std::cout << "   <size>   number of bits in the bitvector\n";
+    std::cout << "   <steps>  How many data points to generate in the "
+                 "[10^6..size] range\n\n";
+    std::cout << "Example: bench 1 1337 1000000 100" << std::endl;
+    exit(0);
+}
+
 int main(int argc, char const* argv[]) {
     if (argc < 3) {
         help();
@@ -556,13 +557,14 @@ int main(int argc, char const* argv[]) {
             size, steps, seed);
     } else if (type == 6) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true>(
+        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
+                bv::query_support<uint64_t, bv::leaf<16>, 2048, true>>(
             size, steps, seed);
     } else if (type == 7) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
-                bv::query_support<uint64_t, bv::leaf<16>, 512>, 512>(size, steps,
-                                                                seed);
+                bv::query_support<uint64_t, bv::leaf<16>, 512>, 512>(
+            size, steps, seed);
     } else if (type == 8) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
