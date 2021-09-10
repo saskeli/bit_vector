@@ -400,6 +400,22 @@ class bit_vector : uncopyable {
     void flush() { root_is_leaf_ ? l_root_->commit() : n_root_->flush(); }
 
     /**
+     * @brief Write raw bit data to the area provided.
+     *
+     * The are provided should have at least bv.size() allocated and zeroed 
+     * out bits.
+     *
+     * @param data Pointer to where raw data should be dumped.
+     */
+    void dump(uint64_t* data) {
+        if (root_is_leaf_) {
+            l_root_->dump(data, 0);
+        } else {
+            n_root_->dump(data, 0);
+        }
+    }
+
+    /**
      * @brief Total size of data structure allocations in bits.
      *
      * Calculates the total size of "this", allocated nodes and allocated leaves
@@ -452,7 +468,7 @@ class bit_vector : uncopyable {
      * @param internal_only If true, actual bit vector data will not be output
      * to save space.
      */
-    void print(bool internal_only) const {
+    void print(bool internal_only = true) const {
         root_is_leaf_ ? l_root_->print(internal_only)
                       : n_root_->print(internal_only);
         std::cout << std::endl;

@@ -559,6 +559,21 @@ class node : uncopyable {
         }
     }
 
+    uint64_t dump(uint64_t* data, uint64_t offset) {
+        if (has_leaves()) {
+            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                offset = children[i]->dump(data, offset);
+            }
+        } else {
+            node** children = reinterpret_cast<node**>(children_);
+            for (uint8_t i = 0; i < child_count_; i++) {
+                offset = children[i]->dump(data, offset);
+            }
+        }
+        return offset;
+    }
+
     /**
      * @brief Check that the subtree structure is internally consistent.
      *

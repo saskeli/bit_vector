@@ -6,6 +6,7 @@
 
 #include "bit_vector/bv.hpp"
 #include "dynamic/dynamic.hpp"
+#include "sdsl/bit_vectors.hpp"
 
 template <class bva, class bvb>
 void check_comp(bva* a, bvb* b, uint64_t size) {
@@ -172,6 +173,68 @@ void run_sup(uint64_t ops, uint64_t ds_size) {
     }
 }
 
+template <class bit_vector>
+void check_sdsl(bit_vector* bv, uint64_t size) {
+    sdsl::bit_vector sdsl_bv(size);
+    bv->dump(sdsl_bv.data());
+    sdsl::bit_vector::rank_1_type sdsl_rank(&sdsl_bv);
+    sdsl::bit_vector::select_1_type sdsl_select(&sdsl_bv);
+    assert(sdsl_bv.size() == bv->size());
+
+    for (uint64_t i = 0; i < size; i++) {
+        assert(sdsl_bv[i] == bv->at(i));
+        assert(sdsl_rank(i) == bv->rank(i));
+    }
+
+    uint64_t ones = bv->rank(size);
+    for (uint64_t i = 1; i <= ones; i++) {
+        assert(sdsl_select(i) == bv->select(i));
+    }
+}
+
+template <class bit_vector>
+void run_sdsl(uint64_t ops, uint64_t ds_size) {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<unsigned long long> gen(
+        std::numeric_limits<std::uint64_t>::min(),
+        std::numeric_limits<std::uint64_t>::max());
+
+    uint64_t counter = 1;
+    while (true) {
+        bit_vector bv;
+        uint64_t size = gen(mt) % ds_size;
+        if (size < ops) size = ops;
+
+        std::cout << counter++ << ": " << size << ", " << std::flush;
+
+        for (uint64_t i = 0; i < size; i++) {
+            bv.insert(0, i % 2);
+        }
+
+        check_sdsl(&bv, size);
+
+        for (uint64_t i = 0; i < ops; i++) {
+            uint64_t op = gen(mt) % 3;
+            std::cout << op << ", " << std::flush;
+            switch (op) {
+                case 0:
+                    insert(&bv, gen(mt) % (size + 1), gen(mt) % 2);
+                    check_sdsl(&bv, ++size);
+                    break;
+                case 1:
+                    remove(&bv, gen(mt) % size);
+                    check_sdsl(&bv, --size);
+                    break;
+                default:
+                    bv_set(&bv, gen(mt) % size, gen(mt) % 2);
+                    check_sdsl(&bv, size);
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
 void help() {
     std::cout << "Brute force testing for dynamic bit vectors.\n\n"
               << "Will run random query sequences on data structures untill "
@@ -182,6 +245,7 @@ void help() {
               << "            1 query support structure testing.\n"
               << "            2 aggressive reallocation vs DYNAMIC.\n"
               << "            3 query support with aggressive reallocation.\n"
+              << "            4 buffered / vs SDSL dump.\n"
               << "   <ops>    Number of random operations to run on each iteration.\n"
               << "            Defaults to 100.\n"
               << "   <size>   Maximum intial size of data structures.\n"
@@ -221,9 +285,11 @@ int main(int argc, char const* argv[]) {
     case 2:
         run_comp<bv::simple_bv<16, 16384, 64, true, true>>(ops, size);
         break;
-    default:
+    case 3:
         run_sup<bv::simple_bv<16, 16384, 64, true, true>>(ops, size);
         break;
+    default:
+        run_sdsl<bv::bv>(ops, size);
     }
     
 }

@@ -31,7 +31,9 @@ cover: COVERAGE = --coverage -O0 -g
 all: bv_debug bench brute
 
 bv_debug: bv_debug.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -Ofast -g -o bv_debug bv_debug.cpp
+	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+	make -C deps/sdsl-lite
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -g -o bv_debug bv_debug.cpp -lsdsl
 
 bench: bench.cpp $(HEADERS) update_git
 	(cd deps/sdsl-lite && cmake CMakeLists.txt)
@@ -39,7 +41,9 @@ bench: bench.cpp $(HEADERS) update_git
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
 
 brute: brute_force.cpp $(HEADERS) update_git
-	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -Ofast -o brute brute_force.cpp
+	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+	make -C deps/sdsl-lite
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o brute brute_force.cpp -lsdsl
 
 queries: queries.cpp $(HEADERS)
 	g++ $(CFLAGS) -g -DDEBUG -O0 -o queries queries.cpp

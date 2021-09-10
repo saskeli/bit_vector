@@ -7,13 +7,7 @@
 #include "bit_vector/bv.hpp"
 //#include "deps/valgrind/callgrind.h"
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
-//#include "sdsl/bit_vectors.hpp"
-
-typedef bv::malloc_alloc alloc;
-typedef bv::leaf<16> leaf;
-typedef bv::node<leaf, uint64_t, 16384, 16> node;
-typedef bv::simple_bv<8, 16384, 64> bit_vector;
-typedef bv::query_support<uint64_t, leaf, 2048> qs;
+#include "sdsl/bit_vectors.hpp"
 
 template <class bit_vector>
 void check_sup(bit_vector* bv, uint64_t size) {
@@ -172,8 +166,91 @@ void run_test(uint64_t* input, uint64_t len, bool show_index = false) {
     }
 }
 
+template <class bit_vector>
+void check_sdsl(bit_vector* bv, uint64_t size) {
+    sdsl::bit_vector sdsl_bv(size);
+    bv->dump(sdsl_bv.data());
+    sdsl::bit_vector::rank_1_type sdsl_rank(&sdsl_bv);
+    sdsl::bit_vector::select_1_type sdsl_select(&sdsl_bv);
+    assert(sdsl_bv.size() == bv->size());
+
+    for (uint64_t i = 0; i < size; i++) {
+        uint64_t ex = bv->at(i);
+        uint64_t ac = sdsl_bv[i];
+        if (ex != ac) {
+            std::cerr << "Problem at access(" << i << "): " << ex << " != " << ac << std::endl;
+            /*bv->print(false);
+            for (size_t i = 0; i < sdsl_bv.size(); i++) {
+                if (i % 8 == 0) std::cout << " ";
+                if (i % 64 == 0) std::cout << std::endl;
+                std::cout << (sdsl_bv[i] ? "1" : "0");
+            }
+            std::cout << std::endl;*/
+            std::cout << "data[15] = " << sdsl_bv.data()[15] << std::endl;
+            assert(ex == ac);
+        }
+        assert(sdsl_rank(i) == bv->rank(i));
+    }
+
+    uint64_t ones = bv->rank(size);
+    for (uint64_t i = 1; i <= ones; i++) {
+        assert(sdsl_select(i) == bv->select(i));
+    }
+}
+
+template <class bit_vector>
+void run_sdsl_test(uint64_t* input, uint64_t len) {
+    bit_vector bv;
+    uint64_t size = input[0];
+    for (uint64_t i = 0; i < size; i++) {
+        bv.insert(0, i % 2);
+    }
+
+    check_sdsl(&bv, size);
+
+    uint64_t index = 1;
+    while (index < len) {
+        switch (input[index]) {
+            case 0:
+                insert_sup(&bv, input[index + 1], input[index + 2]);
+                size++;
+                index += 3;
+                break;
+            case 1:
+                remove_sup(&bv, input[index + 1]);
+                size--;
+                index += 2;
+                break;
+            default:
+                set_sup(&bv, input[index + 1], input[index + 2]);
+                index += 3;
+        }
+        check_sdsl(&bv, size);
+    }
+}
+
 int main() {
     uint64_t a[] = {
+        5216, 1, 2447, 0, 1110, 0, 2, 579, 0, 2, 3487, 0, 0, 130, 0, 2, 3531, 
+        1, 2, 4570, 0, 1, 397, 1, 3680, 1, 1738, 2, 2418, 0, 0, 4711, 0, 1, 
+        2344, 2, 3801, 1, 2, 1335, 1, 2, 1946, 1, 0, 1124, 0, 2, 3259, 1, 2, 
+        4391, 0, 1, 3194, 0, 1329, 0, 2, 3592, 0, 1, 4492, 2, 2694, 0, 0, 
+        3454, 1, 1, 392, 0, 2466, 1, 1, 356, 1, 1631, 2, 1375, 0, 1, 161, 2, 
+        5201, 1, 2, 2525, 1, 2, 2977, 1, 1, 4409, 1, 1163, 2, 1810, 0, 2, 
+        2429, 0, 1, 2347, 0, 1555, 0, 2, 4344, 1, 1, 3129, 1, 2863, 0, 72, 0, 
+        1, 557, 1, 2308, 0, 4407, 1, 1, 2581, 2, 1314, 0, 0, 5069, 1, 2, 3754, 
+        0, 2, 2580, 1, 0, 4535, 1, 0, 3777, 1, 1, 4069, 1, 4509, 0, 1614, 1, 
+        0, 5139, 0, 2, 2872, 0, 0, 3201, 0, 2, 3827, 0, 1, 1647, 2, 2394, 1, 
+        0, 3371, 0, 0, 111, 1, 1, 4438, 0, 4862, 0, 2, 3131, 1, 1, 127, 2, 
+        2480, 1, 0, 515, 0, 1, 211, 0, 3083, 1, 1, 3100, 1, 4473, 1, 4593, 0, 
+        3961, 0, 1, 1319, 0, 4386, 1, 1, 8, 2, 715, 0, 2, 2062, 0, 2, 1678, 0, 
+        0, 1052, 1, 0, 4265, 0, 0, 31, 0, 2, 3963, 0, 2, 1106, 0, 1, 3563, 2, 
+        1006, 1, 2, 3817, 1, 1, 30, 1, 4290, 2, 4978, 0, 0, 2984, 1, 2, 4219, 
+        0, 2, 4478, 0, 2, 4786, 0, 1, 3850, 1, 1170
+    };
+    run_sdsl_test<bv::bv>(a, 266);
+
+    /*uint64_t a[] = {
         876, 1,   27,  2,   668, 1,   1,   594, 0,   26,  0,   2,   320, 1,
         2,   679, 1,   0,   82,  1,   0,   673, 0,   2,   201, 0,   1,   875,
         1,   157, 2,   219, 1,   0,   761, 1,   0,   531, 0,   1,   579, 1,
@@ -196,126 +273,10 @@ int main() {
         0,   281, 1,   2,   242, 1,   0,   660, 1,   2,   401, 1,   0,   798,
         0,   2,   370, 1,   2,   20,  0,   2,   379, 1,   1,   436, 0,   154,
         1};
-    run_test<bv::bv, dyn::suc_bv>(a, 148, true);
+    run_test<bv::bv, dyn::suc_bv>(a, 148, true);*/
     /*uint64_t a[] = {16387, 2,     7184, 1,    1,    9890,  1,    10662,
                     1,     11795, 1,    7332, 0,    14649, 1,    2,
                     14480, 1,     2,    6282, 0,    2,     4190, 1,
                     2,     16170, 0,    1,    12969};
     run_sup_test<bv::bv>(a, 29);*/
-
-    /*uint64_t seed = 2586862946;
-    uint64_t size = 1000000000;
-    uint64_t steps = 100;
-    bit_vector bv;
-    dyn::suc_bv cbv;
-
-    std::mt19937 mt(seed);
-    std::uniform_int_distribution<unsigned long long> gen(
-        std::numeric_limits<std::uint64_t>::min(),
-        std::numeric_limits<std::uint64_t>::max());
-
-    uint64_t start_size = 1000000;
-
-    double startexp = log2(double(start_size));
-    double delta = (log2(double(size)) - log2(double(start_size))) / steps;
-    uint64_t ops = 100000;
-    std::cerr << "startexp: " << startexp << ". delta: " << delta;
-    std::cerr << "\nWith seed: " << seed << std::endl;
-    std::vector<uint64_t> loc, val;
-
-    std::cout << "Filling to 900000..." << std::flush;
-    for (uint64_t i = 0; i < 900000; i++) {
-        uint64_t aloc = gen(mt) % (i + 1);
-        bool aval = gen(mt) % 2;
-        bv.insert(aloc, aval);
-        cbv.insert(aloc, aval);
-    }
-    std::cout << "OK" << std::endl;
-    for (uint64_t step = 1; step <= steps; step++) {
-        uint64_t start = bv.size();
-        uint64_t target = uint64_t(pow(2.0, startexp + delta * step));
-
-        uint64_t checksum = 0;
-
-        std::cout << start << " -> " << target << "..." << std::flush;
-
-        for (size_t i = start; i < target; i++) {
-            uint64_t aloc = gen(mt) % (i + 1);
-            bool aval = gen(mt) % 2;
-            bv.insert(aloc, aval);
-            cbv.insert(aloc, aval);
-            if (target == 7413102 && (i == 6954489 || i == 6954488)) {
-                std::cout << " " << i << " ";
-                bv.validate();
-                check<bit_vector, dyn::suc_bv>(&bv, &cbv, bv.size());
-            }
-        }
-
-        if (target == 7413102) {
-            std::cout << " B ";
-            check<bit_vector, dyn::suc_bv>(&bv, &cbv, bv.size());
-        }
-
-        loc.clear();
-        for (uint64_t i = target; i > target - ops; i--) {
-            loc.push_back(gen(mt) % i);
-        }
-
-        for (size_t i = 0; i < ops; i++) {
-            bv.remove(loc[i]);
-            cbv.remove(loc[i]);
-        }
-
-        loc.clear();
-        val.clear();
-        for (uint64_t i = bv.size(); i < target; i++) {
-            loc.push_back(gen(mt) % (i + 1));
-            val.push_back(gen(mt) % 2);
-        }
-
-        for (size_t i = 0; i < loc.size(); i++) {
-            bv.insert(loc[i], val[i]);
-            cbv.insert(loc[i], val[i]);
-        }
-
-        loc.clear();
-        for (size_t i = 0; i < ops; i++) {
-            loc.push_back(gen(mt) % target);
-        }
-
-        for (size_t i = 0; i < ops; i++) {
-            checksum += bv.at(loc[i]);
-            checksum -= cbv.at(loc[i]);
-        }
-        assert(checksum == 0);
-
-        loc.clear();
-        for (size_t i = 0; i < ops; i++) {
-            loc.push_back(gen(mt) % target);
-        }
-
-        for (size_t i = 0; i < ops; i++) {
-            checksum += bv.rank(loc[i]);
-            checksum -= cbv.rank(loc[i]);
-        }
-        assert(checksum == 0);
-
-        uint64_t limit = bv.rank(target - 1);
-        assert(limit == cbv.rank(target - 1));
-        loc.clear();
-        for (size_t i = 0; i < ops; i++) {
-            loc.push_back(gen(mt) % limit);
-        }
-
-        for (size_t i = 0; i < ops; i++) {
-            checksum += bv.select(loc[i] + 1);
-            checksum -= cbv.select(loc[i]);
-        }
-        assert(checksum == 0);
-        std::cout << "OK" << std::endl;
-    }
-
-    uint64_t tot_size = bv.size();
-    check<bit_vector, dyn::suc_bv>(&bv, &cbv, tot_size);
-    std::cout << "PASSED!" << std::endl;*/
 }

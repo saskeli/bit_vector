@@ -1098,6 +1098,33 @@ class leaf : uncopyable {
         buffer_count_ = 0;
     }
 
+    uint64_t dump(uint64_t* data, uint64_t start) {
+        commit();
+        uint64_t word = start / WORD_BITS;
+        uint16_t offset = start % WORD_BITS;
+        uint64_t t_words = size_ / WORD_BITS;
+        uint16_t t_offset = size_ % WORD_BITS;
+        if (offset == 0) {
+            for (uint16_t i = 0; i < t_words; i++) {
+                data[word++] |= data_[i];
+            }
+            if (t_offset > 0) {
+                data[word] |= data_[t_words];
+            }
+            [[unlikely]] (void(0));
+        } else {
+            for (uint16_t i = 0; i < t_words; i++) {
+                data[word++] |= data_[i] << offset;
+                data[word] |= data[i] >> (WORD_BITS - offset);
+            }
+            data[word++] |= data[t_words] << offset;
+            if (t_offset > WORD_BITS - offset) {
+                data[word] |= data[t_words] >> (WORD_BITS - offset);
+            }
+        }
+        return start + size_;
+    }
+
     /**
      * @brief Ensure that the leaf is in a valid state.
      *
@@ -1162,7 +1189,14 @@ class leaf : uncopyable {
             std::cout << "],\n\"data\": [\n";
             for (uint64_t i = 0; i < capacity_; i++) {
                 std::bitset<WORD_BITS> b(data_[i]);
-                std::cout << "\"" << b << "\"";
+                std::cout << "\"";
+                for (size_t i = 0; i < 64; i++) {
+                    if (i % 8 == 0 && i > 0) {
+                        std::cout << " ";
+                    }
+                    std::cout << (b[i] ? "1" : "0");
+                }
+                std::cout << "\"";
                 if (i != uint64_t(capacity_ - 1)) {
                     std::cout << ",\n";
                 }

@@ -77,12 +77,12 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
             bv.insert(loc[i], val[i]);
         }
         std::cout << "0\t";
-        std::cout << "0\t";
 
+        auto t1 = high_resolution_clock::now();
         sdsl::bit_vector sdsl_bv(bv.size());
-        for (size_t i = 0; i < bv.size(); i++) {
-            sdsl_bv[i] = bv.at(i);
-        }
+        bv.dump(sdsl_bv.data());
+        auto t2 = high_resolution_clock::now();
+        double f_time = (double)duration_cast<microseconds>(t2 - t1).count();
 
         loc.clear();
         val.clear();
@@ -91,16 +91,22 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
             val.push_back(gen(mt) % 2);
         }
 
-        auto t1 = high_resolution_clock::now();
+        t1 = high_resolution_clock::now();
         for (size_t i = 0; i < loc.size(); i++) {
             sdsl_bv[loc[i]] = val[i];
         }
-        auto t2 = high_resolution_clock::now();
+        t2 = high_resolution_clock::now();
         for (size_t i = 0; i < loc.size(); i++) {
             bv.set(loc[i], val[i]);
         }
-        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+        double t_set = (double)duration_cast<microseconds>(t2 - t1).count() / ops;
+
+        t1 = high_resolution_clock::now();
+        sdsl::bit_vector::rank_1_type sdsl_rank(&sdsl_bv);
+        sdsl::bit_vector::select_1_type sdsl_select(&sdsl_bv);
+        t2 = high_resolution_clock::now();
+        f_time += (double)duration_cast<microseconds>(t2 - t1).count();
+        std::cout << f_time << "\t" << t_set << "\t";
 
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
@@ -121,8 +127,6 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
             loc.push_back(gen(mt) % target);
         }
 
-        sdsl::bit_vector::rank_1_type sdsl_rank(&sdsl_bv);
-
         t1 = high_resolution_clock::now();
         //*
         for (size_t i = 0; i < ops; i++) {
@@ -137,8 +141,6 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
         for (size_t i = 0; i < ops; i++) {
             loc.push_back(gen(mt) % limit);
         }
-
-        sdsl::bit_vector::select_1_type sdsl_select(&sdsl_bv);
 
         t1 = high_resolution_clock::now();
         //*
