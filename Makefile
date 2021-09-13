@@ -9,6 +9,8 @@ HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
 		  bit_vector/bv.hpp bit_vector/internal/query_support.hpp \
 		  bit_vector/internal/branch_selection.hpp
 
+SDSL = -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib
+
 GTEST_DIR = deps/googletest/googletest
 GFLAGS = -isystem $(GTEST_DIR)/include -I $(GTEST_DIR)/include -pthread
 
@@ -30,25 +32,22 @@ cover: COVERAGE = --coverage -O0 -g
 
 all: bv_debug bench brute
 
-bv_debug: bv_debug.cpp $(HEADERS) update_git
-	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+bv_debug: bv_debug.cpp $(HEADERS) test/run_tests.hpp test/gtest_main.a
 	make -C deps/sdsl-lite
-	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -g -o bv_debug bv_debug.cpp -lsdsl
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG $(SDSL) $(GFLAGS) -Ofast -g -o bv_debug bv_debug.cpp -lsdsl
 
-bench: bench.cpp $(HEADERS) update_git
-	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+bench: bench.cpp $(HEADERS)
 	make -C deps/sdsl-lite
-	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o bench bench.cpp -lsdsl
+	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG $(SDSL) -Ofast -o bench bench.cpp -lsdsl
 
-brute: brute_force.cpp $(HEADERS) update_git
-	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+brute: brute_force.cpp $(HEADERS) test/run_tests.hpp
 	make -C deps/sdsl-lite
-	g++ $(CFLAGS) $(INCLUDE) -DDEBUG -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib -Ofast -o brute brute_force.cpp -lsdsl
+	g++ $(CFLAGS) $(INCLUDE) -DDEBUG $(SDSL) -Ofast -o brute brute_force.cpp -lsdsl
 
 queries: queries.cpp $(HEADERS)
 	g++ $(CFLAGS) -g -DDEBUG -O0 -o queries queries.cpp
 
-rem_bench: rem_bench.cpp $(HEADERS) update_git
+rem_bench: rem_bench.cpp $(HEADERS)
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ofast -o rem_bench rem_bench.cpp
 
 bit_vector/%.hpp:
@@ -77,6 +76,8 @@ clean_test:
 
 update_git:
 	git submodule update
+	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+
 
 gtest-all.o: $(GTEST_SRCS_)
 	g++ $(CFLAGS) $(GFLAGS) -I$(GTEST_DIR) -c $(GTEST_DIR)/src/gtest-all.cc
@@ -91,20 +92,20 @@ test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
-	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) -c test/test.cpp -o test/test.o
+	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -c test/test.cpp -o test/test.o -lsdsl
 
 test: clean_test test/test.o test/gtest_main.a
 	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE) -lpthread test/test.o test/gtest_main.a -o test/test
+	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
 	test/test
 
 cover: clean_test test/test.o test/gtest_main.a
 	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) -lpthread test/test.o test/gtest_main.a -o test/test
+	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) $(SDSL) -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
 	test/test
 	gcov test/test.cpp
 	lcov -c -d . -o index.info

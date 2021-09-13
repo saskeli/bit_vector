@@ -423,7 +423,7 @@ void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
         t1 = high_resolution_clock::now();
         qs q = qs(&bv);
         t2 = high_resolution_clock::now();
-        f_timing += (double)duration_cast<microseconds>(t2 - t1).count() / ops;
+        f_timing += (double)duration_cast<microseconds>(t2 - t1).count();
         std::cout << f_timing << "\t";
 
         loc.clear();

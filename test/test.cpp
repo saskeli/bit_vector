@@ -366,3 +366,9 @@ TEST(RunSup, D) {
     uint64_t a[] = {10920, 0, 1316, 0, 2, 9930, 0, 0, 2561, 0};
     run_sup_test<bv::bv>(a, 10);
 }
+
+TEST(RunSdsl, A) {
+    uint64_t a[] = {26198, 1, 8440};
+    run_sdsl_test<bv::bv>(a, 3);
+
+}
