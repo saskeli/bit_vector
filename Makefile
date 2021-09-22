@@ -92,7 +92,7 @@ test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
-	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -c test/test.cpp -o test/test.o -lsdsl
+	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -DGTEST_ON -c test/test.cpp -o test/test.o -lsdsl
 
 test: clean_test test/test.o test/gtest_main.a
 	git submodule update

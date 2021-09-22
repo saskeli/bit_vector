@@ -448,6 +448,7 @@ class leaf : uncopyable {
         uint32_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
+        int32_t b_index = -100;
 
         // Step one 64-bit word at a time considering the buffer until pop >= x
         for (uint32_t j = 0; j < capacity_; j++) {
@@ -455,8 +456,8 @@ class leaf : uncopyable {
             pos += WORD_BITS;
             if constexpr (buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                    uint32_t b_index = buffer_index(buffer_[b]);
-                    if (b_index < pos) {
+                    b_index = buffer_index(buffer_[b]);
+                    if (b_index < int32_t(pos)) {
                         if (buffer_is_insertion(buffer_[b])) {
                             pop += buffer_value(buffer_[b]);
                             pos++;
@@ -480,18 +481,60 @@ class leaf : uncopyable {
                 [[unlikely]] break;
             }
         }
+        //std::cout << "First scan: pos = " << pos << ", pop = " << pop << std::endl;
+
+        if constexpr (buffer_size != 0) {
+            current_buffer -= 1;
+            b_index = current_buffer < buffer_count_
+                          ? buffer_index(buffer_[current_buffer])
+                          : -100;
+            if ((b_index - 1 >= int32_t(pos) && !buffer_is_insertion(buffer_[current_buffer])) || 
+                (b_index >= int32_t(pos) && buffer_is_insertion(buffer_[current_buffer]))) {
+                current_buffer--;
+                b_index = current_buffer < buffer_count_
+                              ? buffer_index(buffer_[current_buffer])
+                              : -100;
+            }
+        }
 
         // Make sure we have not overshot the logical end of the structure.
         pos = size_ < pos ? size_ : pos;
+
+        //std::cout << "Start scan from " << pos << " with pop = " << pop << ", and looking for buffer position " << b_index << std::endl;
 
         // Decrement one bit at a time until we can't anymore without going
         // under x.
         pos--;
         while (pop >= x && pos < capacity_ * WORD_BITS) {
-            pop -= at(pos);
+            if constexpr (buffer_size != 0) {
+                while (b_index - 1 == int32_t(pos) && !buffer_is_insertion(buffer_[current_buffer])) {
+                    //std::cout << "  R_It: pos = " << pos << ", pop = " << pop << ", buf = " << b_index << ", off = " << int(a_pos_offset) << std::endl;
+                    a_pos_offset--;
+                    current_buffer--;
+                    b_index = current_buffer < buffer_count_
+                                  ? buffer_index(buffer_[current_buffer])
+                                  : -100;
+                    [[unlikely]] (void(0));
+                }
+                if (b_index == int32_t(pos) && buffer_is_insertion(buffer_[current_buffer])) {
+                    //std::cout << "  B_It: pos = " << pos << ", pop = " << pop << ", buf = " << b_index << ", off = " << int(a_pos_offset) << std::endl;
+                    pop -= buffer_value(buffer_[current_buffer]);
+                    a_pos_offset++;
+                    pos--;
+                    current_buffer--;
+                    b_index = current_buffer < buffer_count_
+                                  ? buffer_index(buffer_[current_buffer])
+                                  : -100;
+                    [[unlikely]] continue;
+                } 
+            }
+            //std::cout << "  It: pos = " << pos << ", pop = " << pop << ", buf = " << b_index << ", off = " << int(a_pos_offset) << std::endl;
+            pop -= (data_[(pos + a_pos_offset) / WORD_BITS] >>
+                    ((pos + a_pos_offset) % WORD_BITS)) &
+                   MASK;
             pos--;
         }
-        // std::cout << "simple select: " << pos + 1 << std::endl;
+        //std::cout << "WTF: pos = " << pos << ", pop = " << pop << std::endl;
         return ++pos;
     }
 

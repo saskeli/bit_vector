@@ -49,7 +49,17 @@ void check(bva* a, bvb* b, uint64_t size) {
 #ifdef GTEST_ON
         ASSERT_EQ(a->select(i + 1), b->select(i)) << "i = " << i;
 #else
-        assert(a->select(i + 1) == b->select(i));
+        uint64_t ex = b->select(i);
+        uint64_t ac = a->select(i + 1);
+        if (ex != ac) {
+            for (size_t i = 0; i < 64; i++) {
+                std::cout << a->at(i);
+            }
+            std::cout << std::endl;
+            std::cerr << "select(" << i + 1 << ") should be " << ex << ", was " << ac << std::endl;
+            a->print(false);
+        }
+        assert(ac == ex);
 #endif
     }
 }
@@ -90,6 +100,9 @@ void run_test(uint64_t* input, uint64_t len) {
 
     uint64_t index = 1;
     while (index < len) {
+#ifndef GTEST_ON
+        std::cout << "index = " << index << std::endl;
+#endif
         switch (input[index]) {
             case 0:
                 insert(&bv, &cbv, input[index + 1], input[index + 2]);

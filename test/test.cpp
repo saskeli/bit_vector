@@ -344,6 +344,19 @@ TEST(Run, D) {
     run_test<simple_bv<8, 256, 8>, dyn::suc_bv>(a, 378);
 }
 
+TEST(Run, E) {
+    uint64_t a[] = {160, 1, 37, 2, 81, 0, 0, 8, 1, 1, 64};
+    run_test<bv::simple_bv<8, 256, 8>, dyn::suc_bv>(a, 11);
+}
+
+TEST(Run, F) {
+    uint64_t a[] = {91, 0,  41, 1,  2,  69, 0,  2,  8, 0,  0, 61, 0,
+                    2,  47, 0,  1,  20, 2,  11, 0,  1, 90, 2, 30, 1,
+                    1,  27, 2,  49, 0,  2,  80, 1,  1, 5,  1, 6,  1,
+                    58, 0,  19, 0,  1,  53, 1,  78, 2, 13, 1, 1,  62};
+    run_test<bv::simple_bv<8, 256, 8>, dyn::suc_bv>(a, 52);
+}
+
 TEST(RunSup, A) {
     uint64_t a[] = {326};
     run_sup_test<bv::bv>(a, 1);
