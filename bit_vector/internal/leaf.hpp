@@ -43,9 +43,10 @@ namespace bv {
  * @tparam Size of insertion/removal buffer.
  * @tparam Use avx population counts for rank operations.
  */
-template <uint8_t buffer_size, bool avx = true>
+template <uint8_t buffer_size, bool avx = true, class dtype = uint32_t,
+          bool compressed = false>
 class leaf : uncopyable {
-   protected:
+   private:
     uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
     uint32_t size_;         ///< Logical number of bits stored.
@@ -70,6 +71,10 @@ class leaf : uncopyable {
     // sizeof(leaf) value but there does not really appear to be any reason to
     // do so.
     static_assert(buffer_size < WORD_BITS);
+
+    // Number of 32 bit buffer elements should be even to allow using buffer as
+    // 64-bit elements if needed.
+    static_assert(buffer_size % 2 == 0);
 
    public:
     /**
@@ -481,15 +486,16 @@ class leaf : uncopyable {
                 [[unlikely]] break;
             }
         }
-        //std::cout << "First scan: pos = " << pos << ", pop = " << pop << std::endl;
 
         if constexpr (buffer_size != 0) {
             current_buffer -= 1;
             b_index = current_buffer < buffer_count_
                           ? buffer_index(buffer_[current_buffer])
                           : -100;
-            if ((b_index - 1 >= int32_t(pos) && !buffer_is_insertion(buffer_[current_buffer])) || 
-                (b_index >= int32_t(pos) && buffer_is_insertion(buffer_[current_buffer]))) {
+            if ((b_index - 1 >= int32_t(pos) &&
+                 !buffer_is_insertion(buffer_[current_buffer])) ||
+                (b_index >= int32_t(pos) &&
+                 buffer_is_insertion(buffer_[current_buffer]))) {
                 current_buffer--;
                 b_index = current_buffer < buffer_count_
                               ? buffer_index(buffer_[current_buffer])
@@ -500,15 +506,13 @@ class leaf : uncopyable {
         // Make sure we have not overshot the logical end of the structure.
         pos = size_ < pos ? size_ : pos;
 
-        //std::cout << "Start scan from " << pos << " with pop = " << pop << ", and looking for buffer position " << b_index << std::endl;
-
         // Decrement one bit at a time until we can't anymore without going
         // under x.
         pos--;
         while (pop >= x && pos < capacity_ * WORD_BITS) {
             if constexpr (buffer_size != 0) {
-                while (b_index - 1 == int32_t(pos) && !buffer_is_insertion(buffer_[current_buffer])) {
-                    //std::cout << "  R_It: pos = " << pos << ", pop = " << pop << ", buf = " << b_index << ", off = " << int(a_pos_offset) << std::endl;
+                while (b_index - 1 == int32_t(pos) &&
+                       !buffer_is_insertion(buffer_[current_buffer])) {
                     a_pos_offset--;
                     current_buffer--;
                     b_index = current_buffer < buffer_count_
@@ -516,8 +520,8 @@ class leaf : uncopyable {
                                   : -100;
                     [[unlikely]] (void(0));
                 }
-                if (b_index == int32_t(pos) && buffer_is_insertion(buffer_[current_buffer])) {
-                    //std::cout << "  B_It: pos = " << pos << ", pop = " << pop << ", buf = " << b_index << ", off = " << int(a_pos_offset) << std::endl;
+                if (b_index == int32_t(pos) &&
+                    buffer_is_insertion(buffer_[current_buffer])) {
                     pop -= buffer_value(buffer_[current_buffer]);
                     a_pos_offset++;
                     pos--;
@@ -526,15 +530,13 @@ class leaf : uncopyable {
                                   ? buffer_index(buffer_[current_buffer])
                                   : -100;
                     [[unlikely]] continue;
-                } 
+                }
             }
-            //std::cout << "  It: pos = " << pos << ", pop = " << pop << ", buf = " << b_index << ", off = " << int(a_pos_offset) << std::endl;
             pop -= (data_[(pos + a_pos_offset) / WORD_BITS] >>
                     ((pos + a_pos_offset) % WORD_BITS)) &
                    MASK;
             pos--;
         }
-        //std::cout << "WTF: pos = " << pos << ", pop = " << pop << std::endl;
         return ++pos;
     }
 
@@ -798,6 +800,10 @@ class leaf : uncopyable {
         }
         size_ -= elems;
         p_sum_ -= ones;
+    }
+
+    void transfer_capacity(leaf* other, uint32_t elems) {
+        // TODO:
     }
 
     /**
@@ -1256,7 +1262,7 @@ class leaf : uncopyable {
         return std::pair<uint64_t, uint64_t>(capacity_ * WORD_BITS, size_);
     }
 
-   protected:
+   private:
     /**
      * @brief Extract the value of a buffer element
      *

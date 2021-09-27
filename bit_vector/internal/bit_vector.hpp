@@ -24,18 +24,21 @@ namespace bv {
  *
  * Practical performance depends on node and leaf implementations.
  *
- * @tparam leaf      Type for leaves. Some kind of bv::leaf.
- * @tparam node      Type for internal nodes. Some kind of bv::node.
- * @tparam allocator Allocator type. For example bv::malloc_alloc.
- * @tparam leaf_size Maximum number of elements in leaf.
- * @tparam branches  Maximum branching factor of internal node.
+ * @tparam leaf               Type for leaves. Some kind of bv::leaf.
+ * @tparam node               Type for internal nodes. Some kind of bv::node.
+ * @tparam allocator          Allocator type. For example bv::malloc_alloc.
+ * @tparam leaf_size          Maximum number of elements in leaf.
+ * @tparam branches           Maximum branching factor of internal node.
  * @tparam aggressive_realloc If true, leaves will only be allowed to have at
  * most 256 elements of unused capacity
+ * @tparam compressed         If true, additional bookkeeping will be done to
+ * ensure compressed leaves behave correctly.
  */
 template <class leaf, class node, class allocator, uint32_t leaf_size,
-          uint8_t branches, class dtype, bool aggressive_realloc = false>
+          uint8_t branches, class dtype, bool aggressive_realloc = false,
+          bool compressed = false>
 class bit_vector : uncopyable {
-   protected:
+   private:
     bool root_is_leaf_ = true;      ///< Value indicating whether the root is in
                                     ///< `n_root_` or `l_root_`.
     bool owned_allocator_ = false;  ///< True if deallocating the allocator
@@ -81,7 +84,7 @@ class bit_vector : uncopyable {
     void split_leaf() {
         leaf* sibling = allocator_->template allocate_leaf<leaf>(
             2 + leaf_size / (2 * WORD_BITS));
-        sibling->transfer_append(l_root_, leaf_size / 2);
+        sibling->transfer_capacity(l_root_, leaf_size / (2 * WORD_BITS));
         if constexpr (aggressive_realloc) {
             dtype cap = l_root_->capacity();
             dtype n_cap = l_root_->desired_capacity();
@@ -108,8 +111,19 @@ class bit_vector : uncopyable {
      *
      * @param alloc The allocator instance.
      */
-    bit_vector(allocator* alloc) {
+    bit_vector(allocator* alloc, dtype size = 0, bool value = false) {
         allocator_ = alloc;
+        if constexpr (compressed) {
+            l_root_->template allocate_leaf<leaf>(leaf_size / (2 * WORD_BITS),
+                                                  size, value);
+            return;
+        }
+        if (size > 0 || value == true) {
+            std::cerr << "Uncompressed data structure can't be constructed "
+                         "with non-default size or value"
+                      << std::endl;
+            [[unlikely]] exit(1);
+        }
         l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size /
                                                            (2 * WORD_BITS));
     }
@@ -120,9 +134,20 @@ class bit_vector : uncopyable {
      * The default constructor will create an owned allocator that gets
      * deallocated along with the rest of the data structure.
      */
-    bit_vector() {
+    bit_vector(dtype size = 0, bool value = false) {
         allocator_ = new allocator();
         owned_allocator_ = true;
+        if constexpr (compressed) {
+            l_root_ = allocator_->template allocate_leaf<leaf>(
+                leaf_size / (2 * WORD_BITS), size, value);
+            return;
+        }
+        if (size > 0 || value == true) {
+            std::cerr << "Uncompressed data structure can't be constructed "
+                         "with non-default size or value"
+                      << std::endl;
+            [[unlikely]] exit(1);
+        }
         l_root_ = allocator_->template allocate_leaf<leaf>(leaf_size /
                                                            (2 * WORD_BITS));
     }
@@ -371,20 +396,25 @@ class bit_vector : uncopyable {
      */
     void set(dtype index, bool value) {
         if (root_is_leaf_) {
-            if (!l_root_->can_set()) {
-                dtype cap = l_root_->capacity();
-                if (cap * WORD_BITS >= leaf_size) {
-                    split_leaf();
-                    n_root_->set(index, value, allocator_);
-                    [[unlikely]] return;
+            if constexpr (compressed) {
+                if (!l_root_->can_set()) {
+                    dtype cap = l_root_->capacity();
+                    if (cap * WORD_BITS >= leaf_size) {
+                        split_leaf();
+                        n_root_->set(index, value, allocator_);
+                        [[unlikely]] return;
+                    }
+                    l_root_ =
+                        allocator_->reallocate_leaf(l_root_, cap, cap + 2);
+                    [[unlikely]] (void(0));
                 }
-                l_root_ = allocator_->reallocate_leaf(l_root_, cap, cap + 2);
-                [[unlikely]] (void(0));
             }
             [[unlikely]] l_root_->set(index, value);
         } else {
-            if (n_root_->child_count() == branches) {
-                [[unlikely]] split_root();
+            if constexpr (compressed) {
+                if (n_root_->child_count() == branches) {
+                    [[unlikely]] split_root();
+                }
             }
             n_root_->set(index, value, allocator_);
         }
@@ -402,7 +432,7 @@ class bit_vector : uncopyable {
     /**
      * @brief Write raw bit data to the area provided.
      *
-     * The are provided should have at least bv.size() allocated and zeroed 
+     * The are provided should have at least bv.size() allocated and zeroed
      * out bits.
      *
      * @param data Pointer to where raw data should be dumped.

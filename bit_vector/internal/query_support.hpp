@@ -48,7 +48,7 @@ struct r_elem : uncopyable {
  */
 template <class dtype, class leaf_type, dtype block_size, bool flush = false>
 class query_support : uncopyable {
-   protected:
+   private:
     typedef r_elem<dtype, leaf_type> E;
 
     dtype size_;
@@ -309,7 +309,7 @@ class query_support : uncopyable {
         std::cout << "]}" << std::endl;
     }
 
-   protected:
+   private:
     /**
      * @brief Locate the block containing the \f$i\f$<sup>th</sup> 1-bit.
      *

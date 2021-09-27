@@ -27,7 +27,7 @@ namespace bv {
  */
 template <class dtype, dtype branches>
 class branchless_scan : uncopyable {
-   protected:
+   private:
     /**
      * Underlying storage for cumulative sums.
      */
@@ -93,7 +93,7 @@ class branchless_scan : uncopyable {
     /**
      * @brief Inserts a new value into the cumulative sums.
      *
-     * Intended for use when a new node is created between 2 exisiting nodes.
+     * Intended for use when a new node is created between 2 existing nodes.
      * Thus `index` is greater than 0 and less than `array_size`.
      *
      * The cumulative sums of only 2 elements will be impacted since new

@@ -22,7 +22,7 @@ namespace bv {
  * the associated data.
  */
 class malloc_alloc : uncopyable {
-   protected:
+   private:
     uint64_t allocations_;  ///< Number of objects currently allocated.
 
    public:
