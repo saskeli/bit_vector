@@ -43,18 +43,20 @@ namespace bv {
  * @tparam Size of insertion/removal buffer.
  * @tparam Use avx population counts for rank operations.
  */
-template <uint8_t buffer_size, bool avx = true, class dtype = uint32_t,
-          bool compressed = false>
+template <uint8_t buffer_size, bool avx = true, bool compressed = false>
 class leaf : uncopyable {
    private:
     uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
+    uint8_t type_info_;     ///< Internal metadata for compressed leaves.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
     uint32_t size_;         ///< Logical number of bits stored.
     uint32_t p_sum_;        ///< Logical number of 1-bits stored.
 #pragma GCC diagnostic ignored "-Wpedantic"
-    uint32_t buffer_[buffer_size];  ///< Insert/remove buffer.
+    uint32_t run_index_[compressed ? 1 : 0];  ///< next index to write for runs.
+    uint32_t buffer_[buffer_size];            ///< Insert/remove buffer.
 #pragma GCC diagnostic pop
     uint64_t* data_;  ///< Pointer to data storage.
+
     /** @brief 0x1 to be used in  bit operations. */
     static const constexpr uint64_t MASK = 1;
     /** @brief Mask for accessing buffer value. */
@@ -65,6 +67,12 @@ class leaf : uncopyable {
     static const constexpr uint32_t INDEX_MASK = ((uint32_t(1) << 8) - 1);
     /** @brief Number of bits in a computer word. */
     static const constexpr uint64_t WORD_BITS = 64;
+    /** @brief Mask for accessing buffer value for compressed leaves */
+    static const constexpr uint32_t C_INDEX = (~uint32_t(0)) >> 1;
+    /** @brief Mask for initial value of rle compressed leaves */
+    static const constexpr uint8_t C_ONE_MASK = 0b00000001;
+    /** @brief Mask for accessing type of possibly compressed leaf */
+    static const constexpr uint8_t C_TYPE_MASK = 0b00000010;
 
     // The buffer fill rate is stored in part of an 8-bit word.
     // This could be resolved with using 16 bits instead (without increasing the
@@ -75,6 +83,9 @@ class leaf : uncopyable {
     // Number of 32 bit buffer elements should be even to allow using buffer as
     // 64-bit elements if needed.
     static_assert(buffer_size % 2 == 0);
+
+    // Hybrid compressed leaves should be buffered.
+    static_assert(!compressed || buffer_size > 0);
 
    public:
     /**
@@ -89,12 +100,44 @@ class leaf : uncopyable {
      * @param data     Pointer to a contiguous memory area available for
      * storage.
      */
-    leaf(uint16_t capacity, uint64_t* data) {
+    leaf(uint16_t capacity,
+         uint64_t* data,
+         uint32_t elems = 0,
+         bool val = false) {
+        if constexpr (!compressed) {
+            if (elems > 0) {
+                std::cerr << "Uncompressed leaf does not support instantiation "
+                             "to non-empty"
+                          << std::endl;
+                exit(1);
+            }
+        } else {
+            if (elems > ~VALUE_MASK) {
+                std::cerr << "Maximum size for leaves is " << ~VALUE_MASK
+                          << std::endl;
+                exit(1);
+            }
+        }
         buffer_count_ = 0;
         capacity_ = capacity;
-        size_ = 0;
+        type_info_ = 0;
+        size_ = elems;
         p_sum_ = 0;
+        if constexpr (compressed) {
+            p_sum_ = val ? elems : p_sum_;
+            run_index_[0] = 0;
+        }
         data_ = data;
+        if constexpr (compressed) {
+            if (elems > 8) {
+                write_run(elems);
+                type_info_ |= C_TYPE_MASK;
+                type_info_ =
+                    val ? type_info_ | C_ONE_MASK : type_info_ & ~C_ONE_MASK;
+            } else {
+                data_[0] = (uint64_t(1) << elems) - 1;
+            }
+        }
     }
 
     /**
@@ -105,6 +148,11 @@ class leaf : uncopyable {
      * @return Value of bit at index i.
      */
     bool at(uint32_t i) const {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_at(i);
+            }
+        }
         if constexpr (buffer_size != 0) {
             uint64_t index = i;
             for (uint8_t idx = 0; idx < buffer_count_; idx++) {
@@ -144,6 +192,11 @@ class leaf : uncopyable {
      * @param x Value to insert
      */
     void insert(uint32_t i, bool x) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_insert();
+            }
+        }
 #ifdef DEBUG
         if (size_ >= capacity_ * WORD_BITS) {
             std::cerr << "Overflow. Reallocate before adding elements"
@@ -211,6 +264,11 @@ class leaf : uncopyable {
      * @return Value of removed element.
      */
     bool remove(uint32_t i) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_remove(i);
+            }
+        }
         if constexpr (buffer_size != 0) {
             bool x = this->at(i);
             p_sum_ -= x;
@@ -279,6 +337,11 @@ class leaf : uncopyable {
      * @return \f$x - \mathrm{bv}[i]\f$
      */
     int set(uint32_t i, bool x) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_set(i, x);
+            }
+        }
         uint32_t idx = i;
         if constexpr (buffer_size != 0) {
             // If buffer exists, the index needs for the underlying structure
@@ -328,8 +391,12 @@ class leaf : uncopyable {
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
     uint32_t rank(uint32_t n) const {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_rank(n);
+            }
+        }
         uint32_t count = 0;
-
         uint32_t idx = n;
         if constexpr (buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
@@ -378,6 +445,11 @@ class leaf : uncopyable {
      * @return \f$\sum_{i = \mathrm{offset}}^{\mathrm{n- 1}} \mathrm{bv}[i]\f$.
      */
     uint32_t rank(uint32_t n, uint32_t offset) const {
+        if (compressed) {
+            if (is_compressed()) {
+                return c_rank(n);
+            }
+        }
         uint32_t count = 0;
         uint32_t idx = n;
         uint32_t o_idx = offset;
@@ -449,6 +521,11 @@ class leaf : uncopyable {
      * \mathrm{bv}[j]\right) = x\f$.
      */
     uint32_t select(uint32_t x) const {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_select(x);
+            }
+        }
         uint32_t pop = 0;
         uint32_t pos = 0;
         uint8_t current_buffer = 0;
@@ -551,8 +628,11 @@ class leaf : uncopyable {
      * \mathrm{bv}[j]\right) = x\f$.
      */
     uint32_t select(uint32_t x, uint32_t pos, uint32_t pop) const {
-        // std::cout << "select(" << x << ", " << pos << ", " << pop << ")" <<
-        // std::endl; pos++;
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_select(x);
+            }
+        }
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
         // Scroll the buffer to the start position and calculate offset.
@@ -657,7 +737,6 @@ class leaf : uncopyable {
             pop -= at(pos);
             pos--;
         }
-        // std::cout << "block select: " << pos + 1 << std::endl;
         return ++pos;
     }
 
@@ -675,7 +754,20 @@ class leaf : uncopyable {
      * @return True if there is no guarantee that an insertion can be completed
      *         without undefined behaviour.
      */
-    bool need_realloc() const { return size_ >= capacity_ * WORD_BITS; }
+    bool need_realloc() const {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                if (buffer_count_ < buffer_size - 1) {
+                    return false;
+                }
+                if (capacity_ * 8 - run_index_[0] >=
+                    buffer_size * (type_info_ >> 5)) {
+                    return false;
+                }
+            }
+        }
+        return size_ >= capacity_ * WORD_BITS;
+    }
 
     /**
      * @brief Size of the leaf-associated data storage in 64-bit words.
@@ -708,12 +800,14 @@ class leaf : uncopyable {
      * @returns A suitable capacity for the leaf.
      */
     uint16_t desired_capacity() {
-        if (capacity_ * WORD_BITS > size_ + 4 * WORD_BITS) {
-            uint16_t n_cap = 2 + size_ / WORD_BITS;
-            n_cap += n_cap % 2;
-            [[unlikely]] return n_cap;
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                static_assert(false);
+            }
         }
-        return capacity_;
+        uint16_t n_cap = 2 + size_ / WORD_BITS;
+        n_cap += n_cap % 2;
+        return n_cap;
     }
 
     /**
@@ -803,7 +897,8 @@ class leaf : uncopyable {
     }
 
     void transfer_capacity(leaf* other, uint32_t elems) {
-        // TODO:
+        std::cerr << "transfer_capacity has not been implemented" << std::endl;
+        exit(1);
     }
 
     /**
@@ -918,7 +1013,8 @@ class leaf : uncopyable {
         // Make space for new data
         for (uint32_t i = capacity_ - 1; i >= words; i--) {
             data_[i] = data_[i - words];
-            if (i == 0) break;
+            if (i == 0)
+                break;
         }
         for (uint32_t i = 0; i < words; i++) {
             data_[i] = 0;
@@ -1048,7 +1144,8 @@ class leaf : uncopyable {
     void commit() {
         // Complicated bit manipulation but whacha gonna do. Hopefully won't
         // need to debug this anymore.
-        if constexpr (buffer_size == 0) return;
+        if constexpr (buffer_size == 0)
+            return;
         if (buffer_count_ == 0) [[unlikely]]
             return;
 
@@ -1364,6 +1461,10 @@ class leaf : uncopyable {
         buffer_[buffer_count_] = 0;
     }
 
+    bool is_compressed() const {
+        return (type_info_ & C_TYPE_MASK) == C_TYPE_MASK;
+    }
+
     /**
      * @brief Add an element to the end of the leaf data.
      *
@@ -1398,6 +1499,311 @@ class leaf : uncopyable {
 
         size_++;
         p_sum_ += uint64_t(x);
+    }
+
+    bool c_at(uint32_t i) const {
+        uint32_t i_q = i;
+        for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
+            uint32_t e_index = buffer_[b_idx] & C_INDEX;
+            if (e_index < i) [[likely]]
+                i_q--;
+            else if (e_index == i)
+                return buffer_[b_idx] >> 31;
+            else
+                break;
+        }
+        bool ret = type_info_ & C_ONE_MASK;
+        uint32_t c_i = 0;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx] & 0b00111111;
+            } else if ((data[d_idx] & 0b01111111) == 0) {
+                rl = data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+                rl = (rl << 8) | data[d_idx];
+            } else {
+                rl = data[d_idx++] & 0b00011111;
+                rl = (rl << 8) | data[d_idx];
+                if ((data[d_idx - 1] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[++d_idx];
+                }
+            }
+            c_i += rl;
+            if (c_i > i_q)
+                return ret;
+            ret = !ret;
+        }
+    }
+
+    void c_commit() {
+        std::cerr << "c_commit is not implemented!" << std::endl;
+        exit(1);
+    }
+
+    void c_insert(uint32_t i, bool v) {
+        uint32_t buf = i | (v ? ~C_INDEX : uint32_t(0));
+        for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
+        }
+        buffer_[buffer_count_++] = i | (v ? ~C_INDEX : uint32_t(0));
+        if (buffer_count_ >= buffer_size) {
+            c_commit();
+        }
+    }
+
+    bool c_remove(uint32_t i) {
+        uint32_t q_i = i;
+        uint8_t b_idx = 0;
+        bool done = false;
+        bool ret = false;
+        for (; b_idx < buffer_count_; b_idx++) {
+            uint32_t e_index = buffer_[b_idx] & C_INDEX;
+            if (e_index < i) {
+                q_i--;
+            } else if (e_index == i) {
+                ret = buffer_[b_idx] >> 31;
+                delete_buffer_element(b_idx);
+                done = true;
+            } else {
+                buffer_[b_idx]--;
+            }
+        }
+        if (done)
+            return ret;
+        uint32_t c_i = 0;
+        ret = type_info_ & C_ONE_MASK;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+            uint32_t rl = 0;
+            uint8_t r_b = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0) {
+                rl = data[d_idx];
+                rl = (rl << 8) | data[d_idx + 1];
+                rl = (rl << 8) | data[d_idx + 2];
+                rl = (rl << 8) | data[d_idx + 3];
+                r_b = 3;
+            } else {
+                rl = data[d_idx] & 0b00011111;
+                rl = (rl << 8) | data[d_idx + 1];
+                r_b = 1;
+                if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[d_idx + 2];
+                    r_b = 2;
+                }
+            }
+            c_i += rl;
+            if (c_i > q_i) {
+                write_run(rl - 1, d_idx, r_b);
+                size_--;
+                p_sum_ -= ret;
+                break;
+            }
+            d_idx += r_b;
+            ret = !ret;
+        }
+        return ret;
+    }
+
+    int c_set(uint32_t i, bool x) {
+        uint32_t q_i = i;
+        uint8_t b_idx = 0;
+        for (; b_idx < buffer_count_; b_idx++) {
+            uint32_t e_index = buffer_[b_idx] & C_INDEX;
+            if (e_index < i) {
+                [[likely]] q_i--;
+            } else if (e_index == i) {
+                bool val = buffer_[b_idx] >> 31;
+                if (val == x) {
+                    return 0;
+                }
+                int ret = val ? -1 : 1;
+                buffer_[b_idx] =
+                    (buffer_[b_idx] & C_INDEX) | (x ? ~C_INDEX : 0);
+                return ret;
+            } else {
+                break;
+            }
+        }
+        uint32_t c_i = 0;
+        bool val = type_info_ & C_ONE_MASK;
+        int ret = 0;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+            uint32_t rl = 0;
+            uint8_t r_b = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0) {
+                rl = data[d_idx];
+                rl = (rl << 8) | data[d_idx + 1];
+                rl = (rl << 8) | data[d_idx + 2];
+                rl = (rl << 8) | data[d_idx + 3];
+                r_b = 3;
+            } else {
+                rl = data[d_idx] & 0b00011111;
+                rl = (rl << 8) | data[d_idx + 1];
+                r_b = 1;
+                if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[d_idx + 2];
+                    r_b = 2;
+                }
+            }
+            c_i += rl;
+            if (c_i > q_i) {
+                if (val == x)
+                    return ret;
+                write_run(rl - 1, d_idx, r_b);
+                insert_buffer(b_idx, i | (x ? ~C_INDEX : uint32_t(0)));
+                ret = x ? 1 : -1;
+                break;
+            }
+            d_idx += r_b;
+            val = !val;
+        }
+        return ret;
+    }
+
+    uint32_t c_rank(uint32_t n) const {
+        uint32_t q_n = n;
+        uint32_t count = 0;
+        for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
+            uint32_t e_index = buffer_[b_idx] & C_INDEX;
+            if (e_index < n) {
+                q_n--;
+                count += buffer_[b_idx] >> 31;
+            } else {
+                break;
+            }
+        }
+        uint32_t c_i = 0;
+        bool val = type_info_ & C_ONE_MASK;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0) {
+                rl = data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+                rl = (rl << 8) | data[d_idx];
+            } else {
+                rl = data[d_idx++] & 0b00011111;
+                rl = (rl << 8) | data[d_idx];
+                if ((data[d_idx - 1] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[++d_idx];
+                }
+            }
+            if (c_i + rl >= q_n) {
+                count += val * (q_n - c_i);
+                break;
+            }
+            c_i += rl;
+            count += rl * val;
+            val = !val;
+        }
+        return count;
+    }
+
+    uint32_t c_select(uint32_t x) const {
+        bool val = type_info_ & C_ONE_MASK;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        uint8_t b_idx = 0;
+        uint8_t e_index = buffer_[b_idx] & C_INDEX;
+        uint32_t c_i = 0;
+        uint32_t count = 0;
+        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0) {
+                rl = data[d_idx];
+                rl = (rl << 8) | data[++d_idx];
+                rl = (rl << 8) | data[++d_idx];
+                rl = (rl << 8) | data[++d_idx];
+            } else {
+                rl = data[d_idx] & 0b00011111;
+                rl = (rl << 8) | data[++d_idx];
+                if ((data[d_idx - 1] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[++d_idx];
+                }
+            }
+            while (e_index < c_i + rl) {
+                if (count + val * (e_index - c_i) >= x) {
+                    return c_i + x - count;
+                }
+                bool b_val = buffer_[b_idx] >> 31;
+                if (b_val) {
+                    if (count + val * (e_index - c_i) + 1 == x) {
+                        return e_index;
+                    }
+                    count++;
+                }
+                c_i++;
+                [[unlikely]] e_index = buffer_[++b_idx] & C_INDEX;
+            }
+            if (count + (val * rl) >= x) {
+                c_i += x - count;
+                break;
+            }
+            c_i += rl;
+            val = !val;
+        }
+        return c_i;
+    }
+
+    void write_run(uint32_t length, uint32_t index, uint8_t c_bytes) {
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        switch (c_bytes) {
+            case 0:
+                data[index] = 0b11000000 | uint8_t(length);
+                return;
+            case 1:
+                data[index++] = 0b10000000 | uint8_t(length >> 8);
+                data[index] = uint8_t(length);
+                return;
+            case 2:
+                data[index++] = 0b10100000 | uint8_t(length >> 16);
+                data[index++] = uint8_t(length >> 8);
+                data[index] = uint8_t(length);
+                return;
+            default:
+                data[index++] = uint8_t(length >> 24);
+                data[index++] = uint8_t(length >> 16);
+                data[index++] = uint8_t(length >> 8);
+                data[index] = uint8_t(length);
+        }
+    }
+
+    void write_run(uint32_t length) {
+        uint32_t r_b = 32 - __builtin_clz(length);
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        uint8_t rl = 1;
+        if (r_b < 7) {
+            data[run_index_[0]++] = 0b11000000 | uint8_t(length);
+        } else if (r_b < 14) {
+            data[run_index_[0]++] = 0b10000000 | uint8_t(length >> 8);
+            data[run_index_[0]++] = uint8_t(length);
+            rl = 2;
+        } else if (r_b < 22) {
+            data[run_index_[0]++] = 0b10100000 | uint8_t(length >> 16);
+            data[run_index_[0]++] = uint8_t(length >> 8);
+            data[run_index_[0]++] = uint8_t(length);
+            rl = 3;
+        } else {
+            data[run_index_[0]++] = uint8_t(length >> 24);
+            data[run_index_[0]++] = uint8_t(length >> 16);
+            data[run_index_[0]++] = uint8_t(length >> 8);
+            data[run_index_[0]++] = uint8_t(length);
+            rl = 4;
+        }
+        if (rl > (type_info_ >> 5)) {
+            type_info_ = (type_info_ & 0b00011111) | (rl << 5);
+        }
     }
 };
 }  // namespace bv

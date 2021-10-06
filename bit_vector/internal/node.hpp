@@ -67,8 +67,12 @@ namespace bv {
  * @tparam compressed If true, additional bookkeeping will be done to
  * ensure compressed leaves behave correctly.
  */
-template <class leaf_type, class dtype, uint32_t leaf_size, uint8_t branches,
-          bool aggressive_realloc = false, bool compressed = false>
+template <class leaf_type,
+          class dtype,
+          uint32_t leaf_size,
+          uint8_t branches,
+          bool aggressive_realloc = false,
+          bool compressed = false>
 class node : uncopyable {
    private:
     typedef branchless_scan<dtype, branches> branching;
@@ -199,7 +203,7 @@ class node : uncopyable {
                         rebalance_leaf(child_index, child, alloc);
                     } else {
                         children_[child_index] =
-                            alloc->reallocate_leaf(child, cap, cap + 2);
+                            alloc->reallocate_leaf(child, cap, child->desired_capacity());
                     }
                     child_index = child_sizes_.find(index + 1);
                     child =
@@ -568,7 +572,7 @@ class node : uncopyable {
         if (has_leaves()) {
             leaf_type** children = reinterpret_cast<leaf_type**>(children_);
             for (uint8_t i = 0; i < child_count_; i++) {
-                children[i]->commit();
+                children[i]->flush();
             }
         } else {
             node** children = reinterpret_cast<node**>(children_);
@@ -957,11 +961,26 @@ class node : uncopyable {
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->need_realloc()) {
             dtype cap = child->capacity();
-            if (cap * WORD_BITS >= leaf_size) {
-                rebalance_leaf(child_index, child, alloc);
+            if constexpr (compressed) {
+                if ((child->is_compressed() &&
+                     child->size >= (~uint32_t(0) >> 1)) ||
+                    cap * WORD_BITS > leaf_size) {
+                    split_leaf(child_index, child, alloc);
+                } else if (cap * WORD_BITS >= leaf_size) {
+                    rebalance_leaf(child_index, child, alloc);
+                } else {
+                    children_[child_index] =
+                        alloc->reallocate_leaf(child, cap, child->desired_capacity());
+                    [[likely]] (void(0));
+                }
             } else {
-                children_[child_index] =
-                    alloc->reallocate_leaf(child, cap, cap + 2);
+                if (cap * WORD_BITS >= leaf_size) {
+                    rebalance_leaf(child_index, child, alloc);
+                } else {
+                    children_[child_index] =
+                        alloc->reallocate_leaf(child, cap, cap + 2);
+                    [[likely]] (void(0));
+                }
             }
             child_index = child_sizes_.find(index);
             child = reinterpret_cast<leaf_type*>(children_[child_index]);
@@ -1150,7 +1169,9 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for allocation and reallocation.
      */
     template <class allocator>
-    void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx,
+    void rebalance_leaves_left(leaf_type* a,
+                               leaf_type* b,
+                               uint8_t idx,
                                allocator* alloc) {
         dtype b_cap = b->capacity();
         dtype addition = (a->size() - leaf_size / 3) / 2;
@@ -1198,7 +1219,9 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for reallocation and deallocation.
      */
     template <class allocator>
-    void merge_leaves(leaf_type* a, leaf_type* b, uint8_t idx,
+    void merge_leaves(leaf_type* a,
+                      leaf_type* b,
+                      uint8_t idx,
                       allocator* alloc) {
         dtype a_cap = a->capacity();
         if (a_cap * WORD_BITS < a->size() + b->size()) {
@@ -1222,7 +1245,7 @@ class node : uncopyable {
     /**
      * @brief Removal used when the children are leaves.
      *
-     * Will maintain structural invarians by reallocating and rebalancing as
+     * Will maintain structural invariants by reallocating and rebalancing as
      * necessary.
      *
      * @tparam Allocator Type of `alloc`.

@@ -34,8 +34,13 @@ namespace bv {
  * @tparam compressed         If true, additional bookkeeping will be done to
  * ensure compressed leaves behave correctly.
  */
-template <class leaf, class node, class allocator, uint32_t leaf_size,
-          uint8_t branches, class dtype, bool aggressive_realloc = false,
+template <class leaf,
+          class node,
+          class allocator,
+          uint32_t leaf_size,
+          uint8_t branches,
+          class dtype,
+          bool aggressive_realloc = false,
           bool compressed = false>
 class bit_vector : uncopyable {
    private:
@@ -65,7 +70,8 @@ class bit_vector : uncopyable {
     void split_root() {
         node* new_root = allocator_->template allocate_node<node>();
         node* sibling = allocator_->template allocate_node<node>();
-        if (n_root_->has_leaves()) sibling->has_leaves(true);
+        if (n_root_->has_leaves())
+            sibling->has_leaves(true);
         sibling->transfer_prepend(n_root_, branches / 2);
         new_root->append_child(n_root_);
         new_root->append_child(sibling);
@@ -84,7 +90,16 @@ class bit_vector : uncopyable {
     void split_leaf() {
         leaf* sibling = allocator_->template allocate_leaf<leaf>(
             2 + leaf_size / (2 * WORD_BITS));
-        sibling->transfer_capacity(l_root_, leaf_size / (2 * WORD_BITS));
+        if constexpr (compressed) {
+            if (l_root_->size() > leaf_size) {
+                sibling->transfer_capacity(l_root_,
+                                           leaf_size / (2 * WORD_BITS));
+            } else {
+                sibling->transfer_append(l_root_, leaf_size / 2);
+            }
+        } else {
+            sibling->transfer_append(l_root_, leaf_size / 2);
+        }
         if constexpr (aggressive_realloc) {
             dtype cap = l_root_->capacity();
             dtype n_cap = l_root_->desired_capacity();
@@ -241,8 +256,8 @@ class bit_vector : uncopyable {
                     split_leaf();
                     n_root_->insert(index, value, allocator_);
                 } else {
-                    l_root_ =
-                        allocator_->reallocate_leaf(l_root_, cap, cap + 2);
+                    l_root_ = allocator_->reallocate_leaf(
+                        l_root_, cap, l_root_->desired_capacity());
                     [[likely]] l_root_->insert(index, value);
                 }
             } else {
@@ -404,8 +419,8 @@ class bit_vector : uncopyable {
                         n_root_->set(index, value, allocator_);
                         [[unlikely]] return;
                     }
-                    l_root_ =
-                        allocator_->reallocate_leaf(l_root_, cap, cap + 2);
+                    l_root_ = allocator_->reallocate_leaf(
+                        l_root_, cap, l_root_->desired_capacity());
                     [[unlikely]] (void(0));
                 }
             }
@@ -427,7 +442,7 @@ class bit_vector : uncopyable {
      * expected, flushing all buffers should improve query time at the cost of a
      * fairly expensive flushing operations.
      */
-    void flush() { root_is_leaf_ ? l_root_->commit() : n_root_->flush(); }
+    void flush() { root_is_leaf_ ? l_root_->flush() : n_root_->flush(); }
 
     /**
      * @brief Write raw bit data to the area provided.
