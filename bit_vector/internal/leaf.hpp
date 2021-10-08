@@ -100,9 +100,7 @@ class leaf : uncopyable {
      * @param data     Pointer to a contiguous memory area available for
      * storage.
      */
-    leaf(uint16_t capacity,
-         uint64_t* data,
-         uint32_t elems = 0,
+    leaf(uint16_t capacity, uint64_t* data, uint32_t elems = 0,
          bool val = false) {
         if constexpr (!compressed) {
             if (elems > 0) {
@@ -802,7 +800,11 @@ class leaf : uncopyable {
     uint16_t desired_capacity() {
         if constexpr (compressed) {
             if (is_compressed()) {
-                static_assert(false);
+                uint64_t n_cap = run_index_[0] % 8;
+                n_cap += run_index_[0] + (n_cap ? 8 - n_cap : 0);
+                n_cap /= 8;
+                n_cap += n_cap % 2 ? 1 : 0;
+                return n_cap;
             }
         }
         uint16_t n_cap = 2 + size_ / WORD_BITS;
@@ -819,7 +821,14 @@ class leaf : uncopyable {
      *
      * @return True, since setting is always supported by uncompressed leaves.
      */
-    constexpr bool can_set() { return true; }
+    constexpr bool can_set() {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return capacity_ * 8 >= run_index_[0] + (type_info_ >> 5);
+            }
+        }
+        return true;
+    }
 
     /**
      * @brief Sets the pointer to the leaf-associated data storage.
@@ -848,13 +857,74 @@ class leaf : uncopyable {
      * @brief Remove the fist "elems" elements from the leaf.
      *
      * Intended for removing elements that have been copied to a neighbouring
-     * leaf. Assumes that buffer has been committed before calling.
+     * leaf. Assumes that buffer of uncompressed leaves has been committed
+     * before calling.
      *
      * Will update size and p_sum.
      *
      * @param elems number of elements to remove.
      */
     void clear_first(uint32_t elems) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                uint32_t q_elems = elems;
+                uint8_t n_delete = 0;
+                for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
+                    uint32_t e_index = buffer_[b_idx] & C_INDEX;
+                    if (e_index >= elems) {
+                        buffer_[b_idx] -= elems;
+                    } else {
+                        size_--;
+                        p_sum_ -= buffer_[b_idx] >> 31;
+                        n_delete++;
+                        q_elems--;
+                    }
+                }
+                for (uint8_t i = n_delete; i < buffer_count_; i++) {
+                    buffer_[i - n_delete] = buffer_[i];
+                    buffer_[i] = uint32_t(0);
+                }
+                buffer_count_ -= n_delete;
+                uint32_t d_idx = 0;
+                bool val = type_info_ & C_ONE_MASK;
+                uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+                while (q_elems > 0) {
+                    uint32_t c_bytes = 1;
+                    uint32_t rl = 0;
+                    if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                        rl = data[d_idx] & 0b00111111;
+                    } else if ((data[d_idx] >> 7) == 0) {
+                        rl = data[d_idx];
+                        rl = (rl << 8) | data[d_idx + 1];
+                        rl = (rl << 8) | data[d_idx + 2];
+                        rl = (rl << 8) | data[d_idx + 3];
+                        c_bytes = 4;
+                    } else {
+                        rl = data[d_idx] & 0b00011111;
+                        rl = (rl << 8) | data[d_idx + 1];
+                        c_bytes = 2;
+                        if ((data[d_idx - 1] & 0b10100000) == 0b10100000) {
+                            rl = (rl << 8) | data[d_idx + 2];
+                            c_bytes = 3;
+                        }
+                    }
+                    if (rl > q_elems) {
+                        write_run(rl - q_elems, d_idx, c_bytes);
+                        q_elems = 0;
+                        size_ -= val * q_elems;
+                        p_sum_ -= q_elems;
+                    } else {
+                        write_run(0, d_idx, c_bytes);
+                        q_elems -= rl;
+                        size_ -= val * rl;
+                        p_sum_ -= rl;
+                    }
+                    d_idx += c_bytes;
+                    val = !val;
+                }
+                return;
+            }
+        }
         // Important to ensure that all trailing data gets zeroed out to not
         // cause undefined behaviour for select or copy operations.
         uint32_t ones = rank(elems);
@@ -896,9 +966,20 @@ class leaf : uncopyable {
         p_sum_ -= ones;
     }
 
+    /**
+     * @brief Transfer elems worth of elements from other to this.
+     *
+     * Only for use with compressed leaves when splitting. It is assumed that
+     * this leaf is empty with an empty buffer.
+     *
+     * @param other Pointer to the sibling to copy from.
+     * @param elems Number of 64-bit equivalent words worth of data to copy.
+     */
     void transfer_capacity(leaf* other, uint32_t elems) {
-        std::cerr << "transfer_capacity has not been implemented" << std::endl;
-        exit(1);
+#ifdef DEBUG
+        assert(buffer_count_ == 0);
+#endif
+        static_assert(false);
     }
 
     /**
@@ -1013,8 +1094,7 @@ class leaf : uncopyable {
         // Make space for new data
         for (uint32_t i = capacity_ - 1; i >= words; i--) {
             data_[i] = data_[i - words];
-            if (i == 0)
-                break;
+            if (i == 0) break;
         }
         for (uint32_t i = 0; i < words; i++) {
             data_[i] = 0;
@@ -1144,8 +1224,7 @@ class leaf : uncopyable {
     void commit() {
         // Complicated bit manipulation but whacha gonna do. Hopefully won't
         // need to debug this anymore.
-        if constexpr (buffer_size == 0)
-            return;
+        if constexpr (buffer_size == 0) return;
         if (buffer_count_ == 0) [[unlikely]]
             return;
 
@@ -1532,8 +1611,7 @@ class leaf : uncopyable {
                 }
             }
             c_i += rl;
-            if (c_i > i_q)
-                return ret;
+            if (c_i > i_q) return ret;
             ret = !ret;
         }
     }
@@ -1544,10 +1622,23 @@ class leaf : uncopyable {
     }
 
     void c_insert(uint32_t i, bool v) {
-        uint32_t buf = i | (v ? ~C_INDEX : uint32_t(0));
+        uint8_t i_idx = 0;
         for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
+            uint32_t e_index = buffer_[b_idx] & C_INDEX;
+            if (e_index < i)
+                i_idx++;
+            else
+                buffer_[b_idx]++;
         }
-        buffer_[buffer_count_++] = i | (v ? ~C_INDEX : uint32_t(0));
+        uint32_t n_b =
+            i | (v ? ~C_INDEX : uint32_t(0)) if (i_idx == buffer_count_) {
+            buffer_[buffer_count_++] = n_b;
+        }
+        else {
+            insert_buffer(i_idx, n_b);
+        }
+        size_++;
+        p_sum_ += v;
         if (buffer_count_ >= buffer_size) {
             c_commit();
         }
@@ -1570,8 +1661,7 @@ class leaf : uncopyable {
                 buffer_[b_idx]--;
             }
         }
-        if (done)
-            return ret;
+        if (done) return ret;
         uint32_t c_i = 0;
         ret = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
@@ -1654,8 +1744,7 @@ class leaf : uncopyable {
             }
             c_i += rl;
             if (c_i > q_i) {
-                if (val == x)
-                    return ret;
+                if (val == x) return ret;
                 write_run(rl - 1, d_idx, r_b);
                 insert_buffer(b_idx, i | (x ? ~C_INDEX : uint32_t(0)));
                 ret = x ? 1 : -1;
