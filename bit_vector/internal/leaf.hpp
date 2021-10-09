@@ -1011,19 +1011,19 @@ class leaf : uncopyable {
         elems *= 8;
         uint32_t o_bytes = other->used_bytes() >> 1;
         elems = elems < o_bytes ? elems : o_bytes;
-        uint8_t o_data = reinterpret_cast<uint8_t*>(other->data());
+        uint8_t* o_data = reinterpret_cast<uint8_t*>(other->data());
         uint32_t d_idx = 0;
         bool split = false;
         while (true) {
             uint32_t rl = 0;
             uint8_t r_bytes = 1;
-            if ((o_data[d_idx] & 0b1100000) == 0b11000000) {
+            if ((o_data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = o_data[d_idx] & 0b00111111;
             } else if ((o_data[d_idx] & 0b10000000) == 0b00000000) {
-                rl = o_data[d_idx];
-                rl = (rl << 8) & o_data[d_idx + 1];
-                rl = (rl << 8) & o_data[d_idx + 2];
-                rl = (rl << 8) & o_data[d_idx + 3];
+                rl = o_data[d_idx] << 24;
+                rl &= o_data[d_idx + 1] << 16;
+                rl &= o_data[d_idx + 2] << 8;
+                rl &= o_data[d_idx + 3];
                 r_bytes = 4;
             } else {
                 rl = o_data[d_idx] & 0b00011111;
@@ -1042,7 +1042,6 @@ class leaf : uncopyable {
                 p_sum_ += val * rl;
             } else if (r_bytes == 4 & d_idx + 2 <= elems) {
                 rl >>= 1;
-                d_idx += 2;
                 split = true;
                 if (rl == 0) [[unlikely]] break;
                 write_run(rl);
@@ -1063,7 +1062,7 @@ class leaf : uncopyable {
                 p_sum_ += o_buf[ob_idx] >> 31;
             }
         }
-        other->delete_capacity(d_idx);
+        other->delete_capacity(d_idx, size_, p_sum_, buffer_count_, split, val);
     }
 
     /**
@@ -1071,12 +1070,52 @@ class leaf : uncopyable {
      * 
      * Intended only for deleting data after splitting
      * 
+     * @param copy_index Index of new first run.
+     * @param elems      Number of logical elements copied from this leaf.
      * @param copy_index Number of bytes copied from this leaf.
      * @param n_buf      Number of elements copied form the buffer.
      * @param split      True iff the last copy split a 4 byte run.
      */
-    void delete_capacity(uint32_t copy_index, uin8_t n_buf, bool split) {
-        static_assert(false);
+    void delete_capacity(uint32_t copy_index, uint32_t elems, uint32_t ones, uint8_t n_buf, bool split, bool first) {
+        type_info_ = (type_info_ & 0b11111110) | uint8_t(first);
+        p_sum_ -= ones;
+        size_ -= elems;
+        if (n_buf > 0) {
+            memmove(buffer_, buffer_ + n_buf, (buffer_count_ - n_buf) * 4);
+            memset(buffer_ + (buffer_count_ - n_buf), 0, 4 * n_buf);
+            buffer_count_ -= n_buf;
+        }
+        uint32_t old_end = run_index_[0];
+        run_index_[0] = 0;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        if (split) {
+            uint32_t rl = data[copy_index++] << 24;
+            rl &= data[copy_index++] << 16;
+            rl &= data[copy_index++] << 8;
+            rl &= data[copy_index++];
+            write_run(rl - (rl >> 1));
+        }
+        while (copy_index < old_end) {
+            uint32_t rl = 0;
+            if ((data[copy_index] & 0b11000000) == 0b11000000) {
+                rl = data[copy_index++] & 0b00111111;
+            } else if ((data[copy_index] & 0b10000000) == 0) {
+                rl = data[copy_index++] << 24;
+                rl &= data[copy_index++] << 16;
+                rl &= data[copy_index++] << 8;
+                rl &= data[copy_index++];
+            } else if ((data[copy_index] & 0b11100000) == 0b10000000) {
+                rl = (data[copy_index++] & 0b00011111) << 8;
+                rl &= data[copy_index++];
+            } else {
+                rl = (data[copy_index++] & 0b00011111) << 16;
+                rl &= data[copy_index++];
+                rl &= data[copy_index++];
+            }
+            if (rl == 0) [[unlikely]] continue;
+            write_run(rl);
+        }
+        memset(data + run_index_[0], 0, old_end - run_index_[0]);
     }
 
     /**
