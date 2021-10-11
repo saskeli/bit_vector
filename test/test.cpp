@@ -21,8 +21,8 @@
 using namespace bv;
 
 typedef malloc_alloc ma;
-typedef leaf<BUFFER_SIZE> sl;
-typedef leaf<0> ubl;
+typedef leaf<BUFFER_SIZE, SIZE> sl;
+typedef leaf<0, SIZE> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef branchless_scan<uint64_t, BRANCH> branch;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
@@ -31,7 +31,7 @@ typedef query_support<uint64_t, sl, 2048> qs;
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
 
-TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8>, ma>(8); }
+TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
 
 TEST(SimpleLeaf, Remove) { leaf_remove_test<sl, ma>(10000); }
 

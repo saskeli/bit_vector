@@ -49,12 +49,22 @@ namespace bv {
  *                          Needs to be one of {8, 16, 32, 64, 128}.
  * @tparam avx              Should avx population counting be used for rank.
  */
-template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
-          bool avx = true, bool aggressive_realloc = false>
-using simple_bv =
-    bit_vector<leaf<buffer_size, avx>,
-               node<leaf<buffer_size>, uint64_t, leaf_size, branching_factor, aggressive_realloc>,
-               malloc_alloc, leaf_size, branching_factor, uint64_t, aggressive_realloc>;
+template <uint8_t buffer_size,
+          uint64_t leaf_size,
+          uint8_t branching_factor,
+          bool avx = true,
+          bool aggressive_realloc = false>
+using simple_bv = bit_vector<leaf<buffer_size, leaf_size, avx>,
+                             node<leaf<buffer_size, leaf_size, avx>,
+                                  uint64_t,
+                                  leaf_size,
+                                  branching_factor,
+                                  aggressive_realloc>,
+                             malloc_alloc,
+                             leaf_size,
+                             branching_factor,
+                             uint64_t,
+                             aggressive_realloc>;
 
 /**
  * @brief Helper type definition template for bit vector with at most 2^31
@@ -76,12 +86,22 @@ using simple_bv =
  *                          Needs to be one 8, 16, 32, 64 or 128.
  * @tparam avx              Should avx population counting be used for rank.
  */
-template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
-          bool avx = true, bool aggressive_realloc = false>
-using small_bv =
-    bit_vector<leaf<buffer_size, avx>,
-               node<leaf<buffer_size, avx>, uint32_t, leaf_size, branching_factor, aggressive_realloc>,
-               malloc_alloc, leaf_size, branching_factor, uint32_t, aggressive_realloc>;
+template <uint8_t buffer_size,
+          uint64_t leaf_size,
+          uint8_t branching_factor,
+          bool avx = true,
+          bool aggressive_realloc = false>
+using small_bv = bit_vector<leaf<buffer_size, leaf_size, avx>,
+                            node<leaf<buffer_size, leaf_size, avx>,
+                                 uint32_t,
+                                 leaf_size,
+                                 branching_factor,
+                                 aggressive_realloc>,
+                            malloc_alloc,
+                            leaf_size,
+                            branching_factor,
+                            uint32_t,
+                            aggressive_realloc>;
 
 /**
  * @brief Default dynamic bit vector type.

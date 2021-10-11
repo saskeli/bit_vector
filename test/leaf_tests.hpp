@@ -546,7 +546,7 @@ void leaf_hit_buffer_test() {
     }
 
     // Make sure the buffer is empty
-    a->commit();
+    a->flush();
 
     a->set(20, true);
     ASSERT_EQ(128u, a->size());
@@ -615,7 +615,7 @@ void leaf_hit_buffer_test() {
     ASSERT_EQ(64u + 3, a->select(64u));
 
     // Make sure the buffer is empty
-    a->commit();
+    a->flush();
 
     // Buffer offset calculation test for committing
     a->insert(110, false);
@@ -669,7 +669,7 @@ void leaf_commit_test(uint64_t size) {
     l->remove(0);
     l->remove(0);
 
-    l->commit();
+    l->flush();
 
     ASSERT_EQ(5461u, l->size());
     ASSERT_EQ(5464u / 2 - 1, l->p_sum());

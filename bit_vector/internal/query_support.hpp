@@ -101,7 +101,7 @@ class query_support : uncopyable {
     void append(leaf_type* leaf) {
         dtype a_size = leaf->size();
         if constexpr (flush) {
-            leaf->commit();
+            leaf->flush();
         }
         while (size_ + a_size > n_elems_ * block_size) {
             dtype i_rank = leaf->rank(n_elems_ * block_size - size_);

@@ -43,7 +43,10 @@ namespace bv {
  * @tparam Size of insertion/removal buffer.
  * @tparam Use avx population counts for rank operations.
  */
-template <uint8_t buffer_size, bool avx = true, bool compressed = false>
+template <uint8_t buffer_size,
+          uint32_t leaf_size,
+          bool avx = true,
+          bool compressed = false>
 class leaf : uncopyable {
    private:
     uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
@@ -56,6 +59,7 @@ class leaf : uncopyable {
     uint32_t buffer_[buffer_size];            ///< Insert/remove buffer.
 #pragma GCC diagnostic pop
     uint64_t* data_;  ///< Pointer to data storage.
+    static uint64_t data_scratch[leaf_size / 64];
 
     /** @brief 0x1 to be used in  bit operations. */
     static const constexpr uint64_t MASK = 1;
@@ -188,7 +192,7 @@ class leaf : uncopyable {
             }
         }
         return at(0);
-    } 
+    }
     /** @brief Number of bytes used to encode content */
     uint32_t used_bytes() {
         if constexpr (compressed) {
@@ -783,7 +787,7 @@ class leaf : uncopyable {
                     return false;
                 }
                 if (capacity_ * 8 - run_index_[0] >=
-                    buffer_size * (type_info_ >> 5)) {
+                    buffer_size * (1 + (type_info_ >> 5))) {
                     return false;
                 }
             }
@@ -826,6 +830,7 @@ class leaf : uncopyable {
             if (is_compressed()) {
                 uint64_t n_cap = run_index_[0] % 8;
                 n_cap += run_index_[0] + (n_cap ? 8 - n_cap : 0);
+                n_cap += buffer_size * (type_info_ >> 5);
                 n_cap /= 8;
                 n_cap += n_cap % 2 ? 1 : 0;
                 return n_cap;
@@ -848,7 +853,10 @@ class leaf : uncopyable {
     constexpr bool can_set() {
         if constexpr (compressed) {
             if (is_compressed()) {
-                return capacity_ * 8 >= run_index_[0] + (type_info_ >> 5);
+                if (buffer_count_ < buffer_size - 1) {
+                    return true;
+                }
+                return desired_capacity() <= capacity_;
             }
         }
         return true;
@@ -1003,7 +1011,7 @@ class leaf : uncopyable {
 #ifdef DEBUG
         assert(buffer_count_ == 0);
         assert(size_ == 0);
-        assert(is_compressed())
+        assert(is_compressed());
 #endif
         type_info_ &= C_TYPE_MASK;
         bool val = other->first_value();
@@ -1034,16 +1042,21 @@ class leaf : uncopyable {
                     r_bytes = 3;
                 }
             }
-            if (d_idx + r_bytes <= elems) {
+            if ((d_idx + r_bytes <= elems) &&
+                (other->size() - size_ - rl > (leaf_size / 3))) {
                 d_idx += r_bytes;
-                if (rl == 0) [[unlikely]] continue;
+                if (rl == 0) {
+                    [[unlikely]] continue;
+                }
                 write_run(rl);
                 size_ += rl;
                 p_sum_ += val * rl;
-            } else if (r_bytes == 4 & d_idx + 2 <= elems) {
+            } else if (r_bytes == 4 && d_idx + 2 <= elems) {
                 rl >>= 1;
                 split = true;
-                if (rl == 0) [[unlikely]] break;
+                if (rl == 0) {
+                    [[unlikely]] break;
+                }
                 write_run(rl);
                 size_ += rl;
                 p_sum_ += val * rl;
@@ -1067,16 +1080,21 @@ class leaf : uncopyable {
 
     /**
      * @brief Delete ~copy_index bytes of data from the leaf.
-     * 
+     *
      * Intended only for deleting data after splitting
-     * 
+     *
      * @param copy_index Index of new first run.
      * @param elems      Number of logical elements copied from this leaf.
      * @param copy_index Number of bytes copied from this leaf.
      * @param n_buf      Number of elements copied form the buffer.
      * @param split      True iff the last copy split a 4 byte run.
      */
-    void delete_capacity(uint32_t copy_index, uint32_t elems, uint32_t ones, uint8_t n_buf, bool split, bool first) {
+    void delete_capacity(uint32_t copy_index,
+                         uint32_t elems,
+                         uint32_t ones,
+                         uint8_t n_buf,
+                         bool split,
+                         bool first) {
         type_info_ = (type_info_ & 0b11111110) | uint8_t(first);
         p_sum_ -= ones;
         size_ -= elems;
@@ -1112,7 +1130,8 @@ class leaf : uncopyable {
                 rl &= data[copy_index++];
                 rl &= data[copy_index++];
             }
-            if (rl == 0) [[unlikely]] continue;
+            if (rl == 0) [[unlikely]]
+                continue;
             write_run(rl);
         }
         memset(data + run_index_[0], 0, old_end - run_index_[0]);
@@ -1132,15 +1151,22 @@ class leaf : uncopyable {
      * @param elems Number of elements to transfer.
      */
     void transfer_append(leaf* other, uint32_t elems) {
-#ifdef DEBUG
-        if (capacity_ * WORD_BITS < size_ + elems) {
-            std::cerr << "Invalid append! Leaf only has room for "
-                      << (capacity_ * WORD_BITS - size_) << " bits  and "
-                      << elems << " was appended." << std::endl;
-            // exit(1);
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                flatten();
+            } else {
+                commit();
+            }
+        } else {
+            commit();
         }
-#endif
-        commit();
+        if constexpr (compressed) {
+            if (other->is_compressed()) {
+                c_append(other, elems);
+                other->clear_first(elems);
+                return;
+            }
+        }
         other->commit();
 
         const uint64_t* o_data = other->data();
@@ -1195,6 +1221,92 @@ class leaf : uncopyable {
      * @param elems number of elements to remove.
      */
     void clear_last(uint32_t elems) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                uint32_t end = size_ - elems;
+                for (uint8_t b_idx = buffer_count_ - 1; b_idx < buffer_count_;
+                     b_idx--) {
+                    if ((buffer_[b_idx] & C_INDEX) >= end) {
+                        p_sum_ -= buffer_[b_idx] >> 31;
+                        size_--;
+                        buffer_[b_idx] = uint32_t(0);
+                        buffer_count_--;
+                    } else {
+                        break;
+                    }
+                }
+                end -= buffer_count_;
+                uint32_t d_idx = 0;
+                uint32_t loc = 0;
+                uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+                bool val = type_info_ & C_ONE_MASK;
+                while (d_idx < run_index_[0]) {
+                    uint32_t rl = 0;
+                    uint32_t r_bytes = 1;
+                    if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                        rl = data[d_idx] & 0b00111111;
+                    } else if ((data[d_idx] & 0b10000000) == 0) {
+                        rl = data[d_idx] << 24;
+                        rl &= data[d_idx + 1] << 16;
+                        rl &= data[d_idx + 2] << 8;
+                        rl &= data[d_idx + 3];
+                        r_bytes = 4;
+                    } else if ((data[d_idx] & 0b11100000) == 0b10000000) {
+                        rl = (data[d_idx] & 0b00011111) << 8;
+                        rl &= data[d_idx + 1];
+                        r_bytes = 2;
+                    } else {
+                        rl = (data[d_idx] & 0b00011111) << 16;
+                        rl &= data[d_idx + 1];
+                        rl &= data[d_idx + 2];
+                        r_bytes = 3;
+                    }
+                    if (rl + loc == end) {
+                        val = !val;
+                        loc += rl;
+                        d_idx += r_bytes;
+                        break;
+                    } else if (rl + loc > end) {
+                        uint32_t n_rl = end - loc;
+                        write_run(n_rl, d_idx, r_bytes);
+                        p_sum_ -= val * (rl - n_rl);
+                        size_ -= rl - n_rl;
+                        loc += n_rl;
+                        val = !val;
+                        d_idx += r_bytes;
+                        break;
+                    }
+                    d_idx += r_bytes;
+                    val = !val;
+                    loc += rl;
+                }
+                uint32_t rem_idx = d_idx;
+                while (rem_idx < run_index_[0]) {
+                    uint32_t rl = 0;
+                    if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                        rl = data[d_idx++] & 0b00111111;
+                    } else if ((data[d_idx] & 0b10000000) == 0) {
+                        rl = data[d_idx++] << 24;
+                        rl &= data[d_idx++] << 16;
+                        rl &= data[d_idx++] << 8;
+                        rl &= data[d_idx++];
+                    } else if ((data[d_idx] & 0b11100000) == 0b10000000) {
+                        rl = (data[d_idx++] & 0b00011111) << 8;
+                        rl &= data[d_idx++];
+                    } else {
+                        rl = (data[d_idx++] & 0b00011111) << 16;
+                        rl &= data[d_idx++];
+                        rl &= data[d_idx++];
+                    }
+                    p_sum_ -= val * rl;
+                    size_ -= rl;
+                    val = !val;
+                }
+                memset(data + d_idx, 0, run_index_[0] - d_idx);
+                run_index_[0] = d_idx;
+                return;
+            }
+        }
         size_ -= elems;
         p_sum_ = rank(size_);
         uint32_t offset = size_ % WORD_BITS;
@@ -1223,9 +1335,15 @@ class leaf : uncopyable {
      * @param elems Number of elements to transfer.
      */
     void transfer_prepend(leaf* other, uint32_t elems) {
-        commit();
-        other->commit();
-        const uint64_t* o_data = other->data();
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                flatten();
+            } else {
+                commit();
+            }
+        } else {
+            commit();
+        }
         uint32_t words = elems / WORD_BITS;
         // Make space for new data
         for (uint32_t i = capacity_ - 1; i >= words; i--) {
@@ -1245,6 +1363,14 @@ class leaf : uncopyable {
             data_[words] <<= overflow;
             [[likely]] (void(0));
         }
+        if constexpr (compressed) {
+            if (other->is_compressed()) {
+                c_transfer_prepend(other, elems);
+                return;
+            }
+        }
+        other->commit();
+        const uint64_t* o_data = other->data();
         // Copy over data from sibling
         uint32_t source_word = other->size();
         uint32_t source_offset = source_word % WORD_BITS;
@@ -1315,13 +1441,27 @@ class leaf : uncopyable {
      *
      * Will ensure that the buffers are empty for both leaves.
      *
-     * Will now clear elements from "other" as it is assumed that "other" will
+     * Will not clear elements from "other" as it is assumed that "other" will
      * be deallocated .
      *
      * @param other Pointer to next leaf.
      */
     void append_all(leaf* other) {
-        commit();
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                flatten();
+            } else {
+                commit();
+            }
+        } else {
+            commit();
+        }
+        if constexpr (compressed) {
+            if (other->is_compressed()) {
+                c_append(other, other->size());
+                return;
+            }
+        }
         other->commit();
         const uint64_t* o_data = other->data();
         uint32_t offset = size_ % WORD_BITS;
@@ -1349,6 +1489,296 @@ class leaf : uncopyable {
         p_sum_ += o_p_sum;
     }
 
+    void flush() {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return;
+            }
+        }
+        commit();
+    }
+
+    uint64_t dump(uint64_t* target, uint64_t start) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_dump(target, start);
+            }
+        }
+        commit();
+        uint64_t word = start / WORD_BITS;
+        uint16_t offset = start % WORD_BITS;
+        uint64_t t_words = size_ / WORD_BITS;
+        uint16_t t_offset = size_ % WORD_BITS;
+        if (offset == 0) {
+            for (uint16_t i = 0; i < t_words; i++) {
+                target[word++] = data_[i];
+            }
+            if (t_offset > 0) {
+                target[word] = data_[t_words];
+            }
+            [[unlikely]] (void(0));
+        } else {
+            for (uint16_t i = 0; i < t_words; i++) {
+                target[word++] |= data_[i] << offset;
+                target[word] |= data_[i] >> (WORD_BITS - offset);
+            }
+            if (t_offset > 0) {
+                target[word++] |= data_[t_words] << offset;
+                if (t_offset > WORD_BITS - offset) {
+                    target[word] |= data_[t_words] >> (WORD_BITS - offset);
+                }
+            }
+        }
+        return start + size_;
+    }
+
+    /**
+     * @brief Ensure that the leaf is in a valid state.
+     *
+     * Will use assertions to check that the actual stored data agrees with
+     * stored metadata. Will not in any way that the leaf is in the correct
+     * state given the preceding sequence of operations, just that the leaf is
+     * in a state that is valid for a leaf.
+     *
+     * If the compiler flag `-DNDEBUG` is given, this function will do nothing
+     * and may be completely optimized out by an optimizing compiler.
+     *
+     * @return 1 for calculating the number of nodes in the tree.
+     */
+    uint32_t validate() const {
+        if (is_compressed()) {
+            assert(size_ <= (~uint32_t(0) >> 1));
+        } else {
+            assert(size_ <= capacity_ * WORD_BITS);
+        }
+        assert(p_sum_ <= size_);
+        assert(p_sum_ == rank(size_));
+        if (is_compressed()) {
+            uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+            for (size_t i = run_index_[0]; i < 8 * capacity_; i++) {
+                assert(data[i] == 0);
+            }
+            return 1;
+        }
+        uint32_t last_word = size_ / WORD_BITS;
+        uint32_t overflow = size_ % WORD_BITS;
+        if (overflow != 0) {
+            for (uint32_t i = overflow; i < WORD_BITS; i++) {
+                uint64_t val = (MASK << i) & data_[last_word];
+                assert(val == 0u);
+            }
+            last_word++;
+        }
+        for (uint32_t i = last_word; i < capacity_; i++) {
+            assert(data_[i] == 0);
+        }
+        return 1;
+    }
+
+    /**
+     * @brief Output data stored in the leaf as json.
+     *
+     * Will output valid json, but will not output a trailing newline since the
+     * call is expected to be part of a recursive tree traversal.
+     *
+     * @param internal_only Will not output raw data it true to save space.
+     */
+    void print(bool internal_only) const {
+        if (is_compressed()) {
+            c_print(internal_only);
+            return;
+        }
+        std::cout << "{\n\"type\": \"leaf\",\n"
+                  << "\"size\": " << size_ << ",\n"
+                  << "\"capacity\": " << capacity_ << ",\n"
+                  << "\"p_sum\": " << p_sum_ << ",\n"
+                  << "\"buffer_size\": " << int(buffer_size) << ",\n"
+                  << "\"buffer\": [\n";
+        for (uint8_t i = 0; i < buffer_count_; i++) {
+#pragma GCC diagnostic ignored "-Warray-bounds"
+            std::cout << "{\"is_insertion\": "
+                      << buffer_is_insertion(buffer_[i]) << ", "
+                      << "\"buffer_value\": " << buffer_value(buffer_[i])
+                      << ", "
+                      << "\"buffer_index\": " << buffer_index(buffer_[i])
+                      << "}";
+#pragma GCC diagnostic pop
+            if (i != buffer_count_ - 1) {
+                std::cout << ",\n";
+            }
+        }
+        if (!internal_only) {
+            std::cout << "],\n\"data\": [\n";
+            for (uint64_t i = 0; i < capacity_; i++) {
+                std::bitset<WORD_BITS> b(data_[i]);
+                std::cout << "\"";
+                for (size_t i = 0; i < 64; i++) {
+                    if (i % 8 == 0 && i > 0) {
+                        std::cout << " ";
+                    }
+                    std::cout << (b[i] ? "1" : "0");
+                }
+                std::cout << "\"";
+                if (i != uint64_t(capacity_ - 1)) {
+                    std::cout << ",\n";
+                }
+            }
+            std::cout << "]}";
+        } else {
+            std::cout << "]}";
+        }
+    }
+
+    std::pair<uint64_t, uint64_t> leaf_usage() const {
+        // TODO: What is even leaf usage for rle leaves?
+        return std::pair<uint64_t, uint64_t>(capacity_ * WORD_BITS, size_);
+    }
+
+   private:
+    /**
+     * @brief Extract the value of a buffer element
+     *
+     * The First bit (lsb) of a 23-bit buffer element contains the value of the
+     * element.
+     *
+     * I.e. if `bv[i]` is `1`, then the buffer created for `remove(i)` will have
+     * a lsb with value 1.
+     *
+     * @param e Buffer element to extract value from.
+     *
+     * @return Boolean value indicating the value of the element referred to by
+     * the buffer.
+     */
+    inline bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
+
+    /**
+     * @brief Extract type information of a buffer element.
+     *
+     * The fourth least significant bit (`0b1000`), contains a 1 if the buffered
+     * operation is an insertion.
+     *
+     * @param e Buffer element to extract type from.
+     *
+     * @return Boolean value True if the buffer is related to an insert
+     * operations, and false if the buffer is related to a removal.
+     */
+    inline bool buffer_is_insertion(uint32_t e) const {
+        return (e & TYPE_MASK) != 0;
+    }
+
+    /**
+     * @brief Extract index information from a butter element.
+     *
+     * The 24 most significant bits of the 32-bit buffer element contain index
+     * information on the insert/removal operation.
+     *
+     * @param e Buffer element to extract index from.
+     *
+     * @return Index information related to the buffer element.
+     */
+    inline uint32_t buffer_index(uint32_t e) const { return e >> 8; }
+
+    /**
+     * @brief Updates index information for a specified buffer element.
+     *
+     * Clears index information for the i<sup>th</sup> buffer element and
+     * replases it with v.
+     *
+     * @param v Value to set the buffer index to.
+     * @param i Index of buffer element in buffer.
+     */
+    void set_buffer_index(uint32_t v, uint8_t i) {
+        buffer_[i] = (v << 8) | (buffer_[i] & INDEX_MASK);
+    }
+
+    /**
+     * @brief Creates a new 32-bit buffer element with the given parameters.
+     *
+     * A new buffer element is typically created for insertion into the buffer.
+     *
+     * @param idx Index value for the new buffer element.
+     * @param t   Type (Insert/Remove) of new buffer element.
+     * @param v   Value associated with the new buffer element.
+     */
+    uint32_t create_buffer(uint32_t idx, bool t, bool v) {
+        return ((idx << 8) | (t ? TYPE_MASK : uint32_t(0))) |
+               (v ? VALUE_MASK : uint32_t(0));
+    }
+
+    /**
+     * @brief Insert a new element into the buffer.
+     *
+     * Existing elements with index idx or greater gets shuffled forward and the
+     * new element will overwrite the buffer at index idx.
+     *
+     * @param idx Position of the new element in the buffer.
+     * @param buf Element to insert.
+     */
+    void insert_buffer(uint8_t idx, uint32_t buf) {
+        memmove(buffer_ + idx + 1, buffer_ + idx,
+                (buffer_count_ - idx) * sizeof(uint32_t));
+        buffer_[idx] = buf;
+        buffer_count_++;
+    }
+
+    /**
+     * @brief Remove an element from the buffer.
+     *
+     * Existing elements with index greater than idx get shuffled backwards and
+     * the old element at idx will be overwritten.
+     *
+     * @param idx Location of the element in the buffer
+     */
+    void delete_buffer_element(uint8_t idx) {
+        buffer_count_--;
+        memmove(buffer_ + idx, buffer_ + idx + 1,
+                (buffer_count_ - idx) * sizeof(uint32_t));
+        buffer_[buffer_count_] = 0;
+    }
+
+    bool is_compressed() const {
+        return (type_info_ & C_TYPE_MASK) == C_TYPE_MASK;
+    }
+
+    /**
+     * @brief Add an element to the end of the leaf data.
+     *
+     * If naively writing to the next available position would cause an
+     * overflow, the buffer will be committed and this will guarantee that the
+     * next available position will become valid assuming proper handling of the
+     * leaf by the parent element.
+     *
+     * @param x Value to be appended to the data.
+     */
+    void push_back(const bool x) {
+        if constexpr (compressed) {
+            assert(!is_compressed());
+        }
+        assert(size_ < capacity_ * WORD_BITS);
+        uint32_t pb_size = size_;
+        if constexpr (buffer_size != 0) {
+            for (uint8_t i = 0; i < buffer_count_; i++) {
+                pb_size += buffer_is_insertion(buffer_[i]) ? -1 : 1;
+            }
+        }
+
+        // If the leaf has at some point been full and has subsequently shrunk
+        // due to removals, the next available position to write to without
+        // committing the buffer may be beyond the end of the data_ array. In
+        // this case the buffer will need to be committed before appending the
+        // new element.
+        if (pb_size >= capacity_ * WORD_BITS) {
+            commit();
+            [[unlikely]] data_[size_ / WORD_BITS] |= uint64_t(x)
+                                                     << (size_ % WORD_BITS);
+        } else {
+            data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
+        }
+
+        size_++;
+        p_sum_ += uint64_t(x);
+    }
+
     /**
      * @brief Commit and clear the Insert/Remove buffer for the leaf.
      *
@@ -1359,6 +1789,12 @@ class leaf : uncopyable {
      * operations to the underlying data.
      */
     void commit() {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                c_commit();
+                return;
+            }
+        }
         // Complicated bit manipulation but whacha gonna do. Hopefully won't
         // need to debug this anymore.
         if constexpr (buffer_size == 0)
@@ -1461,263 +1897,6 @@ class leaf : uncopyable {
         buffer_count_ = 0;
     }
 
-    uint64_t dump(uint64_t* target, uint64_t start) {
-        commit();
-        uint64_t word = start / WORD_BITS;
-        uint16_t offset = start % WORD_BITS;
-        uint64_t t_words = size_ / WORD_BITS;
-        uint16_t t_offset = size_ % WORD_BITS;
-        if (offset == 0) {
-            for (uint16_t i = 0; i < t_words; i++) {
-                target[word++] = data_[i];
-            }
-            if (t_offset > 0) {
-                target[word] = data_[t_words];
-            }
-            [[unlikely]] (void(0));
-        } else {
-            for (uint16_t i = 0; i < t_words; i++) {
-                target[word++] |= data_[i] << offset;
-                target[word] |= data_[i] >> (WORD_BITS - offset);
-            }
-            if (t_offset > 0) {
-                target[word++] |= data_[t_words] << offset;
-                if (t_offset > WORD_BITS - offset) {
-                    target[word] |= data_[t_words] >> (WORD_BITS - offset);
-                }
-            }
-        }
-        return start + size_;
-    }
-
-    /**
-     * @brief Ensure that the leaf is in a valid state.
-     *
-     * Will use assertions to check that the actual stored data agrees with
-     * stored metadata. Will not in any way that the leaf is in the correct
-     * state given the preceding sequence of operations, just that the leaf is
-     * in a state that is valid for a leaf.
-     *
-     * If the compiler flag `-DNDEBUG` is given, this function will do nothing
-     * and may be completely optimized out by an optimizing compiler.
-     *
-     * @return 1 for calculating the number of nodes in the tree.
-     */
-    uint32_t validate() const {
-        assert(size_ <= capacity_ * WORD_BITS);
-        assert(p_sum_ <= size_);
-        assert(p_sum_ == rank(size_));
-        uint32_t last_word = size_ / WORD_BITS;
-        uint32_t overflow = size_ % WORD_BITS;
-        if (overflow != 0) {
-            for (uint32_t i = overflow; i < WORD_BITS; i++) {
-                uint64_t val = (MASK << i) & data_[last_word];
-                assert(val == 0u);
-            }
-            last_word++;
-        }
-        for (uint32_t i = last_word; i < capacity_; i++) {
-            assert(data_[i] == 0);
-        }
-        return 1;
-    }
-
-    /**
-     * @brief Output data stored in the leaf as json.
-     *
-     * Will output valid json, but will not output a trailing newline since the
-     * call is expected to be part of a recursive tree traversal.
-     *
-     * @param internal_only Will not output raw data it true to save space.
-     */
-    void print(bool internal_only) const {
-        std::cout << "{\n\"type\": \"leaf\",\n"
-                  << "\"size\": " << size_ << ",\n"
-                  << "\"capacity\": " << capacity_ << ",\n"
-                  << "\"p_sum\": " << p_sum_ << ",\n"
-                  << "\"buffer_size\": " << int(buffer_size) << ",\n"
-                  << "\"buffer\": [\n";
-        for (uint8_t i = 0; i < buffer_count_; i++) {
-#pragma GCC diagnostic ignored "-Warray-bounds"
-            std::cout << "{\"is_insertion\": "
-                      << buffer_is_insertion(buffer_[i]) << ", "
-                      << "\"buffer_value\": " << buffer_value(buffer_[i])
-                      << ", "
-                      << "\"buffer_index\": " << buffer_index(buffer_[i])
-                      << "}";
-#pragma GCC diagnostic pop
-            if (i != buffer_count_ - 1) {
-                std::cout << ",\n";
-            }
-        }
-        if (!internal_only) {
-            std::cout << "],\n\"data\": [\n";
-            for (uint64_t i = 0; i < capacity_; i++) {
-                std::bitset<WORD_BITS> b(data_[i]);
-                std::cout << "\"";
-                for (size_t i = 0; i < 64; i++) {
-                    if (i % 8 == 0 && i > 0) {
-                        std::cout << " ";
-                    }
-                    std::cout << (b[i] ? "1" : "0");
-                }
-                std::cout << "\"";
-                if (i != uint64_t(capacity_ - 1)) {
-                    std::cout << ",\n";
-                }
-            }
-            std::cout << "]}";
-        } else {
-            std::cout << "]}";
-        }
-    }
-
-    std::pair<uint64_t, uint64_t> leaf_usage() const {
-        return std::pair<uint64_t, uint64_t>(capacity_ * WORD_BITS, size_);
-    }
-
-   private:
-    /**
-     * @brief Extract the value of a buffer element
-     *
-     * The First bit (lsb) of a 23-bit buffer element contains the value of the
-     * element.
-     *
-     * I.e. if `bv[i]` is `1`, then the buffer created for `remove(i)` will have
-     * a lsb with value 1.
-     *
-     * @param e Buffer element to extract value from.
-     *
-     * @return Boolean value indicating the value of the element referred to by
-     * the buffer.
-     */
-    inline bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
-
-    /**
-     * @brief Extract type information of a buffer element.
-     *
-     * The fourth least significant bit (`0b1000`), contains a 1 if the buffered
-     * operation is an insertion.
-     *
-     * @param e Buffer element to extract type from.
-     *
-     * @return Boolean value True if the buffer is related to an insert
-     * operations, and false if the buffer is related to a removal.
-     */
-    inline bool buffer_is_insertion(uint32_t e) const {
-        return (e & TYPE_MASK) != 0;
-    }
-
-    /**
-     * @brief Extract index information from a butter element.
-     *
-     * The 24 most significant bits of the 32-bit buffer element contain index
-     * information on the insert/removal operation.
-     *
-     * @param e Buffer element to extract index from.
-     *
-     * @return Index information related to the buffer element.
-     */
-    inline uint32_t buffer_index(uint32_t e) const { return (e) >> 8; }
-
-    /**
-     * @brief Updates index information for a specified buffer element.
-     *
-     * Clears index information for the i<sup>th</sup> buffer element and
-     * replases it with v.
-     *
-     * @param v Value to set the buffer index to.
-     * @param i Index of buffer element in buffer.
-     */
-    void set_buffer_index(uint32_t v, uint8_t i) {
-        buffer_[i] = (v << 8) | (buffer_[i] & INDEX_MASK);
-    }
-
-    /**
-     * @brief Creates a new 32-bit buffer element with the given parameters.
-     *
-     * A new buffer element is typically created for insertion into the buffer.
-     *
-     * @param idx Index value for the new buffer element.
-     * @param t   Type (Insert/Remove) of new buffer element.
-     * @param v   Value associated with the new buffer element.
-     */
-    uint32_t create_buffer(uint32_t idx, bool t, bool v) {
-        return ((idx << 8) | (t ? TYPE_MASK : uint32_t(0))) |
-               (v ? VALUE_MASK : uint32_t(0));
-    }
-
-    /**
-     * @brief Insert a new element into the buffer.
-     *
-     * Existing elements with index idx or greater gets shuffled forward and the
-     * new element will overwrite the buffer at index idx.
-     *
-     * @param idx Position of the new element in the buffer.
-     * @param buf Element to insert.
-     */
-    void insert_buffer(uint8_t idx, uint32_t buf) {
-        memmove(buffer_ + idx + 1, buffer_ + idx,
-                (buffer_count_ - idx) * sizeof(uint32_t));
-        buffer_[idx] = buf;
-        buffer_count_++;
-    }
-
-    /**
-     * @brief Remove an element from the buffer.
-     *
-     * Existing elements with index greater than idx get shuffled backwards and
-     * the old element at idx will be overwritten.
-     *
-     * @param idx Location of the element in the buffer
-     */
-    void delete_buffer_element(uint8_t idx) {
-        buffer_count_--;
-        memmove(buffer_ + idx, buffer_ + idx + 1,
-                (buffer_count_ - idx) * sizeof(uint32_t));
-        buffer_[buffer_count_] = 0;
-    }
-
-    bool is_compressed() const {
-        return (type_info_ & C_TYPE_MASK) == C_TYPE_MASK;
-    }
-
-    /**
-     * @brief Add an element to the end of the leaf data.
-     *
-     * If naively writing to the next available position would cause an
-     * overflow, the buffer will be committed and this will guarantee that the
-     * next available position will become valid assuming proper handling of the
-     * leaf by the parent element.
-     *
-     * @param x Value to be appended to the data.
-     */
-    void push_back(const bool x) {
-        assert(size_ < capacity_ * WORD_BITS);
-        uint32_t pb_size = size_;
-        if constexpr (buffer_size != 0) {
-            for (uint8_t i = 0; i < buffer_count_; i++) {
-                pb_size += buffer_is_insertion(buffer_[i]) ? -1 : 1;
-            }
-        }
-
-        // If the leaf has at some point been full and has subsequently shrunk
-        // due to removals, the next available position to write to without
-        // committing the buffer may be beyond the end of the data_ array. In
-        // this case the buffer will need to be committed before appending the
-        // new element.
-        if (pb_size >= capacity_ * WORD_BITS) {
-            commit();
-            [[unlikely]] data_[size_ / WORD_BITS] |= uint64_t(x)
-                                                     << (size_ % WORD_BITS);
-        } else {
-            data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
-        }
-
-        size_++;
-        p_sum_ += uint64_t(x);
-    }
-
     bool c_at(uint32_t i) const {
         uint32_t i_q = i;
         for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
@@ -1753,11 +1932,6 @@ class leaf : uncopyable {
                 return ret;
             ret = !ret;
         }
-    }
-
-    void c_commit() {
-        std::cerr << "c_commit is not implemented!" << std::endl;
-        exit(1);
     }
 
     void c_insert(uint32_t i, bool v) {
@@ -1985,6 +2159,352 @@ class leaf : uncopyable {
         return c_i;
     }
 
+    void c_append(leaf* other, uint32_t elems) {
+        uint32_t copied = 0;
+        bool val = other->first_value();
+        uint8_t* o_data = reinterpret_cast<uint8_t*>(other->data());
+        uint8_t o_buf_count = other->buffer_count();
+        uint32_t* o_buf = other->buffer();
+        uint32_t old_size = size_;
+        uint8_t b_idx = 0;
+        uint32_t d_idx = 0;
+        while (copied < elems) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx++] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0) {
+                rl = data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+                rl = (rl << 8) | data[d_idx++];
+            } else {
+                rl = data[d_idx] & 0b00011111;
+                rl = (rl << 8) | data[d_idx + 1];
+                if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[d_idx + 2];
+                    d_idx++;
+                }
+                d_idx += 1;
+            }
+            while (b_idx < o_buf_count &&
+                   (o_buf[b_idx] & C_INDEX) <= rl + copied) {
+                rl++;
+                b_idx++;
+            }
+            rl = rl < elems - copied ? rl : elems - copied;
+            if (val) {
+                uint64_t offset = size_ % WORD_BITS;
+                uint64_t w_idx = size_ / WORD_BITS;
+                uint32_t write = rl;
+                p_sum_ += rl;
+                if (offset != 0) {
+                    if (write < WORD_BITS - offset) {
+                        data_[w_idx++] &= ((uint64_t(1) << write) - 1)
+                                          << offset;
+                        write = 0;
+                    } else {
+                        data_[w_idx++] &= (~uint64_t(0)) << offset;
+                        write -= WORD_BITS - offset;
+                    }
+                }
+                while (write >= WORD_BITS) {
+                    data_[w_idx++] = ~uint64_t(0);
+                    write -= WORD_BITS;
+                }
+                if (write > 0) {
+                    data_[w_idx] = (uint64_t(1) << write) - 1;
+                }
+            }
+            size_ += rl;
+            copied += rl;
+            val = !val;
+        }
+        for (b_idx = 0; b_idx < o_buf_count; b_idx++) {
+            uint32_t e_idx = o_buf[b_idx] & C_INDEX;
+            if (e_idx >= copied)
+                break;
+            uint32_t w_idx = old_size + e_idx;
+            uint32_t w_offset = w_idx % WORD_BITS;
+            w_idx /= WORD_BITS;
+            if (((data_[w_idx] >> w_offset) & MASK) ==
+                uint64_t(o_buf[b_idx] >> 31)) {
+                continue;
+            }
+            data_[w_idx] &= ~(uint64_t(1) << w_offset);
+            data_[w_idx] |= uint64_t(o_buf[b_idx] >> 31) << w_offset;
+            p_sum_ += (o_buf[b_idx] >> 31) ? 1 : -1;
+        }
+    }
+
+    void c_transfer_prepend(leaf* other, uint32_t elems) {
+        uint32_t* o_buf = other->buffer();
+        uint8_t o_buf_count = other->buffer_count();
+        uint8_t b_idx = 0;
+        uint8_t* o_data = reinterpret_cast<uint8_t*>(other->data());
+        uint32_t d_idx = 0;
+        uint32_t e_idx = o_buf[b_idx] & C_INDEX;
+        bool val = other->first_value();
+        uint32_t copied = 0;
+        uint32_t loc = 0;
+        while (loc < other->size() - elems) {
+            uint32_t rl = 0;
+            if ((o_data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = o_data[d_idx++] & 0b00111111;
+            } else if ((o_data[d_idx] & 0b10000000) == 0) {
+                rl = o_data[d_idx++] << 24;
+                rl &= o_data[d_idx++] << 16;
+                rl &= o_data[d_idx++] << 8;
+                rl &= o_data[d_idx++];
+            } else if ((o_data[d_idx] & 0b11100000) == 0b10000000) {
+                rl = (o_data[d_idx++] & 0b00011111) << 8;
+                rl &= o_data[d_idx++];
+            } else {
+                rl = (o_data[d_idx++] & 0b00011111) << 16;
+                rl &= o_data[d_idx++];
+                rl &= o_data[d_idx++];
+            }
+            for (; b_idx < o_buf_count; b_idx++) {
+                if ((o_buf[b_idx] & C_INDEX) <= loc + rl) {
+                    rl++;
+                } else {
+                    break;
+                }
+            }
+            if (loc + rl > other->size() - elems) {
+                uint32_t to_copy = loc + rl - (other->size() - elems);
+                if (val) {
+                    size_t i = 0;
+                    for (; (i + 1) * 64 <= to_copy; i++) {
+                        data_[i] = ~uint64_t(0);
+                    }
+                    data_[i] = (uint64_t(1) << (to_copy % 64)) - 1;
+                    p_sum_ += to_copy;
+                }
+                copied += to_copy;
+            }
+            loc += rl;
+            val = !val;
+        }
+        while (copied < elems) {
+            uint32_t rl = 0;
+            if ((o_data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = o_data[d_idx++] & 0b00111111;
+            } else if ((o_data[d_idx] & 0b10000000) == 0) {
+                rl = o_data[d_idx++] << 24;
+                rl &= o_data[d_idx++] << 16;
+                rl &= o_data[d_idx++] << 8;
+                rl &= o_data[d_idx++];
+            } else if ((o_data[d_idx] & 0b11100000) == 0b10000000) {
+                rl = (o_data[d_idx++] & 0b00011111) << 8;
+                rl &= o_data[d_idx++];
+            } else {
+                rl = (o_data[d_idx++] & 0b00011111) << 16;
+                rl &= o_data[d_idx++];
+                rl &= o_data[d_idx++];
+            }
+            for (; b_idx < o_buf_count; b_idx++) {
+                if ((o_buf[b_idx] & C_INDEX) <= loc + rl) {
+                    rl++;
+                } else {
+                    break;
+                }
+            }
+            if (val) {
+                if (val) {
+                    uint64_t offset = copied % WORD_BITS;
+                    uint64_t w_idx = copied / WORD_BITS;
+                    uint32_t write = rl;
+                    if (offset != 0) {
+                        if (write < WORD_BITS - offset) {
+                            data_[w_idx++] &= ((uint64_t(1) << write) - 1)
+                                              << offset;
+                            write = 0;
+                        } else {
+                            data_[w_idx++] &= (~uint64_t(0)) << offset;
+                            write -= WORD_BITS - offset;
+                        }
+                    }
+                    while (write >= WORD_BITS) {
+                        data_[w_idx++] = ~uint64_t(0);
+                        write -= WORD_BITS;
+                    }
+                    if (write > 0) {
+                        data_[w_idx] = (uint64_t(1) << write) - 1;
+                    }
+                }
+                p_sum_ += rl;
+            }
+            val = !val;
+            copied += rl;
+        }
+        size_ += elems;
+        other->clear_last(elems);
+    }
+
+    void flatten() {
+        uint8_t b_idx = 0;
+        uint32_t e_idx = buffer_[b_idx] & C_INDEX;
+        uint32_t d_idx = 0;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        uint32_t elems = 0;
+        bool val = type_info_ & C_ONE_MASK;
+        memset(data_scratch, 0, capacity_ * 8);
+
+        while (d_idx < run_index_[0]) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx++] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0) {
+                rl = data[d_idx++] << 24;
+                rl &= data[d_idx++] << 16;
+                rl &= data[d_idx++] << 8;
+                rl &= data[d_idx++];
+            } else {
+                rl = data[d_idx] & 0b00011111;
+                rl = (rl << 8) | data[d_idx + 1];
+                if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[d_idx + 2];
+                    d_idx++;
+                }
+                d_idx += 2;
+            }
+            while (b_idx < buffer_count_ && e_idx <= elems + rl) {
+                rl++;
+                b_idx++;
+                if (b_idx < buffer_count) {
+                    e_idx = buffer_[b_idx] & C_INDEX;
+                }
+            }
+            if (val) {
+                uint64_t offset = elems % WORD_BITS;
+                uint64_t w_idx = elems / WORD_BITS;
+                uint32_t write = rl;
+                if (offset != 0) {
+                    if (write < WORD_BITS - offset) {
+                        data_scratch[w_idx++] &= ((uint64_t(1) << write) - 1)
+                                                 << offset;
+                        write = 0;
+                    } else {
+                        data_scratch[w_idx++] &= (~uint64_t(0)) << offset;
+                        write -= WORD_BITS - offset;
+                    }
+                }
+                while (write >= WORD_BITS) {
+                    data_scratch[w_idx++] = ~uint64_t(0);
+                    write -= WORD_BITS;
+                }
+                if (write > 0) {
+                    data_scratch[w_idx] = (uint64_t(1) << write) - 1;
+                }
+            }
+            elems += rl;
+            val = !val;
+        }
+        memcpy(data_, data_scratch, capacity_ * 8);
+        for (b_idx = 0; b_idx < buffer_count_; b_idx++) {
+            uint64_t word = buffer_[b_idx] & C_INDEX;
+            uint64_t offset = word % WORD_BITS;
+            word /= WORD_BITS;
+            data_[word] &= ~(MASK << offset);
+            data_[word] |= uint64_t(buffer_[b_idx] >> 31) << offset;
+            buffer_[b_idx] = uint32_t(0);
+        }
+        buffer_count_ = 0;
+        type_info_ &= ~C_TYPE_MASK;
+    }
+
+    void c_commit() {
+        uint8_t b_idx = 0;
+        uint32_t d_idx = 0;
+        uint32_t e_idx = buffer_[b_idx] & C_INDEX;
+        uint32_t elem_count = run_index_[0];
+        memcpy(data_scratch, data_, elem_count);
+        bool val = type_info_ & C_ONE_MASK;
+        //TODO: write the rest of the functi0n :)
+    }
+
+    uint64_t c_dump(uint64_t* target, uint64_t start) {
+        //TODO: Look for 0b[01]{7}[^01]
+        uint8_t b_idx = 0;
+        uint32_t e_idx = buffer_[b_idx] & C_INDEX;
+        bool val = type_info_ & C_ONE_MASK;
+        uint32_t d_idx = 0;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        uint32_t loc = 0;
+        uint64_t w_idx = start / WORD_BITS;
+        uint64_t offset = start % 64;
+        while (d_idx < run_index_[0]) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx++] & 0b00111111;
+            } else if ((data[d_idx] & 0b10000000) == 0) {
+                rl = data[d_idx++] << 24;
+                rl &= data[d_idx++] << 16;
+                rl &= data[d_idx++] << 8;
+                rl &= data[d_idx++];
+            } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                rl = data[d_idx++] << 16;
+                rl &= data[d_idx++] << 8;
+                rl &= data[d_idx++];
+            } else {
+                rl = data[d_idx++] << 8;
+                rl &= data[d_idx++];
+            }
+            while (b_idx < buffer_count_ && loc + rl > e_idx) {
+                uint32_t write = e_idx - loc;
+                rl -= write;
+                loc += write;
+                start += write;
+                if (val) {
+                    if (offset) {
+                        if (write < WORD_BITS - offset) {
+                            target[w_idx] &= ((MASK << write) - 1) << offset;
+                            write = 0;
+                        } else {
+                            target[w_idx++] &= (~uint64_t(0)) << offset;
+                            write -= WORD_BITS - offset;
+                        }
+                    }
+                    while (write >= WORD_BITS) {
+                        target[w_idx++] = ~uint64_t(0);
+                        write -= WORD_BITS;
+                    }
+                    if (write) {
+                        target[w_idx] = (MASK << write) - 1;
+                    }
+                }
+                target[loc / WORD_BITS] &= uint64_t(buffer_[b_idx++] >> 31) << (loc++ % WORD_BITS);
+                e_idx = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
+                w_idx = start / WORD_BITS;
+                offset = start % WORD_BITS;
+            }
+            loc += rl;
+            start += rl;
+            if (val) {
+                if (offset) {
+                    if (rl < WORD_BITS - offset) {
+                        target[w_idx] &= ((MASK << rl) - 1) << offset;
+                        rl = 0;
+                    } else {
+                        target[w_idx++] &= (~uint64_t(0)) << offset;
+                        rl -= WORD_BITS - offset;
+                    }
+                }
+                while (rl >= WORD_BITS) {
+                    target[w_idx++] = ~uint64_t(0);
+                    rl -= WORD_BITS;
+                }
+                if (rl) {
+                    target[w_idx] = (MASK << rl) - 1;
+                }
+            }
+            w_idx = start / WORD_BITS;
+            offset = start % WORD_BITS;
+            val = !val;
+        }
+        return start;
+    }
+
     void write_run(uint32_t length, uint32_t index, uint8_t c_bytes) {
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         switch (c_bytes) {
@@ -2033,6 +2553,67 @@ class leaf : uncopyable {
         if (rl > (type_info_ >> 5)) {
             type_info_ = (type_info_ & 0b00011111) | (rl << 5);
         }
+    }
+
+    void c_print(bool internal_only) {
+        std::cout << "{\n\"type\": \"c_leaf\",\n"
+                  << "\"size\": " << size_ << ",\n"
+                  << "\"capacity\": " << capacity_ << ",\n"
+                  << "\"p_sum\": " << p_sum_ << ",\n"
+                  << "\"first_value\": " << bool(type_info_ & C_ONE_MASK) << ",\n"
+                  << "\"buffer_size\": " << int(buffer_size) << ",\n"
+                  << "\"buffer\": [\n";
+        for (uint8_t i = 0; i < buffer_count_; i++) {
+#pragma GCC diagnostic ignored "-Warray-bounds"
+            std::cout << "{\"is_insertion\": "
+                      << true << ", "
+                      << "\"buffer_value\": " << bool(buffer_[i] >> 31)
+                      << ", "
+                      << "\"buffer_index\": " << (buffer_[i] & C_INDEX)
+                      << "}";
+#pragma GCC diagnostic pop
+            if (i != buffer_count_ - 1) {
+                std::cout << ",\n";
+            }
+        }
+        if (!internal_only) {
+            std::cout << "],\n\"runs\": [\n";
+            uint32_t d_idx = 0;
+            while (d_idx < run_index_[0]) {
+                uint32_t rl = 0;
+                uint32_t r_bytes = 1;
+                if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                    rl = data[d_idx++] & 0b00111111;
+                } else if ((data[d_idx] >> 7) == 0) {
+                    rl = data[d_idx] << 24;
+                    rl &= data[d_idx + 1] << 16;
+                    rl &= data[d_idx + 2] << 8;
+                    rl &= data[d_idx + 3];
+                } else {
+                    rl = data[d_idx] & 0b00011111;
+                    rl = (rl << 8) | data[d_idx + 1];
+                    r_bytes = 2;
+                    if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                        rl = (rl << 8) | data[d_idx + 2];
+                        r_bytes = 3;
+                    }
+                }
+                std::cout << "{\"run_index\": " << d_idx << ", \"run_value\": " << rl << ", \"run_data\": \"";
+                for (uint32_t i = d_idx; i < d_idx + r_bytes; i++) {
+                    std::bitset<8> b(data[i]);
+                    std::cout << b;
+                    if (i < d_idx + r_bytes - 1) {
+                        std::cout << " ";
+                    }
+                }
+                if (d_idx + r_bytes == run_index_[0] - 1) {
+                    std::cout << "\"}\n";
+                } else {
+                    std::cout << "\"}";
+                }
+            }            
+        }
+        std::cout << "]}";
     }
 };
 }  // namespace bv

@@ -733,7 +733,7 @@ class node : uncopyable {
    private:
     /**
      * @brief Splits a leaf with `n > leaf_size` elements into 2 leaves with
-     * half of the encoded content each.
+     * rougly half of the encoded content each.
      *
      * Intended for use with compressed leaves where a leaf can contain a bigger
      * slice of the universe encoded into less than `leaf_size` bits.

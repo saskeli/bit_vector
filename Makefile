@@ -92,20 +92,20 @@ test/gtest_main.a: gtest-all.o gtest_main.o
 	$(AR) $(ARFLAGS) $@ $^
 
 test/test.o: $(TEST_CODE) $(GTEST_HEADERS) $(HEADERS)
-	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -DGTEST_ON -c test/test.cpp -o test/test.o -lsdsl
+	g++ $(COVERAGE) $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -DDEBUG -DGTEST_ON -c test/test.cpp -o test/test.o -lsdsl
 
 test: clean_test test/test.o test/gtest_main.a
 	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
+	g++ $(CFLAGS) $(GFLAGS) $(INCLUDE) $(SDSL) -DDEBUG -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
 	test/test
 
 cover: clean_test test/test.o test/gtest_main.a
 	git submodule update
 	cd deps/googletest; cmake CMakeLists.txt
 	make -C deps/googletest
-	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) $(SDSL) -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
+	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) $(SDSL) -DDEBUG -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
 	test/test
 	gcov test/test.cpp
 	lcov -c -d . -o index.info
