@@ -34,13 +34,8 @@ namespace bv {
  * @tparam compressed         If true, additional bookkeeping will be done to
  * ensure compressed leaves behave correctly.
  */
-template <class leaf,
-          class node,
-          class allocator,
-          uint32_t leaf_size,
-          uint8_t branches,
-          class dtype,
-          bool aggressive_realloc = false,
+template <class leaf, class node, class allocator, uint32_t leaf_size,
+          uint8_t branches, class dtype, bool aggressive_realloc = false,
           bool compressed = false>
 class bit_vector : uncopyable {
    private:
@@ -70,8 +65,7 @@ class bit_vector : uncopyable {
     void split_root() {
         node* new_root = allocator_->template allocate_node<node>();
         node* sibling = allocator_->template allocate_node<node>();
-        if (n_root_->has_leaves())
-            sibling->has_leaves(true);
+        if (n_root_->has_leaves()) sibling->has_leaves(true);
         sibling->transfer_prepend(n_root_, branches / 2);
         new_root->append_child(n_root_);
         new_root->append_child(sibling);
@@ -252,12 +246,20 @@ class bit_vector : uncopyable {
         if (root_is_leaf_) {
             if (l_root_->need_realloc()) {
                 dtype cap = l_root_->capacity();
-                if (cap >= leaf_size / WORD_BITS) {
+                if (cap >= leaf_size / WORD_BITS ||
+                    l_root_->size() >= ((~uint32_t(0)) >> 1)) {
                     split_leaf();
                     n_root_->insert(index, value, allocator_);
                 } else {
-                    l_root_ = allocator_->reallocate_leaf(
-                        l_root_, cap, l_root_->desired_capacity());
+                    dtype n_cap = l_root_->desired_capacity();
+                    if constexpr (compressed) {
+                        if (n_cap > leaf_size / WORD_BITS) {
+                            split_leaf();
+                            n_root_->insert(index, value, allocator_);
+                            [[unlikely]] return;
+                        }
+                    }
+                    l_root_ = allocator_->reallocate_leaf(l_root_, cap, n_cap);
                     [[likely]] l_root_->insert(index, value);
                 }
             } else {
@@ -414,13 +416,19 @@ class bit_vector : uncopyable {
             if constexpr (compressed) {
                 if (!l_root_->can_set()) {
                     dtype cap = l_root_->capacity();
-                    if (cap * WORD_BITS >= leaf_size) {
+                    if (cap * WORD_BITS >= leaf_size ||
+                        l_root_->size() >= ((~uint32_t(0)) >> 1)) {
                         split_leaf();
                         n_root_->set(index, value, allocator_);
                         [[unlikely]] return;
                     }
-                    l_root_ = allocator_->reallocate_leaf(
-                        l_root_, cap, l_root_->desired_capacity());
+                    dtype n_cap = l_root_->desired_capacity();
+                    if (n_cap > leaf_size / WORD_BITS) {
+                        split_leaf();
+                        n_root_->set(index, value, allocator_);
+                        [[unlikely]] return;
+                    }
+                    l_root_ = allocator_->reallocate_leaf(l_root_, cap, n_cap);
                     [[unlikely]] (void(0));
                 }
             }

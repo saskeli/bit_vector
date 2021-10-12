@@ -67,12 +67,8 @@ namespace bv {
  * @tparam compressed If true, additional bookkeeping will be done to
  * ensure compressed leaves behave correctly.
  */
-template <class leaf_type,
-          class dtype,
-          uint32_t leaf_size,
-          uint8_t branches,
-          bool aggressive_realloc = false,
-          bool compressed = false>
+template <class leaf_type, class dtype, uint32_t leaf_size, uint8_t branches,
+          bool aggressive_realloc = false, bool compressed = false>
 class node : uncopyable {
    private:
     typedef branchless_scan<dtype, branches> branching;
@@ -202,8 +198,8 @@ class node : uncopyable {
                     if (cap * WORD_BITS >= leaf_size) {
                         rebalance_leaf(child_index, child, alloc);
                     } else {
-                        children_[child_index] =
-                            alloc->reallocate_leaf(child, cap, child->desired_capacity());
+                        children_[child_index] = alloc->reallocate_leaf(
+                            child, cap, child->desired_capacity());
                     }
                     child_index = child_sizes_.find(index + 1);
                     child =
@@ -962,15 +958,21 @@ class node : uncopyable {
         if (child->need_realloc()) {
             dtype cap = child->capacity();
             if constexpr (compressed) {
-                if ((child->is_compressed() &&
-                     child->size >= (~uint32_t(0) >> 1)) ||
-                    cap * WORD_BITS > leaf_size) {
+                if (child->is_compressed() &&
+                    ((child->size >= (~uint32_t(0) >> 1)) ||
+                     (cap * WORD_BITS >= leaf_size))) {
                     split_leaf(child_index, child, alloc);
                 } else if (cap * WORD_BITS >= leaf_size) {
                     rebalance_leaf(child_index, child, alloc);
                 } else {
-                    children_[child_index] =
-                        alloc->reallocate_leaf(child, cap, child->desired_capacity());
+                    dtype n_cap = child->desired_capacity();
+                    if (n_cap > leaf_size / WORD_BITS) {
+                        split_leaf(child_index, child, alloc);
+                        [[unlikely]] (void(0));
+                    } else {
+                        children_[child_index] =
+                            alloc->reallocate_leaf(child, cap, n_cap);
+                    }
                     [[likely]] (void(0));
                 }
             } else {
@@ -1169,9 +1171,7 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for allocation and reallocation.
      */
     template <class allocator>
-    void rebalance_leaves_left(leaf_type* a,
-                               leaf_type* b,
-                               uint8_t idx,
+    void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx,
                                allocator* alloc) {
         dtype b_cap = b->capacity();
         dtype addition = (a->size() - leaf_size / 3) / 2;
@@ -1219,9 +1219,7 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for reallocation and deallocation.
      */
     template <class allocator>
-    void merge_leaves(leaf_type* a,
-                      leaf_type* b,
-                      uint8_t idx,
+    void merge_leaves(leaf_type* a, leaf_type* b, uint8_t idx,
                       allocator* alloc) {
         dtype a_cap = a->capacity();
         if (a_cap * WORD_BITS < a->size() + b->size()) {
