@@ -13,6 +13,7 @@
 #include "node_tests.hpp"
 #include "query_support_test.hpp"
 #include "run_tests.hpp"
+#include "rle_leaf_test.hpp"
 
 #define SIZE 16384
 #define BRANCH 16
@@ -77,6 +78,15 @@ TEST(SimpleLeafUnb, Select) { leaf_select_test<ubl, ma>(10000); }
 TEST(SimpleLeafUnb, SelectOffset) { leaf_select_test<ubl, ma>(11); }
 
 TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
+
+// Tests for hybrid RLE leaves.
+typedef leaf<16, SIZE, true, true> rll;
+
+TEST(RleLeaf, InitZeros) {rle_leaf_init_zeros<rll, ma>(10000); }
+
+TEST(RleLeaf, InitOnes) {rle_leaf_init_ones<rll, ma>(10000); }
+
+TEST(RleLeaf, Insert) {rle_leaf_insert<rll, ma>(10000, 100); }
 
 // Branch selection tests
 TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }

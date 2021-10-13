@@ -69,7 +69,7 @@ class malloc_alloc : uncopyable {
      * @param size Number of 64-bit words to reserve for data storage.
      */
     template <class leaf_type>
-    leaf_type* allocate_leaf(uint64_t size) {
+    leaf_type* allocate_leaf(uint64_t size, uint32_t elems = 0, bool val = false) {
         allocations_++;
         constexpr size_t leaf_bytes = sizeof(leaf_type) + sizeof(leaf_type) % 8;
         void* leaf = malloc(leaf_bytes + size * sizeof(uint64_t));
@@ -78,7 +78,7 @@ class malloc_alloc : uncopyable {
         uint8_t* data_ptr = reinterpret_cast<uint8_t*>(leaf) + leaf_bytes;
         memset(data_ptr, 0, size * sizeof(uint64_t));
         return new (leaf)
-            leaf_type(size, reinterpret_cast<uint64_t*>(data_ptr));
+            leaf_type(size, reinterpret_cast<uint64_t*>(data_ptr), elems, val);
     }
 
     /**
