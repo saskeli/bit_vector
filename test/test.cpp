@@ -88,6 +88,10 @@ TEST(RleLeaf, InitOnes) {rle_leaf_init_ones<rll, ma>(10000); }
 
 TEST(RleLeaf, Insert) {rle_leaf_insert<rll, ma>(10000, 100); }
 
+TEST(RleLeaf, InsertMiddle) {rle_leaf_insert_middle<rll, ma>(10000, 100); }
+
+TEST(RleLeaf, InsertEnd) {rle_leaf_insert_end<rll, ma>(10000, 100); }
+
 // Branch selection tests
 TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }
 

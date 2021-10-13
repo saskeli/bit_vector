@@ -1912,7 +1912,7 @@ class leaf : uncopyable {
         for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
             uint32_t rl = 0;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
-                rl = data[d_idx++] & 0b00111111;
+                rl = data[d_idx] & 0b00111111;
                 //std::cout << "\t1 byte" << std::endl;
             } else if ((data[d_idx] & 0b10000000) == 0) {
                 rl = data[d_idx++] << 24;
@@ -1923,16 +1923,16 @@ class leaf : uncopyable {
             } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
                 rl = (data[d_idx++] & 0b00011111) << 16;
                 rl |= data[d_idx++] << 8;
-                rl |= data[d_idx++];
+                rl |= data[d_idx];
                 //std::cout << "\t3 bytes" << std::endl;
             } else {
                 rl = (data[d_idx++] & 0b00011111) << 8;
-                rl |= data[d_idx++];
+                rl |= data[d_idx];
                 //std::cout << "\t2 bytes" << std::endl;
             }
             //std::cout << "rl = " << rl << std::endl;
             c_i += rl;
-            //std::cout << "c_i + rl = " << (c_i + rl) << std::endl;
+            //std::cout << "c_i + rl = " << c_i << std::endl;
             if (c_i > i_q) break;
             ret = !ret;
         }
@@ -2119,7 +2119,7 @@ class leaf : uncopyable {
         bool val = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         uint8_t b_idx = 0;
-        uint8_t e_index = buffer_[b_idx] & C_INDEX;
+        uint32_t e_index = buffer_[b_idx] & C_INDEX;
         uint32_t c_i = 0;
         uint32_t count = 0;
         for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
@@ -2138,13 +2138,16 @@ class leaf : uncopyable {
                     rl = (rl << 8) | data[++d_idx];
                 }
             }
+            //std::cout << "rl = " << rl << ", e_index = " << e_index << ", c_i = " << c_i << std::endl;
             while (b_idx < buffer_count_ && e_index < c_i + rl) {
                 if (count + val * (e_index - c_i) >= x) {
+                    //std::cout << "Split before buffer" << std::endl;
                     return c_i + x - count;
                 }
                 bool b_val = buffer_[b_idx] >> 31;
                 if (b_val) {
                     if (count + val * (e_index - c_i) + 1 == x) {
+                        //std::cout << "Split in buffer" << std::endl;
                         return e_index;
                     }
                     count++;
@@ -2154,6 +2157,7 @@ class leaf : uncopyable {
             }
             if (count + (val * rl) >= x) {
                 c_i += x - count;
+                //std::cout << "Full run" << std::endl;
                 break;
             }
             c_i += rl;
@@ -2444,7 +2448,7 @@ class leaf : uncopyable {
                 }
                 d_idx += r_bytes;
             }
-            // std::cout << "Read run of length " << rl << std::endl;
+            //std::cout << "Read run of length " << rl << std::endl;
             while (b_idx < buffer_count_ && e_idx <= copied + rl) {
                 if ((buffer_[b_idx] >> 31) == val) {
                     rl++;
@@ -2454,9 +2458,10 @@ class leaf : uncopyable {
                     uint32_t pre_count = e_idx - copied;
                     if (pre_count) {
                         rl -= pre_count;
-                        // std::cout << "Writing partial (" << pre_count << ")"
-                        //          << std::endl;
+                        //std::cout << "Writing partial (" << pre_count << ")"
+                        //         << std::endl;
                         elem_count = write_scratch(pre_count, elem_count);
+                        copied += pre_count;
                     }
                     pre_count = 1;
                     while ((b_idx < buffer_count_ - 1) &&
@@ -2466,16 +2471,18 @@ class leaf : uncopyable {
                         e_idx++;
                         [[unlikely]] b_idx++;
                     }
-                    // std::cout << "Writing buffer (" << pre_count << ")"
-                    //          << std::endl;
+                    //std::cout << "Writing buffer (" << pre_count << ")"
+                    //         << std::endl;
                     elem_count = write_scratch(pre_count, elem_count);
+                    copied += pre_count;
                 }
                 b_idx++;
                 e_idx = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
             }
             if (rl) {
-                // std::cout << "Writing run (" << rl << ")" << std::endl;
+                //std::cout << "Writing run (" << rl << ")" << std::endl;
                 elem_count = write_scratch(rl, elem_count);
+                copied += rl;
             }
             if (elem_count * 8 >= size_) {
                 flatten();
@@ -2502,6 +2509,7 @@ class leaf : uncopyable {
         memset(data + elem_count, 0, 8 * capacity_ - elem_count);
         memset(buffer_, 0, sizeof(buffer_));
         buffer_count_ = 0;
+        run_index_[0] = elem_count;
     }
 
     void c_rle_check_convert() {
@@ -2531,7 +2539,7 @@ class leaf : uncopyable {
         uint32_t r_b = 32 - __builtin_clz(rl);
         uint8_t* data = reinterpret_cast<uint8_t*>(data_scratch);
         uint8_t r_bytes = 1;
-        // std::cout << "Writing " << rl << " to " << elem_count << std::endl;
+        //std::cout << "Writing " << rl << " to " << elem_count << std::endl;
         if (r_b < 7) {
             data[elem_count++] = 0b11000000 | uint8_t(rl);
         } else if (r_b < 14) {
@@ -2550,7 +2558,7 @@ class leaf : uncopyable {
             data[elem_count++] = uint8_t(rl);
             r_bytes = 4;
         }
-        // std::cout << "\t" << int(r_bytes) << " byte(s)" << std::endl;
+        //std::cout << "\t" << int(r_bytes) << " byte(s)" << std::endl;
         if (r_bytes > (type_info_ >> 5)) {
             type_info_ = (type_info_ & 0b00011111) | (rl << 5);
         }

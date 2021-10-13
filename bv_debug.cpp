@@ -11,26 +11,34 @@
 
 int main() {
     uint32_t size = 10000;
-    uint32_t i_count = 100;
+    uint32_t i_count = 20;
     bv::malloc_alloc* a = new bv::malloc_alloc();
     bv::leaf<16, 16384, true, true>* l = a->allocate_leaf<bv::leaf<16, 16384, true, true>>(32, size, false);
     l->print(false);
     std::cout << std::endl;
     for (size_t i = 0; i < i_count; i++) {
-        l->insert(0, true);
+        l->insert(size >> 1, true);
     }
     l->print(false);
     std::cout << std::endl;
 
+    //for (size_t i = 0; i < (size >> 1); i++) {
+    //    assert(l->at(i) == false);
+    //}
     for (size_t i = 0; i < i_count; i++) {
-        assert(l->at(i) == true);
-    }
-    for (size_t i = i_count; i < i_count + size; i++) {
-        if (l->at(i)) {
-            std::cout << "bv[" << i << "] should be false" << std::endl;
+        uint32_t ac = l->select(i + 1);
+        uint32_t ex = (size >> 1) + i;
+        if (ac != ex) {
+            std::cout << "select(" << i + 1 << ") should be " << ex << " but was " << ac << std::endl;
             exit(1);
         }
     }
+    //for (size_t i = (size >> 1) + i_count; i < size + i_count; i++) {
+    //    if (l->at(i)) {
+    //        std::cout << "bv[" << i << "] should be false" << std::endl;
+    //        exit(1);
+    //    }
+    //}
     a->deallocate_leaf(l);
     delete a;
     /*uint64_t a[] = {
