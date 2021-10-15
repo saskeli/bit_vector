@@ -83,7 +83,7 @@ class bit_vector : uncopyable {
      */
     void split_leaf() {
         leaf* sibling = allocator_->template allocate_leaf<leaf>(
-            2 + leaf_size / (2 * WORD_BITS));
+            4 + leaf_size / (2 * WORD_BITS));
         if constexpr (compressed) {
             if (l_root_->size() > leaf_size) {
                 sibling->transfer_capacity(l_root_,

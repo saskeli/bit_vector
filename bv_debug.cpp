@@ -9,37 +9,38 @@
 #include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
 #include "test/run_tests.hpp"
 
-int main() {
-    uint32_t size = 10000;
-    uint32_t i_count = 20;
-    bv::malloc_alloc* a = new bv::malloc_alloc();
-    bv::leaf<16, 16384, true, true>* l = a->allocate_leaf<bv::leaf<16, 16384, true, true>>(32, size, false);
-    l->print(false);
-    std::cout << std::endl;
-    for (size_t i = 0; i < i_count; i++) {
-        l->insert(size >> 1, true);
-    }
-    l->print(false);
-    std::cout << std::endl;
+typedef bv::leaf<16, 16384, true, false> rl_l;
 
-    //for (size_t i = 0; i < (size >> 1); i++) {
-    //    assert(l->at(i) == false);
-    //}
-    for (size_t i = 0; i < i_count; i++) {
-        uint32_t ac = l->select(i + 1);
-        uint32_t ex = (size >> 1) + i;
-        if (ac != ex) {
-            std::cout << "select(" << i + 1 << ") should be " << ex << " but was " << ac << std::endl;
-            exit(1);
-        }
+int main() {
+    bv::malloc_alloc* a = new bv::malloc_alloc();
+    rl_l* la = a->template allocate_leaf<rl_l>(32);//, 980, false);
+    for (size_t i = 0; i < 980; i++) {
+        la->insert(i, 0);
     }
-    //for (size_t i = (size >> 1) + i_count; i < size + i_count; i++) {
-    //    if (l->at(i)) {
-    //        std::cout << "bv[" << i << "] should be false" << std::endl;
-    //        exit(1);
-    //    }
-    //}
-    a->deallocate_leaf(l);
+    //assert(la->is_compressed());
+    assert((la->size()) == (980u));
+    assert((la->p_sum()) == (0u));
+    for (size_t i = 1; i < 980; i += 2) {
+        la->set(i, 1);
+    }
+    //assert(!la->is_compressed());
+    assert((la->size()) == (980u));
+    assert((la->p_sum()) == (490u));
+    for (size_t i = 0; i < 980; i += 2) {
+        la->set(i, 1);
+    }
+    la->print(false);
+    std::cout << std::endl;
+    for (size_t i = 0; i < 20; i++) {
+        la->insert(0, 1);
+    }
+    la->print(false);
+    std::cout << std::endl;
+    //assert(la->is_compressed());
+    assert((la->size()) == (1000u));
+    assert((la->p_sum()) == (1000u));
+
+    a->deallocate_leaf(la);
     delete a;
     /*uint64_t a[] = {
         26198, 1, 8440

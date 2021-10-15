@@ -743,7 +743,7 @@ class node : uncopyable {
     template <class allocator>
     void split_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
         leaf_type* sibling = alloc->template allocate_leaf<leaf_type>(
-            2 + leaf_size / (2 * WORD_BITS));
+            4 + leaf_size / (2 * WORD_BITS));
         sibling->transfer_capacity(leaf, leaf_size / (2 * WORD_BITS));
         if constexpr (aggressive_realloc) {
             dtype cap = leaf->capacity();

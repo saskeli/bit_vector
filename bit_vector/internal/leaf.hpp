@@ -829,7 +829,9 @@ class leaf : uncopyable {
             if (is_compressed()) {
                 uint64_t n_cap = run_index_[0] % 8;
                 n_cap += run_index_[0] + (n_cap ? 8 - n_cap : 0);
-                n_cap += buffer_size * (type_info_ >> 5);
+                n_cap += buffer_size * (1 + (type_info_ >> 5));
+                uint64_t m = n_cap % 8;
+                n_cap += m ? 8 - m : 0;
                 n_cap /= 8;
                 n_cap += n_cap % 2 ? 1 : 0;
                 return n_cap;
@@ -925,30 +927,31 @@ class leaf : uncopyable {
                     if ((data[d_idx] & 0b11000000) == 0b11000000) {
                         rl = data[d_idx] & 0b00111111;
                     } else if ((data[d_idx] >> 7) == 0) {
-                        rl = data[d_idx];
-                        rl = (rl << 8) | data[d_idx + 1];
-                        rl = (rl << 8) | data[d_idx + 2];
-                        rl = (rl << 8) | data[d_idx + 3];
+                        rl = data[d_idx] << 24;
+                        rl |= data[d_idx + 1] << 16;
+                        rl |= data[d_idx + 2] << 8;
+                        rl |= data[d_idx + 3];
                         c_bytes = 4;
+                    } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                        rl = (data[d_idx] & 0b00011111) << 16;
+                        rl |= data[d_idx + 1] << 8;
+                        rl |= data[d_idx + 2];
+                        c_bytes = 3;
                     } else {
-                        rl = data[d_idx] & 0b00011111;
-                        rl = (rl << 8) | data[d_idx + 1];
+                        rl = (data[d_idx] & 0b00011111) << 8;
+                        rl |= data[d_idx + 1];
                         c_bytes = 2;
-                        if ((data[d_idx - 1] & 0b10100000) == 0b10100000) {
-                            rl = (rl << 8) | data[d_idx + 2];
-                            c_bytes = 3;
-                        }
                     }
                     if (rl > q_elems) {
                         write_run(rl - q_elems, d_idx, c_bytes);
+                        size_ -= q_elems;
+                        p_sum_ -= val * q_elems;
                         q_elems = 0;
-                        size_ -= val * q_elems;
-                        p_sum_ -= q_elems;
                     } else {
                         write_run(0, d_idx, c_bytes);
                         q_elems -= rl;
-                        size_ -= val * rl;
-                        p_sum_ -= rl;
+                        size_ -= rl;
+                        p_sum_ -= val * rl;
                     }
                     d_idx += c_bytes;
                     val = !val;
@@ -1010,17 +1013,16 @@ class leaf : uncopyable {
 #ifdef DEBUG
         assert(buffer_count_ == 0);
         assert(size_ == 0);
-        assert(is_compressed());
 #endif
         type_info_ &= C_TYPE_MASK;
+        uint32_t o_size = size_;
         bool val = other->first_value();
         type_info_ |= val * C_ONE_MASK;
         elems *= 8;
         uint32_t o_bytes = other->used_bytes() >> 1;
         elems = elems < o_bytes ? elems : o_bytes;
-        uint8_t* o_data = reinterpret_cast<uint8_t*>(other->data());
+        const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
-        bool split = false;
         while (true) {
             uint32_t rl = 0;
             uint8_t r_bytes = 1;
@@ -1050,9 +1052,8 @@ class leaf : uncopyable {
                 write_run(rl);
                 size_ += rl;
                 p_sum_ += val * rl;
-            } else if (r_bytes == 4 && d_idx + 2 <= elems) {
+            } else if (d_idx < elems) {
                 rl >>= 1;
-                split = true;
                 if (rl == 0) {
                     [[unlikely]] break;
                 }
@@ -1074,62 +1075,7 @@ class leaf : uncopyable {
                 p_sum_ += o_buf[ob_idx] >> 31;
             }
         }
-        other->delete_capacity(d_idx, size_, p_sum_, buffer_count_, split, val);
-    }
-
-    /**
-     * @brief Delete ~copy_index bytes of data from the leaf.
-     *
-     * Intended only for deleting data after splitting
-     *
-     * @param copy_index Index of new first run.
-     * @param elems      Number of logical elements copied from this leaf.
-     * @param copy_index Number of bytes copied from this leaf.
-     * @param n_buf      Number of elements copied form the buffer.
-     * @param split      True iff the last copy split a 4 byte run.
-     */
-    void delete_capacity(uint32_t copy_index, uint32_t elems, uint32_t ones,
-                         uint8_t n_buf, bool split, bool first) {
-        type_info_ = (type_info_ & 0b11111110) | uint8_t(first);
-        p_sum_ -= ones;
-        size_ -= elems;
-        if (n_buf > 0) {
-            memmove(buffer_, buffer_ + n_buf, (buffer_count_ - n_buf) * 4);
-            memset(buffer_ + (buffer_count_ - n_buf), 0, 4 * n_buf);
-            buffer_count_ -= n_buf;
-        }
-        uint32_t old_end = run_index_[0];
-        run_index_[0] = 0;
-        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
-        if (split) {
-            uint32_t rl = data[copy_index++] << 24;
-            rl |= data[copy_index++] << 16;
-            rl |= data[copy_index++] << 8;
-            rl |= data[copy_index++];
-            write_run(rl - (rl >> 1));
-        }
-        while (copy_index < old_end) {
-            uint32_t rl = 0;
-            if ((data[copy_index] & 0b11000000) == 0b11000000) {
-                rl = data[copy_index++] & 0b00111111;
-            } else if ((data[copy_index] & 0b10000000) == 0) {
-                rl = data[copy_index++] << 24;
-                rl |= data[copy_index++] << 16;
-                rl |= data[copy_index++] << 8;
-                rl |= data[copy_index++];
-            } else if ((data[copy_index] & 0b11100000) == 0b10000000) {
-                rl = (data[copy_index++] & 0b00011111) << 8;
-                rl |= data[copy_index++];
-            } else {
-                rl = (data[copy_index++] & 0b00011111) << 16;
-                rl |= data[copy_index++];
-                rl |= data[copy_index++];
-            }
-            if (rl == 0) [[unlikely]]
-                continue;
-            write_run(rl);
-        }
-        memset(data + run_index_[0], 0, old_end - run_index_[0]);
+        other->clear_first(size_ - o_size);
     }
 
     /**
@@ -1278,20 +1224,20 @@ class leaf : uncopyable {
                 uint32_t rem_idx = d_idx;
                 while (rem_idx < run_index_[0]) {
                     uint32_t rl = 0;
-                    if ((data[d_idx] & 0b11000000) == 0b11000000) {
-                        rl = data[d_idx++] & 0b00111111;
-                    } else if ((data[d_idx] & 0b10000000) == 0) {
-                        rl = data[d_idx++] << 24;
-                        rl |= data[d_idx++] << 16;
-                        rl |= data[d_idx++] << 8;
-                        rl |= data[d_idx++];
-                    } else if ((data[d_idx] & 0b11100000) == 0b10000000) {
-                        rl = (data[d_idx++] & 0b00011111) << 8;
-                        rl |= data[d_idx++];
+                    if ((data[rem_idx] & 0b11000000) == 0b11000000) {
+                        rl = data[rem_idx++] & 0b00111111;
+                    } else if ((data[rem_idx] & 0b10000000) == 0) {
+                        rl = data[rem_idx++] << 24;
+                        rl |= data[rem_idx++] << 16;
+                        rl |= data[rem_idx++] << 8;
+                        rl |= data[rem_idx++];
+                    } else if ((data[rem_idx] & 0b11100000) == 0b10000000) {
+                        rl = (data[rem_idx++] & 0b00011111) << 8;
+                        rl |= data[rem_idx++];
                     } else {
-                        rl = (data[d_idx++] & 0b00011111) << 16;
-                        rl |= data[d_idx++];
-                        rl |= data[d_idx++];
+                        rl = (data[rem_idx++] & 0b00011111) << 16;
+                        rl |= data[rem_idx++];
+                        rl |= data[rem_idx++];
                     }
                     p_sum_ -= val * rl;
                     size_ -= rl;
@@ -1526,6 +1472,14 @@ class leaf : uncopyable {
         return start + size_;
     }
 
+
+    bool is_compressed() const {
+        if constexpr (compressed) {
+            return (type_info_ & C_TYPE_MASK) == C_TYPE_MASK;
+        }   
+        return false;
+    }
+
     /**
      * @brief Ensure that the leaf is in a valid state.
      *
@@ -1730,10 +1684,6 @@ class leaf : uncopyable {
         buffer_[buffer_count_] = 0;
     }
 
-    bool is_compressed() const {
-        return (type_info_ & C_TYPE_MASK) == C_TYPE_MASK;
-    }
-
     /**
      * @brief Add an element to the end of the leaf data.
      *
@@ -1789,6 +1739,7 @@ class leaf : uncopyable {
                 return;
             }
         }
+        std::cout << "Commit is here" << std::endl;
         // Complicated bit manipulation but whacha gonna do. Hopefully won't
         // need to debug this anymore.
         if constexpr (buffer_size == 0) return;
@@ -1963,44 +1914,49 @@ class leaf : uncopyable {
 
     bool c_remove(uint32_t i) {
         uint32_t q_i = i;
-        uint8_t b_idx = 0;
         bool done = false;
         bool ret = false;
-        for (; b_idx < buffer_count_; b_idx++) {
+        for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
             uint32_t e_index = buffer_[b_idx] & C_INDEX;
             if (e_index < i) {
                 q_i--;
             } else if (e_index == i) {
                 ret = buffer_[b_idx] >> 31;
-                delete_buffer_element(b_idx);
+                delete_buffer_element(b_idx--);
                 done = true;
+                size_--;
+                p_sum_ -= ret;
             } else {
                 buffer_[b_idx]--;
             }
         }
-        if (done) return ret;
+        if (done) {
+            [[unlikely]] return ret;
+        }
         uint32_t c_i = 0;
         ret = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
-        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+        uint32_t d_idx = 0;
+        while (d_idx < run_index_[0]) {
             uint32_t rl = 0;
-            uint8_t r_b = 0;
+            uint8_t r_b = 1;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = data[d_idx] & 0b00111111;
             } else if ((data[d_idx] >> 7) == 0) {
-                rl = data[d_idx];
-                rl = (rl << 8) | data[d_idx + 1];
-                rl = (rl << 8) | data[d_idx + 2];
-                rl = (rl << 8) | data[d_idx + 3];
+                rl = data[d_idx] << 24;
+                rl |= data[d_idx + 1] << 16;
+                rl |= data[d_idx + 2] << 8;
+                rl |= data[d_idx + 3];
+                r_b = 4;
+            } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                rl = (data[d_idx] & 0b00011111) << 16;
+                rl |= data[d_idx + 1] << 8;
+                rl |= data[d_idx + 2];
                 r_b = 3;
             } else {
-                rl = data[d_idx] & 0b00011111;
-                rl = (rl << 8) | data[d_idx + 1];
-                r_b = 1;
-                if ((data[d_idx] & 0b10100000) == 0b10100000) {
-                    rl = (rl << 8) | data[d_idx + 2];
-                    r_b = 2;
-                }
+                rl = (data[d_idx] & 0b00011111) << 8;
+                rl |= data[d_idx + 1];
+                r_b = 2;
             }
             c_i += rl;
             if (c_i > q_i) {
@@ -2028,6 +1984,7 @@ class leaf : uncopyable {
                     return 0;
                 }
                 int ret = val ? -1 : 1;
+                p_sum_ += ret;
                 buffer_[b_idx] =
                     (buffer_[b_idx] & C_INDEX) | (x ? ~C_INDEX : 0);
                 return ret;
@@ -2039,32 +1996,39 @@ class leaf : uncopyable {
         bool val = type_info_ & C_ONE_MASK;
         int ret = 0;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
-        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+        uint32_t d_idx = 0;
+        while (d_idx < run_index_[0]) {
             uint32_t rl = 0;
-            uint8_t r_b = 0;
+            uint8_t r_b = 1;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = data[d_idx] & 0b00111111;
             } else if ((data[d_idx] >> 7) == 0) {
-                rl = data[d_idx];
-                rl = (rl << 8) | data[d_idx + 1];
-                rl = (rl << 8) | data[d_idx + 2];
-                rl = (rl << 8) | data[d_idx + 3];
+                rl = data[d_idx] << 24;
+                rl |= data[d_idx + 1] << 16;
+                rl |= data[d_idx + 2] << 8;
+                rl |= data[d_idx + 3];
+                r_b = 4;
+            } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                rl = (data[d_idx] & 0b00011111) << 16;
+                rl |= data[d_idx + 1] << 8;
+                rl |= data[d_idx + 2];
                 r_b = 3;
             } else {
-                rl = data[d_idx] & 0b00011111;
-                rl = (rl << 8) | data[d_idx + 1];
-                r_b = 1;
-                if ((data[d_idx] & 0b10100000) == 0b10100000) {
-                    rl = (rl << 8) | data[d_idx + 2];
-                    r_b = 2;
-                }
+                rl = (data[d_idx] & 0b00011111) << 8;
+                rl |= data[d_idx + 1];
+                r_b = 2;
             }
             c_i += rl;
+            //std::cout << c_i << " vs " << q_i << std::endl;
             if (c_i > q_i) {
                 if (val == x) return ret;
                 write_run(rl - 1, d_idx, r_b);
                 insert_buffer(b_idx, i | (x ? ~C_INDEX : uint32_t(0)));
+                if (buffer_count_ == buffer_size) {
+                    c_commit();
+                }
                 ret = x ? 1 : -1;
+                p_sum_ += ret;
                 break;
             }
             d_idx += r_b;
@@ -2116,27 +2080,30 @@ class leaf : uncopyable {
     }
 
     uint32_t c_select(uint32_t x) const {
+        //std::cout << "c_select(" << x << ") called" << std::endl;
         bool val = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         uint8_t b_idx = 0;
         uint32_t e_index = buffer_[b_idx] & C_INDEX;
         uint32_t c_i = 0;
         uint32_t count = 0;
-        for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+        uint32_t d_idx = 0;
+        while (d_idx < run_index_[0]) {
             uint32_t rl = 0;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
-                rl = data[d_idx] & 0b00111111;
+                rl = data[d_idx++] & 0b00111111;
             } else if ((data[d_idx] >> 7) == 0) {
-                rl = data[d_idx];
-                rl = (rl << 8) | data[++d_idx];
-                rl = (rl << 8) | data[++d_idx];
-                rl = (rl << 8) | data[++d_idx];
+                rl = data[d_idx++] << 24;
+                rl |= data[d_idx++] << 16;
+                rl |= data[d_idx++] << 8;
+                rl |= data[d_idx++];
+            } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                rl = (data[d_idx++] & 0b00011111) << 16;
+                rl |= data[d_idx++] << 8;
+                rl |= data[d_idx++];
             } else {
-                rl = data[d_idx] & 0b00011111;
-                rl = (rl << 8) | data[++d_idx];
-                if ((data[d_idx - 1] & 0b10100000) == 0b10100000) {
-                    rl = (rl << 8) | data[++d_idx];
-                }
+                rl = (data[d_idx++] & 0b00011111) << 8;
+                rl |= data[d_idx++];
             }
             //std::cout << "rl = " << rl << ", e_index = " << e_index << ", c_i = " << c_i << std::endl;
             while (b_idx < buffer_count_ && e_index < c_i + rl) {
@@ -2145,6 +2112,7 @@ class leaf : uncopyable {
                     return c_i + x - count;
                 }
                 bool b_val = buffer_[b_idx] >> 31;
+                //std::cout << "count = " << count << ", b_val = " << b_val << std::endl;
                 if (b_val) {
                     if (count + val * (e_index - c_i) + 1 == x) {
                         //std::cout << "Split in buffer" << std::endl;
@@ -2153,15 +2121,25 @@ class leaf : uncopyable {
                     count++;
                 }
                 c_i++;
-                [[unlikely]] e_index = buffer_[++b_idx] & C_INDEX;
+                b_idx++;
+                e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
+                [[unlikely]] (void(0));
             }
             if (count + (val * rl) >= x) {
                 c_i += x - count;
                 //std::cout << "Full run" << std::endl;
-                break;
+                return --c_i;
             }
+            count += val * rl;
             c_i += rl;
             val = !val;
+        }
+        while (b_idx < buffer_count_) {
+            count += buffer_[b_idx] >> 31;
+            c_i++;
+            if (count == x) break;
+            b_idx++;
+            e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
         }
         return --c_i;
     }
@@ -2169,7 +2147,7 @@ class leaf : uncopyable {
     void c_append(leaf* other, uint32_t elems) {
         uint32_t copied = 0;
         bool val = other->first_value();
-        uint8_t* o_data = reinterpret_cast<uint8_t*>(other->data());
+        const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint8_t o_buf_count = other->buffer_count();
         uint32_t* o_buf = other->buffer();
         uint32_t old_size = size_;
@@ -2177,18 +2155,18 @@ class leaf : uncopyable {
         uint32_t d_idx = 0;
         while (copied < elems) {
             uint32_t rl = 0;
-            if ((data[d_idx] & 0b11000000) == 0b11000000) {
-                rl = data[d_idx++] & 0b00111111;
-            } else if ((data[d_idx] >> 7) == 0) {
-                rl = data[d_idx++];
-                rl = (rl << 8) | data[d_idx++];
-                rl = (rl << 8) | data[d_idx++];
-                rl = (rl << 8) | data[d_idx++];
+            if ((o_data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = o_data[d_idx++] & 0b00111111;
+            } else if ((o_data[d_idx] >> 7) == 0) {
+                rl = o_data[d_idx++];
+                rl = (rl << 8) | o_data[d_idx++];
+                rl = (rl << 8) | o_data[d_idx++];
+                rl = (rl << 8) | o_data[d_idx++];
             } else {
-                rl = data[d_idx] & 0b00011111;
-                rl = (rl << 8) | data[d_idx + 1];
-                if ((data[d_idx] & 0b10100000) == 0b10100000) {
-                    rl = (rl << 8) | data[d_idx + 2];
+                rl = o_data[d_idx] & 0b00011111;
+                rl = (rl << 8) | o_data[d_idx + 1];
+                if ((o_data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | o_data[d_idx + 2];
                     d_idx++;
                 }
                 d_idx += 1;
@@ -2246,9 +2224,8 @@ class leaf : uncopyable {
         uint32_t* o_buf = other->buffer();
         uint8_t o_buf_count = other->buffer_count();
         uint8_t b_idx = 0;
-        uint8_t* o_data = reinterpret_cast<uint8_t*>(other->data());
+        const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
-        uint32_t e_idx = o_buf[b_idx] & C_INDEX;
         bool val = other->first_value();
         uint32_t copied = 0;
         uint32_t loc = 0;
@@ -2343,6 +2320,25 @@ class leaf : uncopyable {
             val = !val;
             copied += rl;
         }
+        for (b_idx = 0; b_idx < o_buf_count; b_idx++) {
+            uint32_t e_idx = o_buf[b_idx] & C_INDEX;
+            if (e_idx >= other->size() - elems) {
+                uint32_t w_idx = e_idx - (other->size() - elems);
+                uint64_t w_offset = w_idx % WORD_BITS;
+                w_idx /= WORD_BITS;
+                val = (data_[w_idx] >> w_offset) & MASK;
+                if (val == (o_buf[b_idx] >> 31)) {
+                    continue;
+                }
+                if (val) {
+                    data_[w_idx] ^= MASK << w_offset;
+                    p_sum_--;
+                } else {
+                    data_[w_idx] |= MASK << w_offset;
+                    p_sum_++;
+                }
+            }
+        }
         size_ += elems;
         other->clear_last(elems);
     }
@@ -2426,8 +2422,10 @@ class leaf : uncopyable {
         uint32_t elem_count = 0;
         uint32_t copied = 0;
         bool val = type_info_ & C_ONE_MASK;
+        bool first = c_at(0);
         type_info_ &= 0b00011110;
-        type_info_ |= c_at(0);
+        type_info_ |= first;
+        //std::cout << "first run: " << int(val) << ", new first run: " << int(type_info_ & C_ONE_MASK) << std::endl;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         while (d_idx < run_index_[0]) {
             uint32_t rl = 0;
@@ -2513,6 +2511,7 @@ class leaf : uncopyable {
     }
 
     void c_rle_check_convert() {
+        std::cout << "I'm here!" << std::endl;
         run_index_[0] = 0;
         type_info_ &= 0b00011110;
         type_info_ |= data_[0] & MASK;
@@ -2650,14 +2649,14 @@ class leaf : uncopyable {
     void write_run(uint32_t length, uint32_t index, uint8_t c_bytes) {
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         switch (c_bytes) {
-            case 0:
+            case 1:
                 data[index] = 0b11000000 | uint8_t(length);
                 return;
-            case 1:
+            case 2:
                 data[index++] = 0b10000000 | uint8_t(length >> 8);
                 data[index] = uint8_t(length);
                 return;
-            case 2:
+            case 3:
                 data[index++] = 0b10100000 | uint8_t(length >> 16);
                 data[index++] = uint8_t(length >> 8);
                 data[index] = uint8_t(length);

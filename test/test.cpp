@@ -92,6 +92,28 @@ TEST(RleLeaf, InsertMiddle) {rle_leaf_insert_middle<rll, ma>(10000, 100); }
 
 TEST(RleLeaf, InsertEnd) {rle_leaf_insert_end<rll, ma>(10000, 100); }
 
+TEST(RleLeaf, Remove) {rle_leaf_remove<rll, ma>(200, 100); }
+
+TEST(RleLeaf, Set) {rle_leaf_set<rll, ma>(200, 100); }
+
+TEST(RleLeaf, CapCalculation) {rle_leaf_cap_calculation<rll, ma>(); }
+
+TEST(RleLeaf, SetCalculations) {rle_leaf_set_calculations<rll, ma>(); }
+
+TEST(RleLeaf, ClearFirst) {rle_leaf_clear_first<rll, ma>(); }
+
+TEST(RleLeaf, TransferCapacity) {rle_leaf_transfer_capacity<rll, ma>(); }
+
+TEST(RleLeaf, ClearLast) {rle_leaf_clear_last<rll, ma>(); }
+
+TEST(RleLeaf, AppendAll) {rle_leaf_append_all<rll, ma>(); }
+
+TEST(RleLeaf, TransferAppend) {rle_leaf_transfer_append<rll, ma>(); }
+
+TEST(RleLeaf, TransferPrepend) {rle_leaf_transfer_prepend<rll, ma>(); }
+
+TEST(RleLeaf, Convert) {rle_leaf_conversion<rll, ma>(); }
+
 // Branch selection tests
 TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }
 
