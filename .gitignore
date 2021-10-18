@@ -35,6 +35,7 @@ test/test
 bench
 brute
 queries
+comp_bench
 
 # IDE stuff
 .vscode/*

@@ -659,9 +659,9 @@ class node : uncopyable {
      * @param internal_only If true, leaves will not output their data arrays to
      * save space
      */
-    void print(bool internal_only) const {
+    void print(bool internal_only = true) const {
         std::cout << "{\n\"type\": \"node\",\n"
-                  << "\"has_leaves\": " << has_leaves() << ",\n"
+                  << "\"has_leaves\": " << (has_leaves() ? "true" : "false") << ",\n"
                   << "\"child_count\": " << int(child_count_) << ",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"child_sizes\": [";
@@ -752,11 +752,14 @@ class node : uncopyable {
                 leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
             }
         }
-        for (dtype i = child_count_; i > index + 1; i--) {
+        for (dtype i = child_count_; i > index + 1u; i--) {
             children_[i] = children_[i - 1];
         }
-        child_sizes_.insert(index, child_count_, leaf->size(), sibling->size());
-        child_sums_.insert(index, child_count_, leaf->size(), sibling->size());
+        std::cout << "3: has_leaves() = " << has_leaves() << std::endl;
+        child_sizes_.append(index, child_count_, leaf->size(), sibling->size());
+        std::cout << "4: has_leaves() = " << has_leaves() << std::endl;
+        child_sums_.append(index, child_count_, leaf->size(), sibling->size());
+        std::cout << "5: has_leaves() = " << has_leaves() << std::endl;        
         children_[index] = leaf;
         children_[index + 1] = sibling;
         child_count_++;
@@ -958,22 +961,29 @@ class node : uncopyable {
         if (child->need_realloc()) {
             dtype cap = child->capacity();
             if constexpr (compressed) {
-                if (child->is_compressed() &&
-                    ((child->size >= (~uint32_t(0) >> 1)) ||
-                     (cap * WORD_BITS >= leaf_size))) {
-                    split_leaf(child_index, child, alloc);
-                } else if (cap * WORD_BITS >= leaf_size) {
-                    rebalance_leaf(child_index, child, alloc);
-                } else {
-                    dtype n_cap = child->desired_capacity();
-                    if (n_cap > leaf_size / WORD_BITS) {
+                if (child->is_compressed()) {
+                    if ((child->size() >= (~uint32_t(0) >> 1)) ||
+                        (cap * WORD_BITS >= leaf_size)) {
                         split_leaf(child_index, child, alloc);
-                        [[unlikely]] (void(0));
+                    } else {
+                        dtype n_cap = child->desired_capacity();
+                        if (n_cap > leaf_size / WORD_BITS) {
+                            split_leaf(child_index, child, alloc);
+                            [[unlikely]] (void(0));
+                        } else {
+                            children_[child_index] =
+                                alloc->reallocate_leaf(child, cap, n_cap);
+                        }
+                        [[likely]] (void(0));
+                    }
+                } else {
+                    if (cap * WORD_BITS >= leaf_size) {
+                        rebalance_leaf(child_index, child, alloc);
                     } else {
                         children_[child_index] =
-                            alloc->reallocate_leaf(child, cap, n_cap);
+                            alloc->reallocate_leaf(child, cap, cap + 2);
+                        [[likely]] (void(0));
                     }
-                    [[likely]] (void(0));
                 }
             } else {
                 if (cap * WORD_BITS >= leaf_size) {

@@ -7,7 +7,7 @@
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 
 template<class rl_l, class alloc>
-void rle_leaf_init_zeros(uint32_t size) {
+void rle_leaf_init_zeros_test(uint32_t size) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(8, size, false);
     EXPECT_TRUE(l->is_compressed());
@@ -23,7 +23,7 @@ void rle_leaf_init_zeros(uint32_t size) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_init_ones(uint32_t size) {
+void rle_leaf_init_ones_test(uint32_t size) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(8, size, true);
     EXPECT_TRUE(l->is_compressed());
@@ -40,7 +40,7 @@ void rle_leaf_init_ones(uint32_t size) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_insert(uint32_t size, uint32_t i_count) {
+void rle_leaf_insert_test(uint32_t size, uint32_t i_count) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, size, false);
     EXPECT_TRUE(l->is_compressed());
@@ -66,7 +66,7 @@ void rle_leaf_insert(uint32_t size, uint32_t i_count) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_insert_middle(uint32_t size, uint32_t i_count) {
+void rle_leaf_insert_middle_test(uint32_t size, uint32_t i_count) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, size, false);
     EXPECT_TRUE(l->is_compressed());
@@ -96,7 +96,7 @@ void rle_leaf_insert_middle(uint32_t size, uint32_t i_count) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_insert_end(uint32_t size, uint32_t i_count) {
+void rle_leaf_insert_end_test(uint32_t size, uint32_t i_count) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, size, false);
     EXPECT_TRUE(l->is_compressed());
@@ -122,7 +122,7 @@ void rle_leaf_insert_end(uint32_t size, uint32_t i_count) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_remove(uint32_t size, uint32_t i_count) {
+void rle_leaf_remove_test(uint32_t size, uint32_t i_count) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, size, false);
     EXPECT_TRUE(l->is_compressed());
@@ -170,7 +170,7 @@ void rle_leaf_remove(uint32_t size, uint32_t i_count) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_set(uint32_t size, uint32_t i_count) {
+void rle_leaf_set_test(uint32_t size, uint32_t i_count) {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, size, false);
     EXPECT_TRUE(l->is_compressed());
@@ -207,7 +207,7 @@ void rle_leaf_set(uint32_t size, uint32_t i_count) {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_cap_calculation() {
+void rle_leaf_cap_calculation_test() {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 10, false);
     EXPECT_TRUE(l->is_compressed());
@@ -241,7 +241,7 @@ void rle_leaf_cap_calculation() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_set_calculations() {
+void rle_leaf_set_calculations_test() {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(4, 10, false);
     EXPECT_TRUE(l->is_compressed());
@@ -258,7 +258,7 @@ void rle_leaf_set_calculations() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_clear_first() {
+void rle_leaf_clear_first_test() {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 1000, false);
     EXPECT_TRUE(l->is_compressed());
@@ -291,7 +291,7 @@ void rle_leaf_clear_first() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_transfer_capacity() {
+void rle_leaf_transfer_capacity_test() {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 8388608, false);
     EXPECT_TRUE(l->is_compressed());
@@ -337,7 +337,7 @@ void rle_leaf_transfer_capacity() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_clear_last() {
+void rle_leaf_clear_last_test() {
     alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 1000, false);
     EXPECT_TRUE(l->is_compressed());
@@ -370,7 +370,7 @@ void rle_leaf_clear_last() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_append_all() {
+void rle_leaf_append_all_test() {
     alloc* a = new alloc();
     rl_l* la = a->template allocate_leaf<rl_l>(32);
     for (size_t i = 0; i < 100; i++) {
@@ -416,7 +416,7 @@ void rle_leaf_append_all() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_transfer_append() {
+void rle_leaf_transfer_append_test() {
     alloc* a = new alloc();
     rl_l* la = a->template allocate_leaf<rl_l>(32, 100, true);
     la->insert(20, 0);
@@ -449,7 +449,7 @@ void rle_leaf_transfer_append() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_transfer_prepend() {
+void rle_leaf_transfer_prepend_test() {
     alloc* a = new alloc();
     rl_l* la = a->template allocate_leaf<rl_l>(32, 100, true);
     la->insert(20, 0);
@@ -482,7 +482,7 @@ void rle_leaf_transfer_prepend() {
 }
 
 template<class rl_l, class alloc>
-void rle_leaf_conversion() {
+void rle_leaf_conversion_test() {
     alloc* a = new alloc();
     rl_l* la = a->template allocate_leaf<rl_l>(32, 980, false);
     EXPECT_TRUE(la->is_compressed());

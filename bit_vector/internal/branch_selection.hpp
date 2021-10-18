@@ -98,7 +98,7 @@ class branchless_scan : uncopyable {
      *
      * The cumulative sums of only 2 elements will be impacted since new
      * "things" are not added. Rather some of the existing "things" are
-     * rebalanced, with the new element some of the "old" "things".
+     * rebalanced, with the new element having some of the "old" "things".
      *
      * @param index Position of new element.
      * @param array_size Number of elements currently in the array.

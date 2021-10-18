@@ -12,8 +12,9 @@
 #include "leaf_tests.hpp"
 #include "node_tests.hpp"
 #include "query_support_test.hpp"
-#include "run_tests.hpp"
 #include "rle_leaf_test.hpp"
+#include "run_tests.hpp"
+#include "rle_management_test.hpp"
 
 #define SIZE 16384
 #define BRANCH 16
@@ -82,37 +83,37 @@ TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
 // Tests for hybrid RLE leaves.
 typedef leaf<16, SIZE, true, true> rll;
 
-TEST(RleLeaf, InitZeros) {rle_leaf_init_zeros<rll, ma>(10000); }
+TEST(RleLeaf, InitZeros) { rle_leaf_init_zeros_test<rll, ma>(10000); }
 
-TEST(RleLeaf, InitOnes) {rle_leaf_init_ones<rll, ma>(10000); }
+TEST(RleLeaf, InitOnes) { rle_leaf_init_ones_test<rll, ma>(10000); }
 
-TEST(RleLeaf, Insert) {rle_leaf_insert<rll, ma>(10000, 100); }
+TEST(RleLeaf, Insert) { rle_leaf_insert_test<rll, ma>(10000, 100); }
 
-TEST(RleLeaf, InsertMiddle) {rle_leaf_insert_middle<rll, ma>(10000, 100); }
+TEST(RleLeaf, InsertMiddle) { rle_leaf_insert_middle_test<rll, ma>(10000, 100); }
 
-TEST(RleLeaf, InsertEnd) {rle_leaf_insert_end<rll, ma>(10000, 100); }
+TEST(RleLeaf, InsertEnd) { rle_leaf_insert_end_test<rll, ma>(10000, 100); }
 
-TEST(RleLeaf, Remove) {rle_leaf_remove<rll, ma>(200, 100); }
+TEST(RleLeaf, Remove) { rle_leaf_remove_test<rll, ma>(200, 100); }
 
-TEST(RleLeaf, Set) {rle_leaf_set<rll, ma>(200, 100); }
+TEST(RleLeaf, Set) { rle_leaf_set_test<rll, ma>(200, 100); }
 
-TEST(RleLeaf, CapCalculation) {rle_leaf_cap_calculation<rll, ma>(); }
+TEST(RleLeaf, CapCalculation) { rle_leaf_cap_calculation_test<rll, ma>(); }
 
-TEST(RleLeaf, SetCalculations) {rle_leaf_set_calculations<rll, ma>(); }
+TEST(RleLeaf, SetCalculations) { rle_leaf_set_calculations_test<rll, ma>(); }
 
-TEST(RleLeaf, ClearFirst) {rle_leaf_clear_first<rll, ma>(); }
+TEST(RleLeaf, ClearFirst) { rle_leaf_clear_first_test<rll, ma>(); }
 
-TEST(RleLeaf, TransferCapacity) {rle_leaf_transfer_capacity<rll, ma>(); }
+TEST(RleLeaf, TransferCapacity) { rle_leaf_transfer_capacity_test<rll, ma>(); }
 
-TEST(RleLeaf, ClearLast) {rle_leaf_clear_last<rll, ma>(); }
+TEST(RleLeaf, ClearLast) { rle_leaf_clear_last_test<rll, ma>(); }
 
-TEST(RleLeaf, AppendAll) {rle_leaf_append_all<rll, ma>(); }
+TEST(RleLeaf, AppendAll) { rle_leaf_append_all_test<rll, ma>(); }
 
-TEST(RleLeaf, TransferAppend) {rle_leaf_transfer_append<rll, ma>(); }
+TEST(RleLeaf, TransferAppend) { rle_leaf_transfer_append_test<rll, ma>(); }
 
-TEST(RleLeaf, TransferPrepend) {rle_leaf_transfer_prepend<rll, ma>(); }
+TEST(RleLeaf, TransferPrepend) { rle_leaf_transfer_prepend_test<rll, ma>(); }
 
-TEST(RleLeaf, Convert) {rle_leaf_conversion<rll, ma>(); }
+TEST(RleLeaf, Convert) { rle_leaf_conversion_test<rll, ma>(); }
 
 // Branch selection tests
 TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }
@@ -291,6 +292,12 @@ TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE); }
 
 TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
 
+// Rle hybrid management tests
+
+typedef bv::node<rll, uint64_t, SIZE, 64, true, true> rl_node; 
+
+TEST(RleBv, SplitLeaf) { node_split_rle_test<ma, rl_node, rll>(); }
+
 // Query support structure tests
 TEST(QuerySupport, SingleAccess) { qs_access_single_leaf<qs, sl, ma>(SIZE); }
 
@@ -308,7 +315,9 @@ TEST(QuerySupport, DoubleSelect2) {
     qs_select_two_leaves_two<qs, sl, nd, ma>(SIZE);
 }
 
-TEST(QuerySupport, SparseSelect) { qs_sparse_bv_select_test<bv::bv>(100000, 34); }
+TEST(QuerySupport, SparseSelect) {
+    qs_sparse_bv_select_test<bv::bv>(100000, 34);
+}
 
 // Run tests
 TEST(Run, A) {
@@ -419,5 +428,46 @@ TEST(RunSup, D) {
 TEST(RunSdsl, A) {
     uint64_t a[] = {26198, 1, 8440};
     run_sdsl_test<bv::bv>(a, 3);
+}
 
+typedef bv::simple_bv<16, 16384, 64, true, true, true> run_len_bv;
+
+TEST(RunRle, A) {
+    uint64_t a[] = {9585};
+    run_test<run_len_bv, bv::bv>(a, 1, 1);
+}
+
+TEST(RunRle, B) {
+    uint64_t a[] = {
+        8718, 2,    5318, 0,    0,    7604, 0,    2,    7026, 0,    1,    8152,
+        2,    7216, 0,    2,    6821, 0,    0,    5820, 1,    0,    7773, 0,
+        1,    7272, 0,    7439, 0,    0,    2802, 0,    2,    6857, 0,    1,
+        1330, 2,    3683, 0,    0,    5150, 0,    2,    466,  0,    2,    7529,
+        0,    1,    689,  1,    120,  2,    1823, 0,    1,    6937, 1,    1889,
+        1,    5818, 1,    7356, 1,    7652, 0,    8122, 0,    1,    7630, 2,
+        6821, 0,    1,    8004, 0,    1395, 0,    2,    1669, 0,    0,    1080,
+        0,    0,    4176, 0,    1,    3352, 2,    4156, 0,    0,    8306, 0,
+        1,    329,  1,    5436, 1,    7487, 0,    3793, 0,    2,    4161, 0,
+        2,    2957, 0,    2,    324,  0,    1,    2545, 1,    6531, 0,    3862,
+        0,    1,    2998, 2,    7888, 0,    1,    8363, 0,    1337, 0,    1,
+        2831, 1,    1209, 1,    4861, 2,    267,  0,    0,    6099, 0,    2,
+        3670, 0,    0,    5251, 0,    0,    7846, 0,    0,    8327, 0,    1,
+        7581, 0,    8515, 0};
+    run_test<run_len_bv, bv::bv>(a, 160, 1);
+}
+
+TEST(RunRle, C) {
+    uint64_t a[] = {
+        111, 2,   81, 0,   2,  105, 0,  2,  66,  0,   2,  90, 0,  1,  109, 0,
+        89,  0,   0,  42,  0,  0,   72, 0,  2,   107, 0,  0,  69, 0,  2,   104,
+        0,   0,   61, 0,   2,  31,  0,  2,  59,  0,   2,  10, 1,  0,  37,  0,
+        0,   14,  0,  2,   85, 0,   0,  51, 0,   2,   82, 0,  2,  89, 0,   2,
+        55,  0,   0,  91,  0,  1,   16, 2,  80,  0,   1,  34, 2,  87, 0,   0,
+        30,  0,   2,  104, 0,  0,   86, 0,  1,   41,  1,  19, 1,  84, 2,   58,
+        0,   2,   81, 0,   0,  55,  0,  2,  113, 0,   0,  11, 0,  0,  25,  0,
+        2,   103, 0,  1,   69, 1,   52, 2,  29,  0,   0,  11, 1,  1,  27,  2,
+        93,  0,   1,  92,  2,  92,  0,  1,  53,  2,   36, 0,  2,  85, 0,   0,
+        4,   0,   1,  114, 2,  26,  0,  1,  66,  0,   93, 0,  0,  5,  0,   2,
+        83,  0,   2,  106, 0,  1,   15, 0,  89,  0,   0,  13, 0};
+    run_test<run_len_bv, bv::bv>(a, 173, 1);
 }

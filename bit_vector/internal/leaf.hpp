@@ -782,11 +782,14 @@ class leaf : uncopyable {
     bool need_realloc() const {
         if constexpr (compressed) {
             if (is_compressed()) {
+                if (size_ >= (~uint32_t(0)) >> 1) {
+                    [[unlikely]] return true;
+                }
                 if (buffer_count_ < buffer_size - 1) {
                     return false;
                 }
                 if (capacity_ * 8 - run_index_[0] >=
-                    buffer_size * (1 + (type_info_ >> 5))) {
+                    buffer_size * (1u + (type_info_ >> 5))) {
                     return false;
                 }
             }
@@ -1472,11 +1475,10 @@ class leaf : uncopyable {
         return start + size_;
     }
 
-
     bool is_compressed() const {
         if constexpr (compressed) {
             return (type_info_ & C_TYPE_MASK) == C_TYPE_MASK;
-        }   
+        }
         return false;
     }
 
@@ -1739,9 +1741,9 @@ class leaf : uncopyable {
                 return;
             }
         }
-        std::cout << "Commit is here" << std::endl;
-        // Complicated bit manipulation but whacha gonna do. Hopefully won't
-        // need to debug this anymore.
+        // std::cout << "Commit is here" << std::endl;
+        //  Complicated bit manipulation but whacha gonna do. Hopefully won't
+        //  need to debug this anymore.
         if constexpr (buffer_size == 0) return;
         if (buffer_count_ == 0) [[unlikely]]
             return;
@@ -1856,7 +1858,7 @@ class leaf : uncopyable {
             else
                 break;
         }
-        //std::cout << "Looking for " << i_q << std::endl;
+        // std::cout << "Looking for " << i_q << std::endl;
         bool ret = type_info_ & C_ONE_MASK;
         uint32_t c_i = 0;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
@@ -1864,26 +1866,26 @@ class leaf : uncopyable {
             uint32_t rl = 0;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = data[d_idx] & 0b00111111;
-                //std::cout << "\t1 byte" << std::endl;
+                // std::cout << "\t1 byte" << std::endl;
             } else if ((data[d_idx] & 0b10000000) == 0) {
                 rl = data[d_idx++] << 24;
                 rl |= data[d_idx++] << 16;
                 rl |= data[d_idx++] << 8;
                 rl |= data[d_idx];
-                //std::cout << "\t4 bytes" << std::endl;
+                // std::cout << "\t4 bytes" << std::endl;
             } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
                 rl = (data[d_idx++] & 0b00011111) << 16;
                 rl |= data[d_idx++] << 8;
                 rl |= data[d_idx];
-                //std::cout << "\t3 bytes" << std::endl;
+                // std::cout << "\t3 bytes" << std::endl;
             } else {
                 rl = (data[d_idx++] & 0b00011111) << 8;
                 rl |= data[d_idx];
-                //std::cout << "\t2 bytes" << std::endl;
+                // std::cout << "\t2 bytes" << std::endl;
             }
-            //std::cout << "rl = " << rl << std::endl;
+            // std::cout << "rl = " << rl << std::endl;
             c_i += rl;
-            //std::cout << "c_i + rl = " << c_i << std::endl;
+            // std::cout << "c_i + rl = " << c_i << std::endl;
             if (c_i > i_q) break;
             ret = !ret;
         }
@@ -2019,7 +2021,7 @@ class leaf : uncopyable {
                 r_b = 2;
             }
             c_i += rl;
-            //std::cout << c_i << " vs " << q_i << std::endl;
+            // std::cout << c_i << " vs " << q_i << std::endl;
             if (c_i > q_i) {
                 if (val == x) return ret;
                 write_run(rl - 1, d_idx, r_b);
@@ -2080,7 +2082,7 @@ class leaf : uncopyable {
     }
 
     uint32_t c_select(uint32_t x) const {
-        //std::cout << "c_select(" << x << ") called" << std::endl;
+        // std::cout << "c_select(" << x << ") called" << std::endl;
         bool val = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         uint8_t b_idx = 0;
@@ -2105,14 +2107,16 @@ class leaf : uncopyable {
                 rl = (data[d_idx++] & 0b00011111) << 8;
                 rl |= data[d_idx++];
             }
-            //std::cout << "rl = " << rl << ", e_index = " << e_index << ", c_i = " << c_i << std::endl;
+            //std::cout << "rl = " << rl << ", e_index = " << e_index
+            //          << ", c_i = " << c_i << std::endl;
             while (b_idx < buffer_count_ && e_index < c_i + rl) {
                 if (count + val * (e_index - c_i) >= x) {
                     //std::cout << "Split before buffer" << std::endl;
-                    return c_i + x - count;
+                    return c_i + x - count - 1;
                 }
                 bool b_val = buffer_[b_idx] >> 31;
-                //std::cout << "count = " << count << ", b_val = " << b_val << std::endl;
+                //std::cout << "count = " << count << ", b_val = " << b_val
+                //          << std::endl;
                 if (b_val) {
                     if (count + val * (e_index - c_i) + 1 == x) {
                         //std::cout << "Split in buffer" << std::endl;
@@ -2425,7 +2429,8 @@ class leaf : uncopyable {
         bool first = c_at(0);
         type_info_ &= 0b00011110;
         type_info_ |= first;
-        //std::cout << "first run: " << int(val) << ", new first run: " << int(type_info_ & C_ONE_MASK) << std::endl;
+        // std::cout << "first run: " << int(val) << ", new first run: " <<
+        // int(type_info_ & C_ONE_MASK) << std::endl;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         while (d_idx < run_index_[0]) {
             uint32_t rl = 0;
@@ -2436,17 +2441,58 @@ class leaf : uncopyable {
                 rl |= data[d_idx++];
             } else if ((data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = data[d_idx++] & 0b00111111;
+            } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                rl = (data[d_idx++] & 0b00011111) << 16;
+                rl |= data[d_idx++] << 8;
+                rl |= data[d_idx++];
             } else {
-                uint8_t r_bytes = 2;
-                rl = data[d_idx] & 0b00011111;
-                rl = (rl << 8) | data[d_idx + 1];
-                if ((data[d_idx] & 0b10100000) == 0b10100000) {
-                    rl = (rl << 8) | data[d_idx + 2];
-                    r_bytes = 3;
-                }
-                d_idx += r_bytes;
+                rl = (data[d_idx++] & 0b00011111) << 8;
+                rl |= data[d_idx++];
             }
-            //std::cout << "Read run of length " << rl << std::endl;
+
+            // Extend current run while following run for other symbol is empty.
+            while (d_idx < run_index_[0]) {
+                uint32_t ed_idx = d_idx;
+                uint32_t e_rl = 0;
+                if ((data[ed_idx] & 0b10000000) == 0) {
+                    e_rl = data[ed_idx++] << 24;
+                    e_rl |= data[ed_idx++] << 16;
+                    e_rl |= data[ed_idx++] << 8;
+                    e_rl |= data[ed_idx++];
+                } else if ((data[ed_idx] & 0b11000000) == 0b11000000) {
+                    e_rl = data[ed_idx++] & 0b00111111;
+                } else if ((data[ed_idx] & 0b10100000) == 0b10100000) {
+                    e_rl = (data[ed_idx++] & 0b00011111) << 16;
+                    e_rl |= data[ed_idx++] << 8;
+                    e_rl |= data[ed_idx++];
+                } else {
+                    e_rl = (data[ed_idx++] & 0b00011111) << 8;
+                    e_rl |= data[ed_idx++];
+                }
+                if (e_rl || ed_idx >= run_index_[0]) {
+                    [[likely]] break;
+                }
+                e_rl = 0;
+                if ((data[ed_idx] & 0b10000000) == 0) {
+                    e_rl = data[ed_idx++] << 24;
+                    e_rl |= data[ed_idx++] << 16;
+                    e_rl |= data[ed_idx++] << 8;
+                    e_rl |= data[ed_idx++];
+                } else if ((data[ed_idx] & 0b11000000) == 0b11000000) {
+                    e_rl = data[ed_idx++] & 0b00111111;
+                } else if ((data[ed_idx] & 0b10100000) == 0b10100000) {
+                    e_rl = (data[ed_idx++] & 0b00011111) << 16;
+                    e_rl |= data[ed_idx++] << 8;
+                    e_rl |= data[ed_idx++];
+                } else {
+                    e_rl = (data[ed_idx++] & 0b00011111) << 8;
+                    e_rl |= data[ed_idx++];
+                }
+                rl += e_rl;
+                d_idx = ed_idx;
+            }
+
+            // std::cout << "Read run of length " << rl << std::endl;
             while (b_idx < buffer_count_ && e_idx <= copied + rl) {
                 if ((buffer_[b_idx] >> 31) == val) {
                     rl++;
@@ -2456,8 +2502,8 @@ class leaf : uncopyable {
                     uint32_t pre_count = e_idx - copied;
                     if (pre_count) {
                         rl -= pre_count;
-                        //std::cout << "Writing partial (" << pre_count << ")"
-                        //         << std::endl;
+                        // std::cout << "Writing partial (" << pre_count << ")"
+                        //          << std::endl;
                         elem_count = write_scratch(pre_count, elem_count);
                         copied += pre_count;
                     }
@@ -2469,8 +2515,8 @@ class leaf : uncopyable {
                         e_idx++;
                         [[unlikely]] b_idx++;
                     }
-                    //std::cout << "Writing buffer (" << pre_count << ")"
-                    //         << std::endl;
+                    // std::cout << "Writing buffer (" << pre_count << ")"
+                    //          << std::endl;
                     elem_count = write_scratch(pre_count, elem_count);
                     copied += pre_count;
                 }
@@ -2478,7 +2524,7 @@ class leaf : uncopyable {
                 e_idx = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
             }
             if (rl) {
-                //std::cout << "Writing run (" << rl << ")" << std::endl;
+                // std::cout << "Writing run (" << rl << ")" << std::endl;
                 elem_count = write_scratch(rl, elem_count);
                 copied += rl;
             }
@@ -2510,8 +2556,9 @@ class leaf : uncopyable {
         run_index_[0] = elem_count;
     }
 
+    void r_ext(uint32_t d_idx) {}
+
     void c_rle_check_convert() {
-        std::cout << "I'm here!" << std::endl;
         run_index_[0] = 0;
         type_info_ &= 0b00011110;
         type_info_ |= data_[0] & MASK;
@@ -2531,14 +2578,16 @@ class leaf : uncopyable {
             i++;
         }
         memcpy(data_, data_scratch, run_index_[0]);
-        memset(data_, 0, 8 * capacity_ - run_index_[0]);
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        memset(data + run_index_[0], 0, 8 * capacity_ - run_index_[0]);
+        type_info_ |= C_TYPE_MASK;
     }
 
     uint32_t write_scratch(uint32_t rl, uint32_t elem_count) {
         uint32_t r_b = 32 - __builtin_clz(rl);
         uint8_t* data = reinterpret_cast<uint8_t*>(data_scratch);
         uint8_t r_bytes = 1;
-        //std::cout << "Writing " << rl << " to " << elem_count << std::endl;
+        // std::cout << "Writing " << rl << " to " << elem_count << std::endl;
         if (r_b < 7) {
             data[elem_count++] = 0b11000000 | uint8_t(rl);
         } else if (r_b < 14) {
@@ -2557,9 +2606,9 @@ class leaf : uncopyable {
             data[elem_count++] = uint8_t(rl);
             r_bytes = 4;
         }
-        //std::cout << "\t" << int(r_bytes) << " byte(s)" << std::endl;
+        // std::cout << "\t" << int(r_bytes) << " byte(s)" << std::endl;
         if (r_bytes > (type_info_ >> 5)) {
-            type_info_ = (type_info_ & 0b00011111) | (rl << 5);
+            type_info_ = (type_info_ & 0b00011111) | (r_bytes << 5);
         }
         return elem_count;
     }
@@ -2715,41 +2764,62 @@ class leaf : uncopyable {
                 std::cout << ",\n";
             }
         }
-        if (!internal_only) {
-            std::cout << "],\n\"runs\": [\n";
-            uint32_t d_idx = 0;
-            uint8_t* data = reinterpret_cast<uint8_t*>(data_);
-            while (d_idx < run_index_[0]) {
-                uint32_t rl = 0;
-                uint32_t r_bytes = 1;
-                if ((data[d_idx] & 0b11000000) == 0b11000000) {
-                    rl = data[d_idx] & 0b00111111;
-                } else if ((data[d_idx] & 0b10000000) == 0) {
-                    rl = data[d_idx] << 24;
-                    rl |= data[d_idx + 1] << 16;
-                    rl |= data[d_idx + 2] << 8;
-                    rl |= data[d_idx + 3];
-                    r_bytes = 4;
-                } else {
-                    rl = data[d_idx] & 0b00011111;
-                    rl = (rl << 8) | data[d_idx + 1];
-                    r_bytes = 2;
-                    if ((data[d_idx] & 0b10100000) == 0b10100000) {
-                        rl = (rl << 8) | data[d_idx + 2];
-                        r_bytes = 3;
-                    }
+        std::cout << "],\n\"runs\": [\n";
+        uint32_t d_idx = 0;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        while (d_idx < run_index_[0]) {
+            uint32_t rl = 0;
+            uint32_t r_bytes = 1;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx] & 0b00111111;
+            } else if ((data[d_idx] & 0b10000000) == 0) {
+                rl = data[d_idx] << 24;
+                rl |= data[d_idx + 1] << 16;
+                rl |= data[d_idx + 2] << 8;
+                rl |= data[d_idx + 3];
+                r_bytes = 4;
+            } else {
+                rl = data[d_idx] & 0b00011111;
+                rl = (rl << 8) | data[d_idx + 1];
+                r_bytes = 2;
+                if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (rl << 8) | data[d_idx + 2];
+                    r_bytes = 3;
                 }
-                std::cout << "{\"run_index\": " << d_idx
-                          << ", \"run_value\": " << rl << ", \"run_data\": \"";
-                for (uint32_t i = d_idx; i < d_idx + r_bytes; i++) {
-                    std::bitset<8> b(data[i]);
-                    std::cout << b;
-                    if (i < d_idx + r_bytes - 1) {
-                        std::cout << " ";
-                    }
+            }
+            std::cout << "{\"run_index\": " << d_idx
+                      << ", \"run_value\": " << rl << ", \"run_data\": \"";
+            for (uint32_t i = d_idx; i < d_idx + r_bytes; i++) {
+                std::bitset<8> b(data[i]);
+                std::cout << b;
+                if (i < d_idx + r_bytes - 1) {
+                    std::cout << " ";
                 }
+            }
+            d_idx += r_bytes;
+            if (d_idx == run_index_[0]) {
+                std::cout << "\"}";
+            } else {
                 std::cout << "\"}\n";
-                d_idx += r_bytes;
+            }
+        }
+        if (internal_only) {
+            std::cout << "]}";
+            return;
+        }
+        std::cout << "],\n\"data\": [\n";
+        for (uint64_t i = 0; i < capacity_; i++) {
+            std::bitset<WORD_BITS> b(data_[i]);
+            std::cout << "\"";
+            for (size_t i = 0; i < 64; i++) {
+                if (i % 8 == 0 && i > 0) {
+                    std::cout << " ";
+                }
+                std::cout << (b[i] ? "1" : "0");
+            }
+            std::cout << "\"";
+            if (i != uint64_t(capacity_ - 1)) {
+                std::cout << ",\n";
             }
         }
         std::cout << "]}";

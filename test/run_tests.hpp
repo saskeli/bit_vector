@@ -2,6 +2,7 @@
 #define TEST_RUN_HPP
 
 #include <cstdint>
+
 #include "sdsl/bit_vectors.hpp"
 
 #ifdef GTEST_ON
@@ -21,7 +22,7 @@ void print_sdsl(sdsl::bit_vector* sdsl_bv) {
 }
 
 template <class bva, class bvb>
-void check(bva* a, bvb* b, uint64_t size) {
+void check(bva* a, bvb* b, uint64_t size, uint64_t s_offset = 0) {
 #ifdef GTEST_ON
     ASSERT_EQ(a->size(), size);
     ASSERT_EQ(b->size(), size);
@@ -31,10 +32,15 @@ void check(bva* a, bvb* b, uint64_t size) {
 #endif
     for (uint64_t i = 0; i < size; i++) {
 #ifdef GTEST_ON
-        ASSERT_EQ(a->at(i), b->at(i)) << "Failed at " << i << " with size " << size;
+        ASSERT_EQ(a->at(i), b->at(i))
+            << "Failed at " << i << " with size " << size;
         ASSERT_EQ(a->rank(i), b->rank(i));
 #else
-        assert(a->at(i) == b->at(i));
+        if (a->at(i) != b->at(i)) {
+            std::cerr << "a->at(" << i << ") = " << a->at(i) << ", b->at(" << i
+                      << ") = " << b->at(i) << std::endl;
+            assert(a->at(i) == b->at(i));
+        }
         assert(a->rank(i) == b->rank(i));
 #endif
     }
@@ -47,17 +53,13 @@ void check(bva* a, bvb* b, uint64_t size) {
 #endif
     for (uint64_t i = 0; i < ones; i++) {
 #ifdef GTEST_ON
-        ASSERT_EQ(a->select(i + 1), b->select(i)) << "i = " << i;
+        ASSERT_EQ(a->select(i + 1), b->select(i + s_offset)) << "i = " << i;
 #else
-        uint64_t ex = b->select(i);
+        uint64_t ex = b->select(i + s_offset);
         uint64_t ac = a->select(i + 1);
         if (ex != ac) {
-            for (size_t i = 0; i < 64; i++) {
-                std::cout << a->at(i);
-            }
-            std::cout << std::endl;
-            std::cerr << "select(" << i + 1 << ") should be " << ex << ", was " << ac << std::endl;
-            a->print(false);
+            std::cerr << "select(" << i + 1 << ") should be " << ex
+                      << ", was " << ac << std::endl;
         }
         assert(ac == ex);
 #endif
@@ -119,6 +121,44 @@ void run_test(uint64_t* input, uint64_t len) {
                 index += 3;
         }
         check(&bv, &cbv, size);
+    }
+}
+
+template <class bit_vector, class control>
+void run_test(uint64_t* input, uint64_t len, uint64_t s_offset) {
+    bit_vector bv;
+    control cbv;
+
+    uint64_t size = input[0];
+
+    for (uint64_t i = 0; i < size; i++) {
+        bv.insert(0, 0);
+        cbv.insert(0, 0);
+    }
+
+    check(&bv, &cbv, size, s_offset);
+
+    uint64_t index = 1;
+    while (index < len) {
+#ifndef GTEST_ON
+        std::cout << "index = " << index << std::endl;
+#endif
+        switch (input[index]) {
+            case 0:
+                insert(&bv, &cbv, input[index + 1], input[index + 2]);
+                size++;
+                index += 3;
+                break;
+            case 1:
+                remove(&bv, &cbv, input[index + 1]);
+                size--;
+                index += 2;
+                break;
+            default:
+                bv_set(&bv, &cbv, input[index + 1], input[index + 2]);
+                index += 3;
+        }
+        check(&bv, &cbv, size, s_offset);
     }
 }
 
