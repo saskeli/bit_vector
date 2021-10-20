@@ -9,13 +9,18 @@
 template<class alloc, class node, class leaf>
 void node_split_rle_test() {
     alloc* a = new alloc();
-    leaf* l = a->template allocate_leaf<leaf>(32, (~uint32_t(0)) >> 1, false);
     node* n = a->template allocate_node<node>();
+    n->has_leaves(true);
+
+    leaf* l = a->template allocate_leaf<leaf>(32, (~uint32_t(0)) >> 1, false);
     n->append_child(l);
+    l = a->template allocate_leaf<leaf>(32, 300, false);
+    n->append_child(l);
+    EXPECT_EQ(n->child_count(), 2u);
     n->insert(300, true, a);
 
-    EXPECT_EQ(n->child_count(), 2u);
-    EXPECT_EQ(n->size(), ((~uint32_t(0)) >> 1) + 1u);
+    EXPECT_EQ(n->child_count(), 3u);
+    EXPECT_EQ(n->size(), ((~uint32_t(0)) >> 1) + 301u);
     EXPECT_EQ(n->p_sum(), 1u);
     EXPECT_EQ(n->at(300), true);
     for (size_t i = 0; i < n->size(); i += 10000) {

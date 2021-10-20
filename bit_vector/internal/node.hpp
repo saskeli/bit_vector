@@ -742,8 +742,7 @@ class node : uncopyable {
      */
     template <class allocator>
     void split_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
-        leaf_type* sibling = alloc->template allocate_leaf<leaf_type>(
-            4 + leaf_size / (2 * WORD_BITS));
+        leaf_type* sibling = alloc->template allocate_leaf<leaf_type>(leaf->capacity());
         sibling->transfer_capacity(leaf, leaf_size / (2 * WORD_BITS));
         if constexpr (aggressive_realloc) {
             dtype cap = leaf->capacity();
@@ -751,17 +750,19 @@ class node : uncopyable {
             if (n_cap < cap) {
                 leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
             }
+            cap = sibling->capacity();
+            n_cap = sibling->desired_capacity();
+            if (n_cap < cap) {
+                sibling = alloc->reallocate_leaf(sibling, cap, n_cap);
+            }
         }
         for (dtype i = child_count_; i > index + 1u; i--) {
             children_[i] = children_[i - 1];
         }
-        std::cout << "3: has_leaves() = " << has_leaves() << std::endl;
-        child_sizes_.append(index, child_count_, leaf->size(), sibling->size());
-        std::cout << "4: has_leaves() = " << has_leaves() << std::endl;
-        child_sums_.append(index, child_count_, leaf->size(), sibling->size());
-        std::cout << "5: has_leaves() = " << has_leaves() << std::endl;        
         children_[index] = leaf;
         children_[index + 1] = sibling;
+        child_sizes_.insert(index + 1, child_count_, sibling->size());
+        child_sums_.insert(index + 1, child_count_, sibling->p_sum());
         child_count_++;
     }
 
@@ -1265,6 +1266,7 @@ class node : uncopyable {
      */
     template <class allocator>
     bool leaf_remove(dtype index, allocator* alloc) {
+        validate();
         uint8_t child_index = child_sizes_.find(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->size() <= leaf_size / 3) {

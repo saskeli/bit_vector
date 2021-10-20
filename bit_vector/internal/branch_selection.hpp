@@ -116,6 +116,26 @@ class branchless_scan : uncopyable {
     }
 
     /**
+     * @brief Inserts a new value into the cumulative sums.
+     * 
+     * Intended for use when a new node is created after an old node by splitting. 
+     * Thus `index` is greater than 0 and less than or equal to `array_size`.
+     * 
+     * Cumulative sums of only 1 element will be impacted since this is just a split.
+     * 
+     * @param index Position of new element.
+     * @param array_size Number of elements currently in the array.
+     * @param value Value of the new element.
+     */
+    void insert(uint8_t index, uint8_t array_size, dtype value) {
+        assert(index > 0);
+        for (uint8_t i = array_size; i >= index; i--) {
+            elems_[i] = elems_[i - 1];
+        }
+        elems_[index - 1] -= value;
+    }
+
+    /**
      * @brief Removes a value from the cumulative sums
      *
      * Intended for use when merging nodes.

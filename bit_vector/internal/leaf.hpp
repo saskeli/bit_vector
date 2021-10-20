@@ -1017,7 +1017,7 @@ class leaf : uncopyable {
         assert(buffer_count_ == 0);
         assert(size_ == 0);
 #endif
-        type_info_ &= C_TYPE_MASK;
+        type_info_ = C_TYPE_MASK;
         uint32_t o_size = size_;
         bool val = other->first_value();
         type_info_ |= val * C_ONE_MASK;
@@ -1508,6 +1508,35 @@ class leaf : uncopyable {
             for (size_t i = run_index_[0]; i < 8 * capacity_; i++) {
                 assert(data[i] == 0);
             }
+            uint32_t d_idx = 0;
+            uint32_t c_size = buffer_count_;
+            uint32_t c_sum = 0;
+            for (size_t i = 0; i < buffer_count_; i++) {
+                c_sum += buffer_[i] >> 31;
+            }
+            bool val = type_info_ & C_ONE_MASK;
+            while (d_idx < run_index_[0]) {
+                uint32_t rl = 0;
+                if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                    rl = data[d_idx++] & 0b00111111;
+                } else if ((data[d_idx] >> 7) == 0) {
+                    rl = data[d_idx++] << 24;
+                    rl |= data[d_idx++] << 16;
+                    rl |= data[d_idx++] << 8;
+                    rl |= data[d_idx++];
+                } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                    rl = (data[d_idx++] & 0b00011111) << 16;
+                    rl |= data[d_idx++] << 8;
+                    rl |= data[d_idx++];
+                } else {
+                    rl = (data[d_idx++] & 0b00011111) << 8;
+                    rl |= data[d_idx++];
+                }
+                c_size += rl;
+                c_sum += val * rl;
+                val = !val;
+            }
+            assert(c_size == size_);
             return 1;
         }
         uint32_t last_word = size_ / WORD_BITS;
@@ -2225,6 +2254,7 @@ class leaf : uncopyable {
     }
 
     void c_transfer_prepend(leaf* other, uint32_t elems) {
+        assert(elems < other->size());
         uint32_t* o_buf = other->buffer();
         uint8_t o_buf_count = other->buffer_count();
         uint8_t b_idx = 0;
@@ -2555,8 +2585,6 @@ class leaf : uncopyable {
         buffer_count_ = 0;
         run_index_[0] = elem_count;
     }
-
-    void r_ext(uint32_t d_idx) {}
 
     void c_rle_check_convert() {
         run_index_[0] = 0;

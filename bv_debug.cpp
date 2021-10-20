@@ -16,22 +16,26 @@ typedef bv::simple_bv<16, 16384, 64, true, true, true> h_rle;
 
 int main() {
     alloc* a = new alloc();
-    leaf* l = a->template allocate_leaf<leaf>(32, (~uint32_t(0)) >> 1, false);
     node* n = a->template allocate_node<node>();
-    n->has_leaves(true);
+
+    leaf* l = a->template allocate_leaf<leaf>(32, (~uint32_t(0)) >> 1, false);
     n->append_child(l);
-    n->insert(300, true, a);
+    l = a->template allocate_leaf<leaf>(32, 300, false);
+    n->append_child(l);
     n->print();
     std::cout << std::endl;
-    assert((n->child_count()) == (2u));
-    assert((n->size()) == (((~uint32_t(0)) >> 1) + 1u));
-    assert((n->p_sum()) == (1u));
-    assert((n->at(300)) == (true));
+    assert(n->child_count() == 2u);
+    n->insert(300, true, a);
+
+    assert(n->child_count() == 3u);
+    assert(n->size() == ((~uint32_t(0)) >> 1) + 301u);
+    assert(n->p_sum() == 1u);
+    assert(n->at(300) == true);
     for (size_t i = 0; i < n->size(); i += 10000) {
-        assert((n->at(i)) == (false));
-        assert((n->rank(i)) == ((i > 300) * 1u));
+        assert(n->at(i) == false);
+        assert(n->rank(i) == (i > 300) * 1u);
     }
-    assert((n->select(1)) == (300u));
+    assert(n->select(1) == 300u);
 
     n->deallocate(a);
     a->deallocate_leaf(n);
