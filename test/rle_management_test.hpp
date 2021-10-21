@@ -34,5 +34,19 @@ void node_split_rle_test() {
     delete a;
 }
 
+template<class r_bv>
+void root_split_rle_test() {
+    r_bv bv((~uint32_t(0)) >> 1, true);
+    bv.validate();
+    EXPECT_EQ(bv.size(), (~uint32_t(0)) >> 1);
+    EXPECT_EQ(bv.sum(), (~uint32_t(0)) >> 1);
+
+    bv.insert(500000, false);
+
+    EXPECT_EQ(bv.size(), 1 + ((~uint32_t(0)) >> 1));
+    EXPECT_EQ(bv.sum(), (~uint32_t(0)) >> 1);
+
+}
+
 
 #endif

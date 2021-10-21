@@ -295,8 +295,11 @@ TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
 // Rle hybrid management tests
 
 typedef bv::node<rll, uint64_t, SIZE, 64, true, true> rl_node; 
+typedef bv::simple_bv<16, SIZE, 64, true, true, true> rle_bv;
 
 TEST(RleBv, SplitLeaf) { node_split_rle_test<ma, rl_node, rll>(); }
+
+TEST(RleBv, SplitLeafInRoot) {root_split_rle_test<rle_bv>(); }
 
 // Query support structure tests
 TEST(QuerySupport, SingleAccess) { qs_access_single_leaf<qs, sl, ma>(SIZE); }

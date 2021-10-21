@@ -56,7 +56,15 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
             bool aval = get_val(aloc, i + 1, dist(mt));
+            if (i == 10228005) {
+                bv.print();
+                std::cout << "Inserting " << aval << " to position " << aloc << std::endl;
+            }
             bv.insert(aloc, aval);
+            if (i == 10228005) {
+                bv.print();
+                bv.validate();
+            }
         }
 
         loc.clear();
@@ -71,6 +79,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         auto t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
+        bv.validate();
 
         loc.clear();
         val.clear();
@@ -87,6 +96,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
+        bv.validate();
 
         loc.clear();
         val.clear();
@@ -103,6 +113,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
                   << "\t";
+        bv.validate();
 
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
@@ -155,6 +166,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
         std::cout << checksum << std::endl;
     }
+    bv.print();
 }
 
 void help() {

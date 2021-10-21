@@ -75,6 +75,7 @@ class leaf : uncopyable {
     static const constexpr uint8_t C_ONE_MASK = 0b00000001;
     /** @brief Mask for accessing type of possibly compressed leaf */
     static const constexpr uint8_t C_TYPE_MASK = 0b00000010;
+    static const constexpr uint8_t C_EMPTY_RUN_MASK = 0b00000100;
 
     // The buffer fill rate is stored in part of an 8-bit word.
     // This could be resolved with using 16 bits instead (without increasing the
@@ -790,6 +791,9 @@ class leaf : uncopyable {
                 }
                 if (capacity_ * 8 - run_index_[0] >=
                     buffer_size * (1u + (type_info_ >> 5))) {
+                    if (type_info_ & C_EMPTY_RUN_MASK) {
+                        [[unlikely]] c_commit<false>();
+                    }
                     return false;
                 }
             }
@@ -1542,10 +1546,9 @@ class leaf : uncopyable {
         uint32_t last_word = size_ / WORD_BITS;
         uint32_t overflow = size_ % WORD_BITS;
         if (overflow != 0) {
-            for (uint32_t i = overflow; i < WORD_BITS; i++) {
-                uint64_t val = (MASK << i) & data_[last_word];
-                assert(val == 0u);
-            }
+            uint64_t val = (MASK << overflow) - 1;
+            val = (~val) & data_[last_word];
+            assert(val == 0u);
             last_word++;
         }
         for (uint32_t i = last_word; i < capacity_; i++) {
@@ -2449,7 +2452,9 @@ class leaf : uncopyable {
         type_info_ &= 0;
     }
 
+    template <bool commit_buffer = true>
     void c_commit() {
+        //TODO: Template buffer committing or not.
         uint8_t b_idx = 0;
         uint32_t d_idx = 0;
         uint32_t e_idx = buffer_[b_idx] & C_INDEX;
@@ -2724,6 +2729,9 @@ class leaf : uncopyable {
     }
 
     void write_run(uint32_t length, uint32_t index, uint8_t c_bytes) {
+        if (length == 0) {
+            type_info_ |= C_EMPTY_RUN_MASK;
+        }
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         switch (c_bytes) {
             case 1:

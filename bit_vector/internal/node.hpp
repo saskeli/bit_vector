@@ -1266,7 +1266,6 @@ class node : uncopyable {
      */
     template <class allocator>
     bool leaf_remove(dtype index, allocator* alloc) {
-        validate();
         uint8_t child_index = child_sizes_.find(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->size() <= leaf_size / 3) {

@@ -1010,6 +1010,8 @@ void node_remove_leaf_simple_test(uint64_t size) {
         n->remove(i, a);
     }
 
+    n->validate();
+
     ASSERT_EQ(2u, n->child_count());
     ASSERT_EQ(1u * size, n->size());
     ASSERT_EQ(1u * 0, n->p_sum());
