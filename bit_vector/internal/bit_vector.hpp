@@ -82,12 +82,11 @@ class bit_vector : uncopyable {
      * children.
      */
     void split_leaf() {
-        leaf* sibling = allocator_->template allocate_leaf<leaf>(
-            4 + leaf_size / (2 * WORD_BITS));
+        dtype cap = l_root_->capacity();
+        leaf* sibling = allocator_->template allocate_leaf<leaf>(cap);
         if constexpr (compressed) {
             if (l_root_->size() > leaf_size) {
-                sibling->transfer_capacity(l_root_,
-                                           leaf_size / (2 * WORD_BITS));
+                sibling->transfer_capacity(l_root_);
             } else {
                 sibling->transfer_append(l_root_, leaf_size / 2);
             }
@@ -95,10 +94,16 @@ class bit_vector : uncopyable {
             sibling->transfer_append(l_root_, leaf_size / 2);
         }
         if constexpr (aggressive_realloc) {
-            dtype cap = l_root_->capacity();
+            cap = l_root_->capacity();
             dtype n_cap = l_root_->desired_capacity();
             if (n_cap < cap) {
                 l_root_ = allocator_->reallocate_leaf(l_root_, cap, n_cap);
+                [[likely]] (void(0));
+            }
+            cap = sibling->capacity();
+            n_cap = sibling->desired_capacity();
+            if (n_cap < cap) {
+                sibling = allocator_->reallocate_leaf(sibling, cap, n_cap);
                 [[likely]] (void(0));
             }
         }
@@ -423,7 +428,7 @@ class bit_vector : uncopyable {
     void set(dtype index, bool value) {
         if (root_is_leaf_) {
             if constexpr (compressed) {
-                if (!l_root_->can_set()) {
+                if (l_root_->is_compressed() && l_root_->need_realloc()) {
                     dtype cap = l_root_->capacity();
                     if (cap * WORD_BITS >= leaf_size ||
                         l_root_->size() >= ((~uint32_t(0)) >> 1)) {

@@ -247,11 +247,11 @@ void rle_leaf_set_calculations_test() {
     EXPECT_TRUE(l->is_compressed());
     EXPECT_EQ(l->size(), 10u);
     EXPECT_EQ(l->p_sum(), 0u);
-    EXPECT_EQ(l->can_set(), true);
+    EXPECT_EQ(l->need_realloc(), false);
     for (size_t i = 0; i < 15; i++) {
         l->insert(0, false);
     }
-    EXPECT_EQ(l->can_set(), false);
+    EXPECT_EQ(l->need_realloc(), true);
     a->deallocate_leaf(l);
 
     delete a;

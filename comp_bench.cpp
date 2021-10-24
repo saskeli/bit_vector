@@ -56,16 +56,22 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
             bool aval = get_val(aloc, i + 1, dist(mt));
-            if (i == 10228005) {
-                bv.print();
+            if (i == 21678798) {
                 std::cout << "Inserting " << aval << " to position " << aloc << std::endl;
+                bv.print(false);
             }
             bv.insert(aloc, aval);
-            if (i == 10228005) {
-                bv.print();
+            if (i == 21678798) {
+                bv.print(false);
                 bv.validate();
             }
+            //if (i > 20892961) {
+            //    std::cerr << i << std::endl;
+            //    bv.validate();
+            //}
         }
+        
+        bv.validate();
 
         loc.clear();
         for (uint64_t i = target; i > target - ops; i--) {
@@ -74,7 +80,15 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
         auto t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
+            //if (target == 11220184 && i == 4876) {
+            //    std::cout << "Remove " << i << " targetting " << loc[i] << std::endl;
+            //    //bv.print();
+            //}
             bv.remove(loc[i]);
+            //if (target == 11220184 && i == 4876) {
+            //    //bv.print();
+            //    bv.validate();
+            //}
         }
         auto t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops

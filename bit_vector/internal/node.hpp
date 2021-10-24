@@ -193,17 +193,19 @@ class node : uncopyable {
             leaf_type* child =
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             if constexpr (compressed) {
-                if (!child->can_set()) {
+                if (child->is_compressed() && child->need_realloc()) {
                     dtype cap = child->capacity();
-                    if (cap * WORD_BITS >= leaf_size) {
+                    dtype n_cap = child->desired_capacity();
+                    if (cap * WORD_BITS >= leaf_size || n_cap * WORD_BITS >= leaf_size) {
                         rebalance_leaf(child_index, child, alloc);
                     } else {
                         children_[child_index] = alloc->reallocate_leaf(
-                            child, cap, child->desired_capacity());
+                            child, cap, n_cap);
                     }
                     child_index = child_sizes_.find(index + 1);
                     child =
                         reinterpret_cast<leaf_type*>(children_[child_index]);
+                    [[unlikely]] (void(0));
                 }
             }
             index -= child_index != 0 ? child_sizes_.get(child_index - 1) : 0;
@@ -661,7 +663,8 @@ class node : uncopyable {
      */
     void print(bool internal_only = true) const {
         std::cout << "{\n\"type\": \"node\",\n"
-                  << "\"has_leaves\": " << (has_leaves() ? "true" : "false") << ",\n"
+                  << "\"has_leaves\": " << (has_leaves() ? "true" : "false")
+                  << ",\n"
                   << "\"child_count\": " << int(child_count_) << ",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"child_sizes\": [";
@@ -729,7 +732,7 @@ class node : uncopyable {
    private:
     /**
      * @brief Splits a leaf with `n > leaf_size` elements into 2 leaves with
-     * rougly half of the encoded content each.
+     * part of the encoded content each.
      *
      * Intended for use with compressed leaves where a leaf can contain a bigger
      * slice of the universe encoded into less than `leaf_size` bits.
@@ -742,10 +745,13 @@ class node : uncopyable {
      */
     template <class allocator>
     void split_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
-        leaf_type* sibling = alloc->template allocate_leaf<leaf_type>(leaf->capacity());
-        sibling->transfer_capacity(leaf, leaf_size / (2 * WORD_BITS));
+        dtype cap = leaf->capacity();
+        //leaf->print(false);
+        //std::cout << std::endl;
+        leaf_type* sibling = alloc->template allocate_leaf<leaf_type>(cap);
+        sibling->transfer_capacity(leaf);
         if constexpr (aggressive_realloc) {
-            dtype cap = leaf->capacity();
+            cap = leaf->capacity();
             dtype n_cap = leaf->desired_capacity();
             if (n_cap < cap) {
                 leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
@@ -756,13 +762,17 @@ class node : uncopyable {
                 sibling = alloc->reallocate_leaf(sibling, cap, n_cap);
             }
         }
+        //sibling->print(false);
+        //std::cout << std::endl;
+        //leaf->print(false);
+        //std::cout << std::endl;
         for (dtype i = child_count_; i > index + 1u; i--) {
             children_[i] = children_[i - 1];
         }
-        children_[index] = leaf;
-        children_[index + 1] = sibling;
-        child_sizes_.insert(index + 1, child_count_, sibling->size());
-        child_sums_.insert(index + 1, child_count_, sibling->p_sum());
+        children_[index] = sibling;
+        children_[index + 1] = leaf;
+        child_sizes_.insert(index + 1, child_count_, leaf->size());
+        child_sums_.insert(index + 1, child_count_, leaf->p_sum());
         child_count_++;
     }
 
@@ -807,7 +817,7 @@ class node : uncopyable {
             }
             [[likely]] (void(0));
         }
-        // Number of leaves that can fir in the "right" sibling (with potential
+        // Number of leaves that can fit in the "right" sibling (with potential
         // reallocation).
         uint32_t r_cap = 0;
         if (index < child_count_ - 1) {
@@ -827,6 +837,7 @@ class node : uncopyable {
             leaf_type* b_child;
             leaf_type* new_child;
             dtype n_cap;
+            //TODO: FIX THIS SHIT!
             if (index == 0) {
                 // If the full leaf is the first child, a new leaf is created
                 // between indexes 0 and 1.
@@ -837,7 +848,13 @@ class node : uncopyable {
                 n_cap += n_cap % 2;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
-                new_child->transfer_append(b_child, b_child->size() - n_elem);
+                if constexpr (compressed) {
+                    n_elem = b_child->size() - n_elem;
+                    n_elem = n_elem + new_child->size() > (2 * leaf_size) / 3 ? leaf_size / 3 : n_elem;
+                    new_child->transfer_append(b_child, n_elem);
+                } else {
+                    new_child->transfer_append(b_child, b_child->size() - n_elem);
+                }
                 [[unlikely]] index++;
             } else {
                 // If the full leaf is not the first child, a new leaf is
@@ -849,7 +866,13 @@ class node : uncopyable {
                 n_cap += n_cap % 2;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
-                new_child->transfer_prepend(a_child, a_child->size() - n_elem);
+                if constexpr (compressed) {
+                    n_elem = a_child->size() - n_elem;
+                    n_elem = n_elem + new_child->size() > (2 * leaf_size) / 3 ? leaf_size / 3 : n_elem;
+                    new_child->transfer_prepend(a_child, n_elem);
+                } else {
+                    new_child->transfer_prepend(a_child, a_child->size() - n_elem);
+                }
             }
             if constexpr (aggressive_realloc) {
                 uint64_t cap = a_child->capacity();
@@ -961,20 +984,15 @@ class node : uncopyable {
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->need_realloc()) {
             dtype cap = child->capacity();
+            dtype n_cap = child->desired_capacity();
             if constexpr (compressed) {
                 if (child->is_compressed()) {
                     if ((child->size() >= (~uint32_t(0) >> 1)) ||
-                        (cap * WORD_BITS >= leaf_size)) {
-                        split_leaf(child_index, child, alloc);
+                        (n_cap * WORD_BITS > leaf_size)) {
+                        rebalance_leaf(child_index, child, alloc);
                     } else {
-                        dtype n_cap = child->desired_capacity();
-                        if (n_cap > leaf_size / WORD_BITS) {
-                            split_leaf(child_index, child, alloc);
-                            [[unlikely]] (void(0));
-                        } else {
-                            children_[child_index] =
-                                alloc->reallocate_leaf(child, cap, n_cap);
-                        }
+                        children_[child_index] =
+                            alloc->reallocate_leaf(child, cap, n_cap);
                         [[likely]] (void(0));
                     }
                 } else {
@@ -987,7 +1005,7 @@ class node : uncopyable {
                     }
                 }
             } else {
-                if (cap * WORD_BITS >= leaf_size) {
+                if (n_cap * WORD_BITS > leaf_size) {
                     rebalance_leaf(child_index, child, alloc);
                 } else {
                     children_[child_index] =
@@ -997,6 +1015,7 @@ class node : uncopyable {
             }
             child_index = child_sizes_.find(index);
             child = reinterpret_cast<leaf_type*>(children_[child_index]);
+            [[unlikely]] (void(0));
         }
         if (child_index != 0) {
             [[likely]] index -= child_sizes_.get(child_index - 1);

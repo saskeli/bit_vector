@@ -41,7 +41,7 @@ bench: bench.cpp $(HEADERS)
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG $(SDSL) -Ofast -o bench bench.cpp -lsdsl
 
 comp_bench: comp_bench.cpp $(HEADERS)
-	g++ $(CFLAGS) -DDEBUG -Ofast -g -o comp_bench comp_bench.cpp
+	g++ $(CFLAGS) -DDEBUG -O0 -g -o comp_bench comp_bench.cpp
 
 brute: brute_force.cpp $(HEADERS) test/run_tests.hpp
 	make -C deps/sdsl-lite

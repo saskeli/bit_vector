@@ -75,7 +75,7 @@ class leaf : uncopyable {
     static const constexpr uint8_t C_ONE_MASK = 0b00000001;
     /** @brief Mask for accessing type of possibly compressed leaf */
     static const constexpr uint8_t C_TYPE_MASK = 0b00000010;
-    static const constexpr uint8_t C_EMPTY_RUN_MASK = 0b00000100;
+    static const constexpr uint8_t C_RUN_REMOVAL_MASK = 0b00000100;
 
     // The buffer fill rate is stored in part of an 8-bit word.
     // This could be resolved with using 16 bits instead (without increasing the
@@ -775,27 +775,46 @@ class leaf : uncopyable {
 
     /**
      * @brief Determine if reallocation / splitting is required prior to
-     * additional insertion of new elements.
+     * additional insertion of new elements (or modification).
      *
-     * @return True if there is no guarantee that an insertion can be completed
-     *         without undefined behaviour.
+     * For uncompressed leaves, only insertions may require reallocation. For
+     * compressed leaves modification may also require modification as
+     * modifications are typically converted into a remove operation followed by
+     * an insertion, and the type of encoding used may cause additional space to
+     * be required.
+     *
+     * @return True if there is no guarantee that an insertion/modification can
+     * be completed without undefined behaviour.
      */
-    bool need_realloc() const {
+    bool need_realloc() {
+        //std::cerr << "need_realloc called" << std::endl;
         if constexpr (compressed) {
             if (is_compressed()) {
                 if (size_ >= (~uint32_t(0)) >> 1) {
+                    //std::cerr << " Size limit reached" << std::endl;
                     [[unlikely]] return true;
                 }
                 if (buffer_count_ < buffer_size - 1) {
-                    return false;
+                    //std::cerr << " Buffer has room" << std::endl;
+                    [[likely]] return false;
                 }
-                if (capacity_ * 8 - run_index_[0] >=
-                    buffer_size * (1u + (type_info_ >> 5))) {
-                    if (type_info_ & C_EMPTY_RUN_MASK) {
-                        [[unlikely]] c_commit<false>();
-                    }
-                    return false;
+                if (type_info_ & C_RUN_REMOVAL_MASK) {
+                    //std::cerr << " Attempting to clean up runs" << std::endl;
+                    c_commit<false>();
                 }
+                //std::cerr << " capacity_ * 8 = " << (capacity_ * 8)
+                //          << " vs. run_index + buffer_size * (1 + (type_info_"
+                //             ">> 5) = "
+                //          << run_index_[0] << " + " << buffer_size << " * (1 + "
+                //          << (type_info_ >> 5) << ") = "
+                //          << run_index_[0] +
+                //                 int(buffer_size) * (1u + (type_info_ >> 5))
+                //          << std::endl;
+                bool ret =
+                    (capacity_ * 8 <
+                     run_index_[0] + buffer_size * (1u + (type_info_ >> 5)));
+                //std::cerr << " returning " << ret << std::endl;
+                return ret;
             }
         }
         return size_ >= capacity_ * WORD_BITS;
@@ -850,27 +869,6 @@ class leaf : uncopyable {
     }
 
     /**
-     * @brief Ensure that leaf can support a set operations without increase in
-     * capacity
-     *
-     * For uncompressed leaves, this will always hold. For compressed leaves it
-     * may not.
-     *
-     * @return True, since setting is always supported by uncompressed leaves.
-     */
-    constexpr bool can_set() {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                if (buffer_count_ < buffer_size - 1) {
-                    return true;
-                }
-                return desired_capacity() <= capacity_;
-            }
-        }
-        return true;
-    }
-
-    /**
      * @brief Sets the pointer to the leaf-associated data storage.
      *
      * Intended only to be set by an allocator after allocating additional
@@ -920,9 +918,11 @@ class leaf : uncopyable {
                         q_elems--;
                     }
                 }
-                for (uint8_t i = n_delete; i < buffer_count_; i++) {
-                    buffer_[i - n_delete] = buffer_[i];
-                    buffer_[i] = uint32_t(0);
+                if (n_delete) {
+                    for (uint8_t i = n_delete; i < buffer_count_; i++) {
+                        buffer_[i - n_delete] = buffer_[i];
+                        buffer_[i] = uint32_t(0);
+                    }
                 }
                 buffer_count_ -= n_delete;
                 uint32_t d_idx = 0;
@@ -963,6 +963,7 @@ class leaf : uncopyable {
                     d_idx += c_bytes;
                     val = !val;
                 }
+                c_commit<false>();
                 return;
             }
         }
@@ -1014,75 +1015,82 @@ class leaf : uncopyable {
      * this leaf is empty with an empty buffer.
      *
      * @param other Pointer to the sibling to copy from.
-     * @param elems Number of 64-bit equivalent words worth of data to copy.
      */
-    void transfer_capacity(leaf* other, uint32_t elems) {
+    void transfer_capacity(leaf* other) {
 #ifdef DEBUG
         assert(buffer_count_ == 0);
         assert(size_ == 0);
 #endif
         type_info_ = C_TYPE_MASK;
-        uint32_t o_size = size_;
         bool val = other->first_value();
-        type_info_ |= val * C_ONE_MASK;
-        elems *= 8;
-        uint32_t o_bytes = other->used_bytes() >> 1;
-        elems = elems < o_bytes ? elems : o_bytes;
+        type_info_ |= other->at(0) ? C_ONE_MASK : 0;
+        uint32_t o_bytes = other->used_bytes();
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
-        while (true) {
+        uint32_t* o_buf = other->buffer();
+        uint8_t o_buf_count = other->buffer_count();
+        uint8_t ob_idx = 0;
+        while (d_idx < o_bytes) {
             uint32_t rl = 0;
             uint8_t r_bytes = 1;
             if ((o_data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = o_data[d_idx] & 0b00111111;
-            } else if ((o_data[d_idx] & 0b10000000) == 0b00000000) {
+            } else if ((o_data[d_idx] >> 7) == 0u) {
                 rl = o_data[d_idx] << 24;
                 rl |= o_data[d_idx + 1] << 16;
                 rl |= o_data[d_idx + 2] << 8;
                 rl |= o_data[d_idx + 3];
                 r_bytes = 4;
-            } else {
-                rl = o_data[d_idx] & 0b00011111;
-                rl = (rl << 8) & o_data[d_idx + 1];
+            } else if ((o_data[d_idx] & 0b11100000) == 0b10000000) {
+                rl = (o_data[d_idx] & 0b00011111) << 8;
+                rl |= o_data[d_idx + 1];
                 r_bytes = 2;
-                if ((o_data[d_idx] & 0b10100000) == 0b10100000) {
-                    rl = (rl << 8) & o_data[d_idx + 2];
-                    r_bytes = 3;
-                }
+            } else  {
+                rl = (o_data[d_idx] & 0b00011111) << 16;
+                rl |= o_data[d_idx + 1] << 8;
+                rl |= o_data[d_idx + 2];
+                r_bytes = 3;
             }
-            if ((d_idx + r_bytes <= elems) &&
-                (other->size() - size_ - rl > (leaf_size / 3))) {
+            if ((other->size() - size_ - rl >= leaf_size / 3) && ((size_ < (leaf_size / 3) || buffer_count_ < (buffer_size >> 1)))) {
                 d_idx += r_bytes;
-                if (rl == 0) {
-                    [[unlikely]] continue;
-                }
+                assert(rl != 0);
                 write_run(rl);
                 size_ += rl;
                 p_sum_ += val * rl;
-            } else if (d_idx < elems) {
-                rl >>= 1;
-                if (rl == 0) {
-                    [[unlikely]] break;
+                for (; ob_idx < o_buf_count; ob_idx++) {
+                    if ((o_buf[ob_idx] & C_INDEX) < size_) {
+                        buffer_[buffer_count_++] = o_buf[ob_idx];
+                        size_++;
+                        p_sum_ += o_buf[ob_idx] >> 31;
+                    } else {
+                        [[likely]] break;
+                    }
                 }
-                write_run(rl);
-                size_ += rl;
-                p_sum_ += val * rl;
+            } else if (size_ < leaf_size / 3) {
+                uint32_t to_copy = (leaf_size / 3) - size_;
+                assert(rl >= to_copy);
+                write_run(to_copy);
+                size_ += to_copy;
+                p_sum_ += val * to_copy;
+                for (; ob_idx < o_buf_count; ob_idx++) {
+                    if ((o_buf[ob_idx] & C_INDEX) < size_) {
+                        buffer_[buffer_count_++] = o_buf[ob_idx];
+                        size_++;
+                        p_sum_ += o_buf[ob_idx] >> 31;
+                    } else {
+                        [[likely]] break;
+                    }
+                }
                 break;
             } else {
                 break;
             }
             val = !val;
         }
-        uint32_t* o_buf = other->buffer();
-        uint8_t o_buf_count = other->buffer_count();
-        for (uint8_t ob_idx = 0; ob_idx < o_buf_count; ob_idx++) {
-            if ((o_buf[ob_idx] & C_INDEX) < size_) {
-                buffer_[buffer_count_++] = o_buf[ob_idx];
-                size_++;
-                p_sum_ += o_buf[ob_idx] >> 31;
-            }
+        if (run_index_[0] * 8 > size_) {
+            [[unlikely]] flatten();
         }
-        other->clear_first(size_ - o_size);
+        other->clear_first(size_);
     }
 
     /**
@@ -1508,6 +1516,7 @@ class leaf : uncopyable {
         assert(p_sum_ <= size_);
         assert(p_sum_ == rank(size_));
         if (is_compressed()) {
+            bool rem = type_info_ & C_RUN_REMOVAL_MASK;
             uint8_t* data = reinterpret_cast<uint8_t*>(data_);
             for (size_t i = run_index_[0]; i < 8 * capacity_; i++) {
                 assert(data[i] == 0);
@@ -1536,6 +1545,9 @@ class leaf : uncopyable {
                     rl = (data[d_idx++] & 0b00011111) << 8;
                     rl |= data[d_idx++];
                 }
+                if (!rem) {
+                    assert(rl > 0);
+                }
                 c_size += rl;
                 c_sum += val * rl;
                 val = !val;
@@ -1543,8 +1555,16 @@ class leaf : uncopyable {
             assert(c_size == size_);
             return 1;
         }
-        uint32_t last_word = size_ / WORD_BITS;
-        uint32_t overflow = size_ % WORD_BITS;
+        uint32_t u_loc = size_;
+        for (uint8_t i = 0; i < buffer_count_; i++) {
+            if (buffer_is_insertion(buffer_[i])) {
+                u_loc--;
+            } else {
+                u_loc++;
+            }
+        }
+        uint32_t last_word = u_loc / WORD_BITS;
+        uint32_t overflow = u_loc % WORD_BITS;
         if (overflow != 0) {
             uint64_t val = (MASK << overflow) - 1;
             val = (~val) & data_[last_word];
@@ -1565,7 +1585,7 @@ class leaf : uncopyable {
      *
      * @param internal_only Will not output raw data if true to save space.
      */
-    void print(bool internal_only) const {
+    void print(bool internal_only = true) const {
         if (is_compressed()) {
             c_print(internal_only);
             return;
@@ -1575,6 +1595,7 @@ class leaf : uncopyable {
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
+                  << "\"buffer_count\": " << int(buffer_count_) << ",\n"
                   << "\"buffer\": [\n";
         for (uint8_t i = 0; i < buffer_count_; i++) {
 #pragma GCC diagnostic ignored "-Warray-bounds"
@@ -1894,7 +1915,9 @@ class leaf : uncopyable {
         bool ret = type_info_ & C_ONE_MASK;
         uint32_t c_i = 0;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+#pragma GCC diagnostic ignored "-Warray-bounds"
         for (uint32_t d_idx = 0; d_idx < run_index_[0]; d_idx++) {
+#pragma GCC diagnostic pop
             uint32_t rl = 0;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = data[d_idx] & 0b00111111;
@@ -1967,6 +1990,7 @@ class leaf : uncopyable {
         if (done) {
             [[unlikely]] return ret;
         }
+        type_info_ |= C_RUN_REMOVAL_MASK;
         uint32_t c_i = 0;
         ret = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
@@ -2056,6 +2080,7 @@ class leaf : uncopyable {
             // std::cout << c_i << " vs " << q_i << std::endl;
             if (c_i > q_i) {
                 if (val == x) return ret;
+                type_info_ |= C_RUN_REMOVAL_MASK;
                 write_run(rl - 1, d_idx, r_b);
                 insert_buffer(b_idx, i | (x ? ~C_INDEX : uint32_t(0)));
                 if (buffer_count_ == buffer_size) {
@@ -2139,19 +2164,19 @@ class leaf : uncopyable {
                 rl = (data[d_idx++] & 0b00011111) << 8;
                 rl |= data[d_idx++];
             }
-            //std::cout << "rl = " << rl << ", e_index = " << e_index
-            //          << ", c_i = " << c_i << std::endl;
+            // std::cout << "rl = " << rl << ", e_index = " << e_index
+            //           << ", c_i = " << c_i << std::endl;
             while (b_idx < buffer_count_ && e_index < c_i + rl) {
                 if (count + val * (e_index - c_i) >= x) {
-                    //std::cout << "Split before buffer" << std::endl;
+                    // std::cout << "Split before buffer" << std::endl;
                     return c_i + x - count - 1;
                 }
                 bool b_val = buffer_[b_idx] >> 31;
-                //std::cout << "count = " << count << ", b_val = " << b_val
-                //          << std::endl;
+                // std::cout << "count = " << count << ", b_val = " << b_val
+                //           << std::endl;
                 if (b_val) {
                     if (count + val * (e_index - c_i) + 1 == x) {
-                        //std::cout << "Split in buffer" << std::endl;
+                        // std::cout << "Split in buffer" << std::endl;
                         return e_index;
                     }
                     count++;
@@ -2163,7 +2188,7 @@ class leaf : uncopyable {
             }
             if (count + (val * rl) >= x) {
                 c_i += x - count;
-                //std::cout << "Full run" << std::endl;
+                // std::cout << "Full run" << std::endl;
                 return --c_i;
             }
             count += val * rl;
@@ -2454,7 +2479,7 @@ class leaf : uncopyable {
 
     template <bool commit_buffer = true>
     void c_commit() {
-        //TODO: Template buffer committing or not.
+        std::bitset<8> b(type_info_);
         uint8_t b_idx = 0;
         uint32_t d_idx = 0;
         uint32_t e_idx = buffer_[b_idx] & C_INDEX;
@@ -2462,12 +2487,14 @@ class leaf : uncopyable {
         uint32_t copied = 0;
         bool val = type_info_ & C_ONE_MASK;
         bool first = c_at(0);
-        type_info_ &= 0b00011110;
+        type_info_ &= 0b00000010;
         type_info_ |= first;
         // std::cout << "first run: " << int(val) << ", new first run: " <<
         // int(type_info_ & C_ONE_MASK) << std::endl;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+#pragma GCC diagnostic ignored "-Warray-bounds"
         while (d_idx < run_index_[0]) {
+#pragma GCC diagnostic pop
             uint32_t rl = 0;
             if ((data[d_idx] & 0b10000000) == 0) {
                 rl = data[d_idx++] << 24;
@@ -2528,35 +2555,39 @@ class leaf : uncopyable {
             }
 
             // std::cout << "Read run of length " << rl << std::endl;
-            while (b_idx < buffer_count_ && e_idx <= copied + rl) {
-                if ((buffer_[b_idx] >> 31) == val) {
-                    rl++;
-                } else if (e_idx == copied + rl) {
-                    break;
-                } else {
-                    uint32_t pre_count = e_idx - copied;
-                    if (pre_count) {
-                        rl -= pre_count;
-                        // std::cout << "Writing partial (" << pre_count << ")"
+            if constexpr (commit_buffer) {
+                while (b_idx < buffer_count_ && e_idx <= copied + rl) {
+                    if ((buffer_[b_idx] >> 31) == val) {
+                        rl++;
+                    } else if (e_idx == copied + rl) {
+                        break;
+                    } else {
+                        uint32_t pre_count = e_idx - copied;
+                        if (pre_count) {
+                            rl -= pre_count;
+                            // std::cout << "Writing partial (" << pre_count <<
+                            // ")"
+                            //          << std::endl;
+                            elem_count = write_scratch(pre_count, elem_count);
+                            copied += pre_count;
+                        }
+                        pre_count = 1;
+                        while ((b_idx < buffer_count_ - 1) &&
+                               ((buffer_[b_idx + 1] & C_INDEX) == e_idx + 1) &&
+                               ((buffer_[b_idx + 1] >> 31) == !val)) {
+                            pre_count++;
+                            e_idx++;
+                            [[unlikely]] b_idx++;
+                        }
+                        // std::cout << "Writing buffer (" << pre_count << ")"
                         //          << std::endl;
                         elem_count = write_scratch(pre_count, elem_count);
                         copied += pre_count;
                     }
-                    pre_count = 1;
-                    while ((b_idx < buffer_count_ - 1) &&
-                           ((buffer_[b_idx + 1] & C_INDEX) == e_idx + 1) &&
-                           ((buffer_[b_idx + 1] >> 31) == !val)) {
-                        pre_count++;
-                        e_idx++;
-                        [[unlikely]] b_idx++;
-                    }
-                    // std::cout << "Writing buffer (" << pre_count << ")"
-                    //          << std::endl;
-                    elem_count = write_scratch(pre_count, elem_count);
-                    copied += pre_count;
+                    b_idx++;
+                    e_idx =
+                        b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
                 }
-                b_idx++;
-                e_idx = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
             }
             if (rl) {
                 // std::cout << "Writing run (" << rl << ")" << std::endl;
@@ -2569,26 +2600,32 @@ class leaf : uncopyable {
             }
             val = !val;
         }
-        while (b_idx < buffer_count_) {
-            uint32_t rl = 1;
-            while ((b_idx < buffer_count_ - 1) &&
-                   ((buffer_[b_idx + 1] >> 31) == (buffer_[b_idx] >> 31))) {
-                rl++;
+        if constexpr (commit_buffer) {
+            while (b_idx < buffer_count_) {
+                uint32_t rl = 1;
+                while ((b_idx < buffer_count_ - 1) &&
+                       ((buffer_[b_idx + 1] >> 31) == (buffer_[b_idx] >> 31))) {
+                    rl++;
+                    b_idx++;
+                }
+                elem_count = write_scratch(rl, elem_count);
                 b_idx++;
             }
-            elem_count = write_scratch(rl, elem_count);
-            b_idx++;
-        }
-        if (elem_count * 8 > size_) {
-            flatten();
-            return;
+            if (elem_count * 8 > size_) {
+                flatten();
+                return;
+            }
         }
         assert(capacity_ * 8 >= elem_count);
         memcpy(data_, data_scratch, elem_count);
         memset(data + elem_count, 0, 8 * capacity_ - elem_count);
-        memset(buffer_, 0, sizeof(buffer_));
-        buffer_count_ = 0;
+        if constexpr (commit_buffer) {
+            memset(buffer_, 0, sizeof(buffer_));
+            buffer_count_ = 0;
+        }
+#pragma GCC diagnostic ignored "-Warray-bounds"
         run_index_[0] = elem_count;
+#pragma GCC diagnostic pop
     }
 
     void c_rle_check_convert() {
@@ -2729,9 +2766,6 @@ class leaf : uncopyable {
     }
 
     void write_run(uint32_t length, uint32_t index, uint8_t c_bytes) {
-        if (length == 0) {
-            type_info_ |= C_EMPTY_RUN_MASK;
-        }
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         switch (c_bytes) {
             case 1:
@@ -2788,7 +2822,11 @@ class leaf : uncopyable {
                   << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"first_value\": " << bool(type_info_ & C_ONE_MASK)
                   << ",\n"
+                  << "\"Uncommitted removal\": "
+                  << bool(type_info_ & C_RUN_REMOVAL_MASK) << ",\n"
+                  << "\"Run bytes\": " << run_index_[0] << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
+                  << "\"buffer_count\": " << int(buffer_count_) << ",\n"
                   << "\"buffer\": [\n";
         for (uint8_t i = 0; i < buffer_count_; i++) {
 #pragma GCC diagnostic ignored "-Warray-bounds"
@@ -2799,6 +2837,10 @@ class leaf : uncopyable {
             if (i != buffer_count_ - 1) {
                 std::cout << ",\n";
             }
+        }
+        if (internal_only) {
+            std::cout << "]}";
+            return;
         }
         std::cout << "],\n\"runs\": [\n";
         uint32_t d_idx = 0;
@@ -2836,25 +2878,22 @@ class leaf : uncopyable {
             if (d_idx == run_index_[0]) {
                 std::cout << "\"}";
             } else {
-                std::cout << "\"}\n";
+                std::cout << "\"},\n";
             }
-        }
-        if (internal_only) {
-            std::cout << "]}";
-            return;
         }
         std::cout << "],\n\"data\": [\n";
-        for (uint64_t i = 0; i < capacity_; i++) {
-            std::bitset<WORD_BITS> b(data_[i]);
+        for (uint64_t k = 0; k < capacity_ * 8; k += 8) {
+            uint64_t lim = std::min(k + 8, uint64_t(capacity_ * 8));
             std::cout << "\"";
-            for (size_t i = 0; i < 64; i++) {
-                if (i % 8 == 0 && i > 0) {
+            for (uint64_t i = k; i < lim; i++) {
+                std::bitset<8> b(data[i]);
+                std::cout << b;
+                if (i < lim - 1) {
                     std::cout << " ";
                 }
-                std::cout << (b[i] ? "1" : "0");
             }
             std::cout << "\"";
-            if (i != uint64_t(capacity_ - 1)) {
+            if (k + 8 < capacity_ * 8) {
                 std::cout << ",\n";
             }
         }
