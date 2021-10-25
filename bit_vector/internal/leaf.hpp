@@ -227,7 +227,8 @@ class leaf : uncopyable {
         if (size_ >= capacity_ * WORD_BITS) {
             std::cerr << "Overflow. Reallocate before adding elements"
                       << "\n";
-            std::cerr << "Attempted to insert to " << i << std::endl;
+            std::cerr << "Attempted to insert(" << i << ", " << x << ")" << std::endl;
+            std::cerr << "cap = " << capacity_ << ", size = " << size_ << std::endl;
             assert(size_ < capacity_ * WORD_BITS);
         }
 #endif
@@ -1179,16 +1180,20 @@ class leaf : uncopyable {
     void clear_last(uint32_t elems) {
         if constexpr (compressed) {
             if (is_compressed()) {
+                std::cerr << elems << " elements are getting deleted:" << std::endl;
+                print(false);
+                std::cout << std::endl;
                 uint32_t end = size_ - elems;
+                p_sum_ = 0;
                 for (uint8_t b_idx = buffer_count_ - 1; b_idx < buffer_count_;
                      b_idx--) {
                     if ((buffer_[b_idx] & C_INDEX) >= end) {
-                        p_sum_ -= buffer_[b_idx] >> 31;
-                        size_--;
+                        std::cerr << " deleted buffer at " << (buffer_[b_idx] & C_INDEX) << std::endl;
+                        size_++;
                         buffer_[b_idx] = uint32_t(0);
                         buffer_count_--;
                     } else {
-                        break;
+                        p_sum_ += buffer_[b_idx] >> 31;
                     }
                 }
                 end -= buffer_count_;
@@ -1201,7 +1206,7 @@ class leaf : uncopyable {
                     uint32_t r_bytes = 1;
                     if ((data[d_idx] & 0b11000000) == 0b11000000) {
                         rl = data[d_idx] & 0b00111111;
-                    } else if ((data[d_idx] & 0b10000000) == 0) {
+                    } else if ((data[d_idx] >> 7) == 0u) {
                         rl = data[d_idx] << 24;
                         rl |= data[d_idx + 1] << 16;
                         rl |= data[d_idx + 2] << 8;
@@ -1211,55 +1216,40 @@ class leaf : uncopyable {
                         rl = (data[d_idx] & 0b00011111) << 8;
                         rl |= data[d_idx + 1];
                         r_bytes = 2;
-                    } else {
+                    } else  {
                         rl = (data[d_idx] & 0b00011111) << 16;
-                        rl |= data[d_idx + 1];
+                        rl |= data[d_idx + 1] << 8;
                         rl |= data[d_idx + 2];
                         r_bytes = 3;
                     }
+                    std::cerr << "Read run of length " << rl << std::endl;
                     if (rl + loc == end) {
                         val = !val;
                         loc += rl;
                         d_idx += r_bytes;
                         break;
                     } else if (rl + loc > end) {
+                        std::cerr << "Splitting run of length " << rl << std::endl;
                         uint32_t n_rl = end - loc;
                         write_run(n_rl, d_idx, r_bytes);
+                        type_info_ |= C_RUN_REMOVAL_MASK;
                         p_sum_ -= val * (rl - n_rl);
-                        size_ -= rl - n_rl;
                         loc += n_rl;
                         val = !val;
                         d_idx += r_bytes;
                         break;
                     }
                     d_idx += r_bytes;
+                    p_sum_ += val * rl;
                     val = !val;
                     loc += rl;
                 }
-                uint32_t rem_idx = d_idx;
-                while (rem_idx < run_index_[0]) {
-                    uint32_t rl = 0;
-                    if ((data[rem_idx] & 0b11000000) == 0b11000000) {
-                        rl = data[rem_idx++] & 0b00111111;
-                    } else if ((data[rem_idx] & 0b10000000) == 0) {
-                        rl = data[rem_idx++] << 24;
-                        rl |= data[rem_idx++] << 16;
-                        rl |= data[rem_idx++] << 8;
-                        rl |= data[rem_idx++];
-                    } else if ((data[rem_idx] & 0b11100000) == 0b10000000) {
-                        rl = (data[rem_idx++] & 0b00011111) << 8;
-                        rl |= data[rem_idx++];
-                    } else {
-                        rl = (data[rem_idx++] & 0b00011111) << 16;
-                        rl |= data[rem_idx++];
-                        rl |= data[rem_idx++];
-                    }
-                    p_sum_ -= val * rl;
-                    size_ -= rl;
-                    val = !val;
-                }
                 memset(data + d_idx, 0, run_index_[0] - d_idx);
                 run_index_[0] = d_idx;
+                size_ = size_ - elems;
+                std::cerr << elems << " elements got deleted:" << std::endl;
+                print(false);
+                std::cout << std::endl;
                 return;
             }
         }
@@ -2317,12 +2307,13 @@ class leaf : uncopyable {
             }
             if (loc + rl > other->size() - elems) {
                 uint32_t to_copy = loc + rl - (other->size() - elems);
+                //std::cerr << " partial yoink of " << to_copy << " elements with value " << val << std::endl; 
                 if (val) {
                     size_t i = 0;
                     for (; (i + 1) * 64 <= to_copy; i++) {
-                        data_[i] = ~uint64_t(0);
+                        data_[i] |= ~uint64_t(0);
                     }
-                    data_[i] = (uint64_t(1) << (to_copy % 64)) - 1;
+                    data_[i] |= (uint64_t(1) << (to_copy % 64)) - 1;
                     p_sum_ += to_copy;
                 }
                 copied += to_copy;
@@ -2354,28 +2345,27 @@ class leaf : uncopyable {
                     break;
                 }
             }
+            //std::cerr << " yoink of " << rl << " elements with value " << val << std::endl; 
             if (val) {
-                if (val) {
-                    uint64_t offset = copied % WORD_BITS;
-                    uint64_t w_idx = copied / WORD_BITS;
-                    uint32_t write = rl;
-                    if (offset != 0) {
-                        if (write < WORD_BITS - offset) {
-                            data_[w_idx++] |= ((uint64_t(1) << write) - 1)
-                                              << offset;
-                            write = 0;
-                        } else {
-                            data_[w_idx++] |= (~uint64_t(0)) << offset;
-                            write -= WORD_BITS - offset;
-                        }
+                uint64_t offset = copied % WORD_BITS;
+                uint64_t w_idx = copied / WORD_BITS;
+                uint32_t write = rl;
+                if (offset != 0) {
+                    if (write < WORD_BITS - offset) {
+                        data_[w_idx++] |= ((uint64_t(1) << write) - 1)
+                                            << offset;
+                        write = 0;
+                    } else {
+                        data_[w_idx++] |= (~uint64_t(0)) << offset;
+                        write -= WORD_BITS - offset;
                     }
-                    while (write >= WORD_BITS) {
-                        data_[w_idx++] = ~uint64_t(0);
-                        write -= WORD_BITS;
-                    }
-                    if (write > 0) {
-                        data_[w_idx] = (uint64_t(1) << write) - 1;
-                    }
+                }
+                while (write >= WORD_BITS) {
+                    data_[w_idx++] |= ~uint64_t(0);
+                    write -= WORD_BITS;
+                }
+                if (write > 0) {
+                    data_[w_idx] |= (uint64_t(1) << write) - 1;
                 }
                 p_sum_ += rl;
             }
@@ -2393,9 +2383,11 @@ class leaf : uncopyable {
                     continue;
                 }
                 if (val) {
+                    //std::cerr << " setting " << e_idx << " to 0 from buffer" << std::endl;
                     data_[w_idx] ^= MASK << w_offset;
                     p_sum_--;
                 } else {
+                    //std::cerr << " setting " << e_idx << " to 1 from buffer" << std::endl;
                     data_[w_idx] |= MASK << w_offset;
                     p_sum_++;
                 }

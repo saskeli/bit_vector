@@ -51,21 +51,21 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         uint64_t start = bv.size();
         uint64_t target = uint64_t(pow(2.0, startexp + delta * step));
 
-        std::cout << seed << "\t" << target << "\t";
+        std::cout << seed << "\t" << target << "\t" << std::flush;
 
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
             bool aval = get_val(aloc, i + 1, dist(mt));
-            if (i == 21678798) {
+            if (i == 49158688) {
                 std::cout << "Inserting " << aval << " to position " << aloc << std::endl;
-                bv.print(false);
+                //bv.print();
             }
             bv.insert(aloc, aval);
-            if (i == 21678798) {
-                bv.print(false);
+            if (i == 49158688) {
+                //bv.print();
                 bv.validate();
             }
-            //if (i > 20892961) {
+            //if (i > 47863009) {
             //    std::cerr << i << std::endl;
             //    bv.validate();
             //}
@@ -92,7 +92,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }
         auto t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t" << std::flush;
         bv.validate();
 
         loc.clear();
@@ -109,7 +109,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t" << std::flush;
         bv.validate();
 
         loc.clear();
@@ -126,7 +126,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t" << std::flush;
         bv.validate();
 
         loc.clear();
@@ -141,7 +141,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }  //*/
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t" << std::flush;
 
         loc.clear();
         for (size_t i = 0; i < ops; i++) {
@@ -155,7 +155,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }  //*/
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t" << std::flush;
 
         uint64_t limit = bv.rank(target - 1);
         loc.clear();
@@ -171,7 +171,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         }  //*/
         t2 = high_resolution_clock::now();
         std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
-                  << "\t";
+                  << "\t" << std::flush;
 
         std::cout << bv.bit_size() << "\t";
         getrusage(RUSAGE_SELF, &ru);

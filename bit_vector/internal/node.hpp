@@ -837,14 +837,13 @@ class node : uncopyable {
             leaf_type* b_child;
             leaf_type* new_child;
             dtype n_cap;
-            //TODO: FIX THIS SHIT!
             if (index == 0) {
                 // If the full leaf is the first child, a new leaf is created
                 // between indexes 0 and 1.
                 a_child = reinterpret_cast<leaf_type*>(children_[0]);
                 b_child = reinterpret_cast<leaf_type*>(children_[1]);
                 dtype n_elem = (a_child->size() + (leaf_size - r_cap)) / 3;
-                n_cap = 2 + n_elem / WORD_BITS;
+                n_cap = 2 + (2 * leaf_size) / (3 * WORD_BITS);
                 n_cap += n_cap % 2;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
                 new_child->transfer_prepend(a_child, a_child->size() - n_elem);
@@ -859,28 +858,35 @@ class node : uncopyable {
             } else {
                 // If the full leaf is not the first child, a new leaf is
                 // created to the left of the full leaf.
+                std::cerr << "Making new leaf between " << int(index - 1) << " and " << int(index) << std::endl; 
                 a_child = reinterpret_cast<leaf_type*>(children_[index - 1]);
                 b_child = reinterpret_cast<leaf_type*>(children_[index]);
                 dtype n_elem = ((leaf_size - l_cap) + b_child->size()) / 3;
-                n_cap = 2 + n_elem / WORD_BITS;
+                n_cap = 2 + (2 * leaf_size) / (3 * WORD_BITS);
                 n_cap += n_cap % 2;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
+                std::cerr << "Yoinking " << (b_child->size() - n_elem) << " elements from the right" << std::endl;
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
+                new_child->validate();
                 if constexpr (compressed) {
                     n_elem = a_child->size() - n_elem;
                     n_elem = n_elem + new_child->size() > (2 * leaf_size) / 3 ? leaf_size / 3 : n_elem;
+                    std::cerr << "Yoinking " << n_elem << " elements from the left" << std::endl;
                     new_child->transfer_prepend(a_child, n_elem);
+                    new_child->validate();
                 } else {
                     new_child->transfer_prepend(a_child, a_child->size() - n_elem);
                 }
             }
             if constexpr (aggressive_realloc) {
                 uint64_t cap = a_child->capacity();
+                n_cap = a_child->desired_capacity();
                 if (cap > n_cap) {
                     a_child = alloc->reallocate_leaf(a_child, cap, n_cap);
                     [[unlikely]] children_[index - 1] = a_child;
                 }
                 cap = b_child->capacity();
+                n_cap = b_child->desired_capacity();
                 if (cap > n_cap) {
                     b_child = alloc->reallocate_leaf(b_child, cap, n_cap);
                     [[unlikely]] children_[index] = b_child;
@@ -913,15 +919,17 @@ class node : uncopyable {
                 sibling = reinterpret_cast<leaf_type*>(children_[index + 1]);
             }
             sibling->transfer_prepend(leaf, r_cap / 2);
-            if constexpr (aggressive_realloc) {
-                uint32_t cap = leaf->capacity();
-                uint32_t l_size = leaf->size();
-                if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
-                    uint32_t n_cap = 2 + l_size / WORD_BITS;
-                    n_cap += n_cap % 2;
-                    leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
-                    [[unlikely]] children_[index] = leaf;
-                }
+            uint32_t cap = leaf->capacity();
+            uint32_t n_cap = leaf->desired_capacity();
+            if (cap != n_cap) {
+                leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
+                [[unlikely]] children_[index] = leaf;
+            }
+            cap = sibling->capacity();
+            n_cap = sibling->desired_capacity();
+            if (cap != n_cap) {
+                sibling = alloc->reallocate_leaf(sibling, cap, n_cap);
+                [[unlikely]] children_[index + 1] = sibling;
             }
             child_sizes_.set(
                 index, index != 0 ? child_sizes_.get(index - 1) + leaf->size()
@@ -946,15 +954,17 @@ class node : uncopyable {
                 sibling = reinterpret_cast<leaf_type*>(children_[index - 1]);
             }
             sibling->transfer_append(leaf, l_cap / 2);
-            if constexpr (aggressive_realloc) {
-                uint32_t cap = leaf->capacity();
-                uint32_t l_size = leaf->size();
-                if (cap * WORD_BITS > l_size + 4 * WORD_BITS) {
-                    uint32_t n_cap = 2 + l_size / WORD_BITS;
-                    n_cap += n_cap % 2;
-                    leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
-                    [[unlikely]] children_[index] = leaf;
-                }
+            uint32_t cap = leaf->capacity();
+            uint32_t n_cap = leaf->desired_capacity();
+            if (cap != n_cap) {
+                leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
+                [[unlikely]] children_[index] = leaf;
+            }
+            cap = sibling->capacity();
+            n_cap = sibling->desired_capacity();
+            if (cap != n_cap) {
+                sibling = alloc->reallocate_leaf(sibling, cap, n_cap);
+                [[unlikely]] children_[index - 1] = sibling;
             }
             child_sizes_.set(index - 1,
                              index > 1
@@ -996,11 +1006,11 @@ class node : uncopyable {
                         [[likely]] (void(0));
                     }
                 } else {
-                    if (cap * WORD_BITS >= leaf_size) {
+                    if (n_cap * WORD_BITS > leaf_size) {
                         rebalance_leaf(child_index, child, alloc);
                     } else {
                         children_[child_index] =
-                            alloc->reallocate_leaf(child, cap, cap + 2);
+                            alloc->reallocate_leaf(child, cap, n_cap);
                         [[likely]] (void(0));
                     }
                 }
@@ -1009,7 +1019,7 @@ class node : uncopyable {
                     rebalance_leaf(child_index, child, alloc);
                 } else {
                     children_[child_index] =
-                        alloc->reallocate_leaf(child, cap, cap + 2);
+                        alloc->reallocate_leaf(child, cap, n_cap);
                     [[likely]] (void(0));
                 }
             }
