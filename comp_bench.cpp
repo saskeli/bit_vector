@@ -10,7 +10,7 @@
 #include "bit_vector/bv.hpp"
 
 bool get_val(uint64_t i, uint64_t lim, uint64_t val) {
-    double x = ((400.0 * i) / lim) - 200.0;
+    double x = ((20.0 * i) / lim) - 10.0;
     return val < atan(x) / M_PI_2;
 }
 
@@ -56,16 +56,17 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
             bool aval = get_val(aloc, i + 1, dist(mt));
-            if (i == 49158688) {
-                std::cout << "Inserting " << aval << " to position " << aloc << std::endl;
-                //bv.print();
-            }
+            //if (i == 72515787) {
+            //    std::cout << "Inserting " << aval << " to position " << aloc << std::endl;
+            //    //bv.print();
+            //}
             bv.insert(aloc, aval);
-            if (i == 49158688) {
-                //bv.print();
-                bv.validate();
-            }
-            //if (i > 47863009) {
+            //if (i == 72515787) {
+            //    //bv.print();
+            //    std::cout << "Validating" << std::endl;
+            //    bv.validate();
+            //}
+            //if (i > 72443596) {
             //    std::cerr << i << std::endl;
             //    bv.validate();
             //}
@@ -180,7 +181,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
         std::cout << checksum << std::endl;
     }
-    bv.print();
+    //bv.print();
 }
 
 void help() {

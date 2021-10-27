@@ -796,10 +796,12 @@ class node : uncopyable {
      */
     template <class allocator>
     void rebalance_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
+        //std::cout << "Rebalancing leaf " << int(index) << ":" << std::endl;
         if constexpr (compressed) {
             // Leaf contains a sufficiently large partition of the universe that
             // it can just be split into 2.
             if (leaf->size() > leaf_size) {
+                //std::cout << " split" << std::endl;
                 split_leaf(index, leaf, alloc);
                 return;
             }
@@ -858,25 +860,46 @@ class node : uncopyable {
             } else {
                 // If the full leaf is not the first child, a new leaf is
                 // created to the left of the full leaf.
-                std::cerr << "Making new leaf between " << int(index - 1) << " and " << int(index) << std::endl; 
+                // std::cout << " split 2->3" << std::endl;
                 a_child = reinterpret_cast<leaf_type*>(children_[index - 1]);
                 b_child = reinterpret_cast<leaf_type*>(children_[index]);
+                //a_child->print(false);
+                //std::cout << std::endl;
+                //a_child->validate();
+                //b_child->print(false);
+                //std::cout << std::endl;
+                //b_child->validate();
                 dtype n_elem = ((leaf_size - l_cap) + b_child->size()) / 3;
                 n_cap = 2 + (2 * leaf_size) / (3 * WORD_BITS);
                 n_cap += n_cap % 2;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
-                std::cerr << "Yoinking " << (b_child->size() - n_elem) << " elements from the right" << std::endl;
+                //new_child->print(false);
+                //std::cout << "Yoinking " << (b_child->size() - n_elem) << " elems from the right" << std::endl;
+                //dtype temp = b_child->rank(b_child->size() - n_elem);
+                //std::cout << temp << " = ";
+                //temp = b_child->p_sum() - temp;
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
-                new_child->validate();
+                //std::cout << new_child->p_sum() << std::endl;
+                //std::cout << temp << " = " << b_child->p_sum() << std::endl;;
                 if constexpr (compressed) {
                     n_elem = a_child->size() - n_elem;
                     n_elem = n_elem + new_child->size() > (2 * leaf_size) / 3 ? leaf_size / 3 : n_elem;
-                    std::cerr << "Yoinking " << n_elem << " elements from the left" << std::endl;
+                    //std::cout << "Yoinking " << n_elem << " elems from the left" << std::endl;
                     new_child->transfer_prepend(a_child, n_elem);
-                    new_child->validate();
                 } else {
                     new_child->transfer_prepend(a_child, a_child->size() - n_elem);
                 }
+                //std::cout << new_child->p_sum() << std::endl;
+                //new_child->print(false);
+                //a_child->print(false);
+                //std::cout << std::endl;
+                //a_child->validate();
+                //new_child->print(false);
+                //std::cout << std::endl;
+                //new_child->validate();
+                //b_child->print(false);
+                //std::cout << std::endl;
+                //b_child->validate();
             }
             if constexpr (aggressive_realloc) {
                 uint64_t cap = a_child->capacity();

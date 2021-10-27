@@ -514,6 +514,7 @@ class bit_vector : uncopyable {
      * since assertions will be `(void(0))`ed out.
      */
     void validate() const {
+#ifndef NDEBUG
         if (owned_allocator_) {
             uint64_t allocs = allocator_->live_allocations();
             if (root_is_leaf_) {
@@ -527,6 +528,7 @@ class bit_vector : uncopyable {
             else
                 n_root_->validate();
         }
+#endif
     }
 
     /**
