@@ -322,7 +322,7 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
 
 template <class bit_vector, uint64_t select_offset, uint8_t buffer,
           uint8_t branch, uint32_t leaf_size, bool flush = false,
-          class qs = bv::query_support<uint64_t, bv::leaf<16>, 2048>,
+          class qs = bv::query_support<uint64_t, bv::leaf<buffer, leaf_size>, 2048>,
           uint32_t block = 2048>
 void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
@@ -502,7 +502,8 @@ void help() {
               << "            10 for new buffered implementation with "
                  "aggressive reallocation and query support\n"
               << "            11 for new buffered implementation with "
-                 "aggressive reallocation small block query support\n";
+                 "aggressive reallocation small block query support\n"
+              << "            12 for tree with hybrid rlz leaves\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
@@ -549,23 +550,23 @@ int main(int argc, char const* argv[]) {
                                                                    seed);
     } else if (type == 3) {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
-        test<bv::simple_bv<0, 16384, 64>, 1, 0, 64, 16384>(size, steps, seed);
+        test<bv::simple_bv<0, 16384, 64, true, true, false>, 1, 0, 64, 16384>(size, steps, seed);
     } else if (type == 4) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
     } else if (type == 5) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false>(
-            size, steps, seed);
+        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false, 
+            bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(size, steps, seed);
     } else if (type == 6) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
-                bv::query_support<uint64_t, bv::leaf<16>, 2048, true>>(
+        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true,
+                bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(
             size, steps, seed);
     } else if (type == 7) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
-                bv::query_support<uint64_t, bv::leaf<16>, 512>, 512>(
+                bv::query_support<uint64_t, bv::leaf<16, 16384>, 512>, 512>(
             size, steps, seed);
     } else if (type == 8) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
@@ -577,13 +578,16 @@ int main(int argc, char const* argv[]) {
             size, steps, seed);
     } else if (type == 10) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
+        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384, false, 
+            bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(size, steps, seed);
+    } else if (type == 11) {
+        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
+        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
+                false, bv::query_support<uint64_t, bv::leaf<16, 16384>, 512>, 512>(
             size, steps, seed);
     } else {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
-                false, bv::query_support<uint64_t, bv::leaf<16>, 512>, 512>(
-            size, steps, seed);
+        test<bv::simple_bv<16, 16384, 64, true, true, true>, 1, 16, 64, 16384, false>(size, steps, seed);
     }
 
     return 0;
