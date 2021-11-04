@@ -132,6 +132,7 @@ void run_test(uint64_t* input, uint64_t len, uint64_t s_offset) {
     uint64_t size = input[0];
 
     for (uint64_t i = 0; i < size; i++) {
+        
         bv.insert(0, 0);
         cbv.insert(0, 0);
     }

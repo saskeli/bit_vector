@@ -14,6 +14,8 @@
 #include "branch_selection.hpp"
 #include "uncopyable.hpp"
 
+//#include "deb.hpp"
+
 namespace bv {
 
 /**
@@ -796,12 +798,16 @@ class node : uncopyable {
      */
     template <class allocator>
     void rebalance_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
-        //std::cout << "Rebalancing leaf " << int(index) << ":" << std::endl;
+        //if (!compressed && do_debug) {
+        //        std::cout << "Rebalancing leaf " << int(index) << ":" << std::endl;
+        //}
         if constexpr (compressed) {
             // Leaf contains a sufficiently large partition of the universe that
             // it can just be split into 2.
             if (leaf->size() > leaf_size) {
-                //std::cout << " split" << std::endl;
+                //if (compressed && do_debug) {
+                //    std::cout << " split" << std::endl;
+                //}
                 split_leaf(index, leaf, alloc);
                 return;
             }
@@ -860,46 +866,49 @@ class node : uncopyable {
             } else {
                 // If the full leaf is not the first child, a new leaf is
                 // created to the left of the full leaf.
-                // std::cout << " split 2->3" << std::endl;
+                //if (compressed && do_debug) {
+                //    std::cout << " split 2->3" << std::endl;
+                //}
                 a_child = reinterpret_cast<leaf_type*>(children_[index - 1]);
                 b_child = reinterpret_cast<leaf_type*>(children_[index]);
-                //a_child->print(false);
-                //std::cout << std::endl;
-                //a_child->validate();
-                //b_child->print(false);
-                //std::cout << std::endl;
-                //b_child->validate();
+                //if (compressed && do_debug) {
+                //    a_child->print(false);
+                //    std::cout << std::endl;
+                //    b_child->print(false);
+                //    std::cout << std::endl;
+                //}
                 dtype n_elem = ((leaf_size - l_cap) + b_child->size()) / 3;
                 n_cap = 2 + (2 * leaf_size) / (3 * WORD_BITS);
                 n_cap += n_cap % 2;
                 new_child = alloc->template allocate_leaf<leaf_type>(n_cap);
-                //new_child->print(false);
-                //std::cout << "Yoinking " << (b_child->size() - n_elem) << " elems from the right" << std::endl;
-                //dtype temp = b_child->rank(b_child->size() - n_elem);
-                //std::cout << temp << " = ";
-                //temp = b_child->p_sum() - temp;
+                //if (compressed && do_debug) {
+                //    std::cout << "Yoinking " << (b_child->size() - n_elem) << " elems from the right" << std::endl;
+                //}
                 new_child->transfer_append(b_child, b_child->size() - n_elem);
-                //std::cout << new_child->p_sum() << std::endl;
-                //std::cout << temp << " = " << b_child->p_sum() << std::endl;;
                 if constexpr (compressed) {
                     n_elem = a_child->size() - n_elem;
                     n_elem = n_elem + new_child->size() > (2 * leaf_size) / 3 ? leaf_size / 3 : n_elem;
-                    //std::cout << "Yoinking " << n_elem << " elems from the left" << std::endl;
+                    //if (do_debug) {
+                    //    std::cout << "Yoinking " << n_elem << " elems from the left" << std::endl;
+                    //}
                     new_child->transfer_prepend(a_child, n_elem);
                 } else {
+                    //if (do_debug) {
+                    //    std::cout << "Yoinking " << n_elem << " elems from the left" << std::endl;
+                    //}
                     new_child->transfer_prepend(a_child, a_child->size() - n_elem);
                 }
-                //std::cout << new_child->p_sum() << std::endl;
-                //new_child->print(false);
-                //a_child->print(false);
-                //std::cout << std::endl;
-                //a_child->validate();
-                //new_child->print(false);
-                //std::cout << std::endl;
-                //new_child->validate();
-                //b_child->print(false);
-                //std::cout << std::endl;
-                //b_child->validate();
+                //if (compressed && do_debug) {
+                //    a_child->print(false);
+                //    std::cout << std::endl;
+                //    new_child->print(false);
+                //    std::cout << std::endl;
+                //    b_child->print(false);
+                //    std::cout << std::endl;
+                //}
+                a_child->validate();
+                new_child->validate();
+                b_child->validate();
             }
             if constexpr (aggressive_realloc) {
                 uint64_t cap = a_child->capacity();
@@ -928,10 +937,18 @@ class node : uncopyable {
         } else if (r_cap > l_cap) {
             // Right sibling has more space than the left sibling. Move elements
             // to right sibling
+            
             leaf_type* sibling =
                 reinterpret_cast<leaf_type*>(children_[index + 1]);
+            //if (!compressed && do_debug) {
+            //    std::cout << "Scooting right" << std::endl;
+            //    //leaf->print(false);
+            //    //std::cout << std::endl;
+            //    //sibling->print(false);
+            //    //std::cout << std::endl;
+            //}
             uint32_t n_size = sibling->size() + r_cap / 2;
-            if (sibling->capacity() * WORD_BITS < n_size) {
+            if (sibling->capacity() * WORD_BITS <= n_size) {
                 n_size = n_size / WORD_BITS + 1;
                 n_size += n_size % 2;
                 n_size = n_size * WORD_BITS <= leaf_size
@@ -944,13 +961,13 @@ class node : uncopyable {
             sibling->transfer_prepend(leaf, r_cap / 2);
             uint32_t cap = leaf->capacity();
             uint32_t n_cap = leaf->desired_capacity();
-            if (cap != n_cap) {
+            if (cap > n_cap) {
                 leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
                 [[unlikely]] children_[index] = leaf;
             }
             cap = sibling->capacity();
             n_cap = sibling->desired_capacity();
-            if (cap != n_cap) {
+            if (cap > n_cap) {
                 sibling = alloc->reallocate_leaf(sibling, cap, n_cap);
                 [[unlikely]] children_[index + 1] = sibling;
             }
@@ -960,13 +977,27 @@ class node : uncopyable {
             child_sums_.set(
                 index, index != 0 ? child_sums_.get(index - 1) + leaf->p_sum()
                                   : leaf->p_sum());
+            //if (!compressed && do_debug) {
+            //    std::cout << "scooted right" << std::endl;
+            //    //leaf->print(false);
+            //    //std::cout << std::endl;
+            //    //sibling->print(false);
+            //    //std::cout << std::endl;
+            //}
         } else {
             // Left sibling has more space than the right sibling. Move elements
             // to the left sibling.
             leaf_type* sibling =
                 reinterpret_cast<leaf_type*>(children_[index - 1]);
+            //if (!compressed && do_debug) {
+            //    std::cout << "Scooting left" << std::endl;
+            //    //sibling->print(false);
+            //    //std::cout << std::endl;
+            //    //leaf->print(false);
+            //    //std::cout << std::endl;
+            //}
             uint32_t n_size = sibling->size() + l_cap / 2;
-            if (sibling->capacity() * WORD_BITS < n_size) {
+            if (sibling->capacity() * WORD_BITS <= n_size) {
                 n_size = n_size / WORD_BITS + 1;
                 n_size += n_size % 2;
                 n_size = n_size * WORD_BITS <= leaf_size
@@ -979,13 +1010,13 @@ class node : uncopyable {
             sibling->transfer_append(leaf, l_cap / 2);
             uint32_t cap = leaf->capacity();
             uint32_t n_cap = leaf->desired_capacity();
-            if (cap != n_cap) {
+            if (cap > n_cap) {
                 leaf = alloc->reallocate_leaf(leaf, cap, n_cap);
                 [[unlikely]] children_[index] = leaf;
             }
             cap = sibling->capacity();
             n_cap = sibling->desired_capacity();
-            if (cap != n_cap) {
+            if (cap > n_cap) {
                 sibling = alloc->reallocate_leaf(sibling, cap, n_cap);
                 [[unlikely]] children_[index - 1] = sibling;
             }
@@ -996,6 +1027,13 @@ class node : uncopyable {
             child_sums_.set(index - 1, index > 1 ? child_sums_.get(index - 2) +
                                                        sibling->p_sum()
                                                  : sibling->p_sum());
+            //if (!compressed && do_debug) {
+            //    std::cout << "Scooted left" << std::endl;
+            //    //sibling->print(false);
+            //    //std::cout << std::endl;
+            //    //leaf->print(false);
+            //    //std::cout << std::endl;
+            //}
             [[likely]] (void(0));
         }
     }
@@ -1015,7 +1053,15 @@ class node : uncopyable {
     void leaf_insert(dtype index, bool value, allocator* alloc) {
         uint8_t child_index = child_sizes_.find(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
+        //if (!compressed && do_debug){
+        //    std::cout << "leaf insert" << std::endl;
+        //    child->print();
+        //    std::cout << std::endl;
+        //}
         if (child->need_realloc()) {
+            //if (!compressed && do_debug) {
+            //    std::cout << "Need realloc" << std::endl;
+            //}
             dtype cap = child->capacity();
             dtype n_cap = child->desired_capacity();
             if constexpr (compressed) {
@@ -1050,6 +1096,11 @@ class node : uncopyable {
             child = reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] (void(0));
         }
+        //if (!compressed && do_debug) {
+        //    std::cout << "After possible realloc" << std::endl;
+        //    child->print();
+        //    std::cout << std::endl;
+        //}
         if (child_index != 0) {
             [[likely]] index -= child_sizes_.get(child_index - 1);
         }

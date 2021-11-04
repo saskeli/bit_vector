@@ -13,8 +13,8 @@
 #include "node_tests.hpp"
 #include "query_support_test.hpp"
 #include "rle_leaf_test.hpp"
-#include "run_tests.hpp"
 #include "rle_management_test.hpp"
+#include "run_tests.hpp"
 
 #define SIZE 16384
 #define BRANCH 16
@@ -89,7 +89,9 @@ TEST(RleLeaf, InitOnes) { rle_leaf_init_ones_test<rll, ma>(10000); }
 
 TEST(RleLeaf, Insert) { rle_leaf_insert_test<rll, ma>(10000, 100); }
 
-TEST(RleLeaf, InsertMiddle) { rle_leaf_insert_middle_test<rll, ma>(10000, 100); }
+TEST(RleLeaf, InsertMiddle) {
+    rle_leaf_insert_middle_test<rll, ma>(10000, 100);
+}
 
 TEST(RleLeaf, InsertEnd) { rle_leaf_insert_end_test<rll, ma>(10000, 100); }
 
@@ -294,12 +296,12 @@ TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
 
 // Rle hybrid management tests
 
-typedef bv::node<rll, uint64_t, SIZE, 64, true, true> rl_node; 
+typedef bv::node<rll, uint64_t, SIZE, 64, true, true> rl_node;
 typedef bv::simple_bv<16, SIZE, 64, true, true, true> rle_bv;
 
 TEST(RleBv, SplitLeaf) { node_split_rle_test<ma, rl_node, rll>(); }
 
-TEST(RleBv, SplitLeafInRoot) {root_split_rle_test<rle_bv>(); }
+TEST(RleBv, SplitLeafInRoot) { root_split_rle_test<rle_bv>(); }
 
 // Query support structure tests
 TEST(QuerySupport, SingleAccess) { qs_access_single_leaf<qs, sl, ma>(SIZE); }
@@ -473,4 +475,15 @@ TEST(RunRle, C) {
         4,   0,   1,  114, 2,  26,  0,  1,  66,  0,   93, 0,  0,  5,  0,   2,
         83,  0,   2,  106, 0,  1,   15, 0,  89,  0,   0,  13, 0};
     run_test<run_len_bv, bv::bv>(a, 173, 1);
+}
+
+TEST(RunRle, D) {
+    uint64_t a[] = {10000, 0,  1,  1, 0,  2,  0,  0,  3,  1,  0,  4, 0,  0,
+                    5,      1,  0,  6, 0,  0,  7,  1,  0,  8,  0,  0, 9,  1,
+                    0,      10, 0,  0, 11, 1,  0,  12, 0,  0,  13, 1, 0,  14,
+                    0,      0,  15, 1, 0,  0,  1,  0,  2,  0,  0,  4, 1,  0,
+                    6,      0,  0,  8, 1,  0,  10, 0,  0,  12, 1,  0, 14, 0,
+                    0,      16, 1,  0, 18, 0,  0,  20, 1,  0,  22, 0, 0,  24,
+                    1,      0,  26, 0, 0,  28, 1,  0,  30, 0};
+    run_test<run_len_bv, bv::bv>(a, 94, 1);
 }

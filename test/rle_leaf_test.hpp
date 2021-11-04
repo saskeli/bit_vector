@@ -298,7 +298,7 @@ void rle_leaf_transfer_capacity_test() {
     rl_l* lb = a->template allocate_leaf<rl_l>(32);
     EXPECT_EQ(l->size(), 8388608u);
     EXPECT_EQ(l->p_sum(), 0u);
-    lb->transfer_capacity(l, 2);
+    lb->transfer_capacity(l);
     EXPECT_EQ(l->size(), 8388608u / 2);
     EXPECT_EQ(l->p_sum(), 0u);
     EXPECT_EQ(lb->size(), 8388608u / 2);
@@ -310,7 +310,7 @@ void rle_leaf_transfer_capacity_test() {
     lb = a->template allocate_leaf<rl_l>(32);
     EXPECT_EQ(l->size(), 8388608u);
     EXPECT_EQ(l->p_sum(), 0u);
-    lb->transfer_capacity(l, 4);
+    lb->transfer_capacity(l);
     EXPECT_EQ(l->size(), 8388608u / 2);
     EXPECT_EQ(l->p_sum(), 0u);
     EXPECT_EQ(lb->size(), 8388608u / 2);
@@ -325,7 +325,7 @@ void rle_leaf_transfer_capacity_test() {
     }
     EXPECT_EQ(l->size(), 8388608u + 20u);
     EXPECT_EQ(l->p_sum(), 20u);
-    lb->transfer_capacity(l, 4);
+    lb->transfer_capacity(l);
     EXPECT_EQ(l->size(), 8388608u / 2);
     EXPECT_EQ(l->p_sum(), 0u);
     EXPECT_EQ(lb->size(), 20u + 8388608u / 2);
