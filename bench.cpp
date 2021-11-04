@@ -99,7 +99,8 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
         for (size_t i = 0; i < loc.size(); i++) {
             bv.set(loc[i], val[i]);
         }
-        double t_set = (double)duration_cast<microseconds>(t2 - t1).count() / ops;
+        double t_set =
+            (double)duration_cast<microseconds>(t2 - t1).count() / ops;
 
         t1 = high_resolution_clock::now();
         sdsl::bit_vector::rank_1_type sdsl_rank(&sdsl_bv);
@@ -320,10 +321,11 @@ void test(uint64_t size, uint64_t steps, uint64_t seed) {
     }
 }
 
-template <class bit_vector, uint64_t select_offset, uint8_t buffer,
-          uint8_t branch, uint32_t leaf_size, bool flush = false,
-          class qs = bv::query_support<uint64_t, bv::leaf<buffer, leaf_size>, 2048>,
-          uint32_t block = 2048>
+template <
+    class bit_vector, uint64_t select_offset, uint8_t buffer, uint8_t branch,
+    uint32_t leaf_size, bool flush = false,
+    class qs = bv::query_support<uint64_t, bv::leaf<buffer, leaf_size>, 2048>,
+    uint32_t block = 2048>
 void test_qs(uint64_t size, uint64_t steps, uint64_t seed) {
     bit_vector bv;
 
@@ -489,21 +491,12 @@ void help() {
     std::cout << "Usage: bench <type> <seed> <size> <steps>\n";
     std::cout << "   <type>   0 for dynamic\n"
               << "            1 for new implementation\n"
-              << "            2 for new implementation with flushing\n"
+              << "            2 for new implementation buffer 8\n"
               << "            3 for new implementation with no buffer\n"
               << "            4 for sdsl bit_vector\n"
               << "            5 for rank support structure\n"
-              << "            6 for flushed rank support structure\n"
-              << "            7 for rank support structure with small blocks\n"
-              << "            8 for new buffered implementation with "
-                 "aggressive reallocation\n"
-              << "            9 for new unbuffered implementation with "
-                 "aggressive reallocation\n"
-              << "            10 for new buffered implementation with "
-                 "aggressive reallocation and query support\n"
-              << "            11 for new buffered implementation with "
-                 "aggressive reallocation small block query support\n"
-              << "            12 for tree with hybrid rlz leaves\n";
+              << "            6 for rank support structure with small blocks\n"
+              << "            7 for tree with hybrid rlz leaves\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector\n";
     std::cout << "   <steps>  How many data points to generate in the "
@@ -543,51 +536,34 @@ int main(int argc, char const* argv[]) {
         test<dyn::suc_bv, 0, 0, 8, 8192>(size, steps, seed);
     } else if (type == 1) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384>(size, steps, seed);
+        test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
+            size, steps, seed);
     } else if (type == 2) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true>(size, steps,
-                                                                   seed);
+        test<bv::simple_bv<8, 16384, 64, true, true>, 1, 8, 64, 16384>(
+            size, steps, seed);
     } else if (type == 3) {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
-        test<bv::simple_bv<0, 16384, 64, true, true, false>, 1, 0, 64, 16384>(size, steps, seed);
+        test<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
+            size, steps, seed);
     } else if (type == 4) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
     } else if (type == 5) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false, 
-            bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(size, steps, seed);
-    } else if (type == 6) {
-        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, true,
+        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
+                false,
                 bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(
             size, steps, seed);
-    } else if (type == 7) {
-        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64>, 1, 16, 64, 16384, false,
-                bv::query_support<uint64_t, bv::leaf<16, 16384>, 512>, 512>(
-            size, steps, seed);
-    } else if (type == 8) {
-        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
-            size, steps, seed);
-    } else if (type == 9) {
-        std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
-        test<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
-            size, steps, seed);
-    } else if (type == 10) {
-        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384, false, 
-            bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(size, steps, seed);
-    } else if (type == 11) {
+    } else if (type == 6) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
         test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
-                false, bv::query_support<uint64_t, bv::leaf<16, 16384>, 512>, 512>(
-            size, steps, seed);
+                false, bv::query_support<uint64_t, bv::leaf<16, 16384>, 512>,
+                512>(size, steps, seed);
     } else {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64, true, true, true>, 1, 16, 64, 16384, false>(size, steps, seed);
+        test<bv::simple_bv<16, 16384, 64, true, true, true>, 1, 16, 64, 16384,
+             false>(size, steps, seed);
     }
 
     return 0;
