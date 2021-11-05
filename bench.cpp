@@ -12,7 +12,7 @@
 #include "sdsl/bit_vectors.hpp"
 
 void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
-    bv::simple_bv<16, 16384, 64> bv;
+    bv::simple_bv<0, 16384, 64> bv;
 
     std::mt19937 mt(seed);
     std::uniform_int_distribution<unsigned long long> gen(
@@ -550,15 +550,15 @@ int main(int argc, char const* argv[]) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
     } else if (type == 5) {
-        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
+        std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
+        test_qs<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384,
                 false,
-                bv::query_support<uint64_t, bv::leaf<16, 16384>, 2048, true>>(
+                bv::query_support<uint64_t, bv::leaf<0, 16384>, 2048, true>>(
             size, steps, seed);
     } else if (type == 6) {
-        std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test_qs<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384,
-                false, bv::query_support<uint64_t, bv::leaf<16, 16384>, 512>,
+        std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
+        test_qs<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384,
+                false, bv::query_support<uint64_t, bv::leaf<0, 16384>, 512>,
                 512>(size, steps, seed);
     } else {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
