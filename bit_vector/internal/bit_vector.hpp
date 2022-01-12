@@ -396,6 +396,13 @@ class bit_vector : uncopyable {
     dtype rank(dtype index) const {
         return !root_is_leaf_ ? n_root_->rank(index) : l_root_->rank(index);
     }
+    uint64_t rank0(uint64_t index) const {
+        if (index == 0) {
+            [[unlikely]] return 0;
+        }
+        uint64_t ret = index - rank(index);
+        return ret;
+    }
 
     /**
      * @brief Index of the count<sup>th</sup> 1-bit in the data structure
@@ -413,6 +420,23 @@ class bit_vector : uncopyable {
      */
     dtype select(dtype count) const {
         return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
+    }
+
+    uint64_t select0(uint64_t count) const {
+        uint64_t a = 0;
+        uint64_t b = size();
+        while (a < b) {
+            uint64_t m = (a + b) / 2;
+            uint64_t r_m = rank0(m);
+            if (r_m < count) {
+                a = m + 1;
+            } else if (r_m > count) {
+                b = m - 1;
+            } else {
+                b = m;
+            }
+        }
+        return a - 1;
     }
 
     /**

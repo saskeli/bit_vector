@@ -419,4 +419,52 @@ void bv_select_node_test(uint64_t size) {
     delete (a);
 }
 
+template <class bit_vector, class control>
+void bv_select_0_test(uint64_t size) {
+    bit_vector* bv = new bit_vector();
+    control* cbv = new control();
+    for (uint64_t i = 0; i < size; i++) {
+        bv->insert(0, 0);
+        cbv->insert(0, 0);
+    }
+    ASSERT_EQ(cbv->size(), size);
+    ASSERT_EQ(cbv->rank(size), 0u);
+    ASSERT_EQ(bv->size(), size);
+    ASSERT_EQ(bv->sum(), 0u);
+    uint64_t limit = bv->rank0(size);
+    ASSERT_EQ(limit, cbv->rank0(size));
+    for (uint64_t i = 1; i <= limit; i++) {
+        ASSERT_EQ(bv->select0(i), cbv->select0(i - 1)) << "i = " << i;
+    }
+
+    for (uint64_t i = 0; i < size; i += 2) {
+        bv->set(i, 1);
+        cbv->set(i, 1);
+    }
+    ASSERT_EQ(cbv->size(), size);
+    ASSERT_EQ(cbv->rank(size), size / 2);
+    ASSERT_EQ(bv->size(), size);
+    ASSERT_EQ(bv->sum(), size / 2);
+    limit = bv->rank0(size);
+    ASSERT_EQ(limit, cbv->rank0(size));
+    for (uint64_t i = 1; i <= limit; i++) {
+        ASSERT_EQ(bv->select0(i), cbv->select0(i - 1)) << "i = " << i;
+    }
+
+    for (uint64_t i = 1; i < size; i += 2) {
+        bv->set(i, 1);
+        cbv->set(i, 1);
+    }
+    ASSERT_EQ(cbv->size(), size);
+    ASSERT_EQ(cbv->rank(size), size);
+    ASSERT_EQ(bv->size(), size);
+    ASSERT_EQ(bv->sum(), size);
+    limit = bv->rank0(size);
+    ASSERT_EQ(limit, cbv->rank0(size));
+    ASSERT_EQ(limit, 0u);
+
+    delete(bv);
+    delete(cbv);
+}
+
 #endif

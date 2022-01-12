@@ -35,6 +35,7 @@ void check(bva* a, bvb* b, uint64_t size, uint64_t s_offset = 0) {
         ASSERT_EQ(a->at(i), b->at(i))
             << "Failed at " << i << " with size " << size;
         ASSERT_EQ(a->rank(i), b->rank(i));
+        ASSERT_EQ(a->rank0(i), b->rank0(i));
 #else
         if (a->at(i) != b->at(i)) {
             std::cerr << "a->at(" << i << ") = " << a->at(i) << ", b->at(" << i
@@ -42,6 +43,7 @@ void check(bva* a, bvb* b, uint64_t size, uint64_t s_offset = 0) {
             assert(a->at(i) == b->at(i));
         }
         assert(a->rank(i) == b->rank(i));
+        assert(a->rank0(i) == b->rank0(i));
 #endif
     }
 
@@ -57,6 +59,26 @@ void check(bva* a, bvb* b, uint64_t size, uint64_t s_offset = 0) {
 #else
         uint64_t ex = b->select(i + s_offset);
         uint64_t ac = a->select(i + 1);
+        if (ex != ac) {
+            std::cerr << "select(" << i + 1 << ") should be " << ex
+                      << ", was " << ac << std::endl;
+        }
+        assert(ac == ex);
+#endif
+    }
+
+    uint64_t zeros = a->rank0(size);
+#ifdef GTEST_ON
+    ASSERT_EQ(b->rank0(size), zeros);
+#else
+    assert(b->rank0(size) == zeros);
+#endif
+    for (uint64_t i = 0; i < zeros; i++) {
+#ifdef GTEST_ON
+        ASSERT_EQ(a->select0(i + 1), b->select0(i + s_offset)) << "i = " << i;
+#else
+        uint64_t ex = b->select0(i + s_offset);
+        uint64_t ac = a->select0(i + 1);
         if (ex != ac) {
             std::cerr << "select(" << i + 1 << ") should be " << ex
                       << ", was " << ac << std::endl;

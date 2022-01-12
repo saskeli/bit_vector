@@ -294,6 +294,10 @@ TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE); }
 
 TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
 
+TEST(SimpleBV, Select0) {
+    bv_select_0_test<test_bv, dyn::suc_bv>(10000);
+}
+
 // Rle hybrid management tests
 
 typedef bv::node<rll, uint64_t, SIZE, 64, true, true> rl_node;
