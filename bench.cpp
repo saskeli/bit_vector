@@ -12,7 +12,7 @@
 #include "sdsl/bit_vectors.hpp"
 
 void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
-    bv::simple_bv<0, 16384, 64> bv;
+    bv::simple_bv<16, 16384, 64, true, true> bv;
 
     std::mt19937 mt(seed);
     std::uniform_int_distribution<unsigned long long> gen(
@@ -48,7 +48,7 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
         uint64_t start = bv.size();
         uint64_t target = uint64_t(pow(2.0, startexp + delta * step));
 
-        std::cout << "0\t0\t0\t" << seed << "\t" << target << "\t";
+        std::cout << "16\t64\t16384\t" << seed << "\t" << target << "\t";
 
         for (size_t i = start; i < target; i++) {
             uint64_t aloc = gen(mt) % (i + 1);
@@ -61,10 +61,13 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
             loc.push_back(gen(mt) % i);
         }
 
+        auto t1 = high_resolution_clock::now();
         for (size_t i = 0; i < ops; i++) {
             bv.remove(loc[i]);
         }
-        std::cout << "0\t";
+        auto t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
 
         loc.clear();
         val.clear();
@@ -73,15 +76,18 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
             val.push_back(gen(mt) % 2);
         }
 
+        t1 = high_resolution_clock::now();
         for (size_t i = 0; i < loc.size(); i++) {
             bv.insert(loc[i], val[i]);
         }
-        std::cout << "0\t";
+        t2 = high_resolution_clock::now();
+        std::cout << (double)duration_cast<microseconds>(t2 - t1).count() / ops
+                  << "\t";
 
-        auto t1 = high_resolution_clock::now();
+        t1 = high_resolution_clock::now();
         sdsl::bit_vector sdsl_bv(bv.size());
         bv.dump(sdsl_bv.data());
-        auto t2 = high_resolution_clock::now();
+        t2 = high_resolution_clock::now();
         double f_time = (double)duration_cast<microseconds>(t2 - t1).count();
 
         loc.clear();
@@ -154,7 +160,8 @@ void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
 
         std::cout << 8 * (sdsl::size_in_bytes(sdsl_bv) +
                           sdsl::size_in_bytes(sdsl_rank) +
-                          sdsl::size_in_bytes(sdsl_select))
+                          sdsl::size_in_bytes(sdsl_select)) + 
+                     bv.bit_size()
                   << "\t";
         getrusage(RUSAGE_SELF, &ru);
         std::cout << ru.ru_maxrss * 8 * 1024 << "\t";
