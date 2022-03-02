@@ -11,7 +11,7 @@
 
 bool get_val(uint64_t i, uint64_t lim, uint64_t val) {
     double x = ((20.0 * i) / lim) - 10.0;
-    return val < atan(x) / M_PI_2;
+    return val < 0.5 + atan(x) / M_PI;
 }
 
 template <class bit_vector>
