@@ -559,6 +559,12 @@ class leaf : uncopyable {
                 return c_select(x);
             }
         }
+        if constexpr (buffer_size == 0) {
+            return unb_select(x);
+        }
+        if (buffer_count_ == 0) {
+            return unb_select(x);
+        }
         uint32_t pop = 0;
         uint32_t pos = 0;
         uint8_t current_buffer = 0;
@@ -569,48 +575,44 @@ class leaf : uncopyable {
         for (uint32_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += WORD_BITS;
-            if constexpr (buffer_size != 0) {
-                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                    b_index = buffer_index(buffer_[b]);
-                    if (b_index < int32_t(pos)) {
-                        if (buffer_is_insertion(buffer_[b])) {
-                            pop += buffer_value(buffer_[b]);
-                            pos++;
-                            a_pos_offset--;
-                        } else {
-                            pop -=
-                                (data_[(b_index + a_pos_offset) / WORD_BITS] >>
-                                 ((b_index + a_pos_offset) % WORD_BITS)) &
-                                MASK;
-                            pos--;
-                            a_pos_offset++;
-                        }
-                        [[unlikely]] current_buffer++;
+            for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                b_index = buffer_index(buffer_[b]);
+                if (b_index < int32_t(pos)) {
+                    if (buffer_is_insertion(buffer_[b])) {
+                        pop += buffer_value(buffer_[b]);
+                        pos++;
+                        a_pos_offset--;
                     } else {
-                        [[likely]] break;
+                        pop -=
+                            (data_[(b_index + a_pos_offset) / WORD_BITS] >>
+                                ((b_index + a_pos_offset) % WORD_BITS)) &
+                            MASK;
+                        pos--;
+                        a_pos_offset++;
                     }
-                    [[unlikely]] (void(0));
+                    [[unlikely]] current_buffer++;
+                } else {
+                    [[likely]] break;
                 }
+                [[unlikely]] (void(0));
             }
             if (pop >= x) {
                 [[unlikely]] break;
             }
         }
 
-        if constexpr (buffer_size != 0) {
-            current_buffer -= 1;
+        current_buffer -= 1;
+        b_index = current_buffer < buffer_count_
+                        ? buffer_index(buffer_[current_buffer])
+                        : -100;
+        if ((b_index - 1 >= int32_t(pos) &&
+                !buffer_is_insertion(buffer_[current_buffer])) ||
+            (b_index >= int32_t(pos) &&
+                buffer_is_insertion(buffer_[current_buffer]))) {
+            current_buffer--;
             b_index = current_buffer < buffer_count_
-                          ? buffer_index(buffer_[current_buffer])
-                          : -100;
-            if ((b_index - 1 >= int32_t(pos) &&
-                 !buffer_is_insertion(buffer_[current_buffer])) ||
-                (b_index >= int32_t(pos) &&
-                 buffer_is_insertion(buffer_[current_buffer]))) {
-                current_buffer--;
-                b_index = current_buffer < buffer_count_
-                              ? buffer_index(buffer_[current_buffer])
-                              : -100;
-            }
+                            ? buffer_index(buffer_[current_buffer])
+                            : -100;
         }
 
         // Make sure we have not overshot the logical end of the structure.
@@ -620,27 +622,25 @@ class leaf : uncopyable {
         // under x.
         pos--;
         while (pop >= x && pos < capacity_ * WORD_BITS) {
-            if constexpr (buffer_size != 0) {
-                while (b_index - 1 == int32_t(pos) &&
-                       !buffer_is_insertion(buffer_[current_buffer])) {
-                    a_pos_offset--;
-                    current_buffer--;
-                    b_index = current_buffer < buffer_count_
-                                  ? buffer_index(buffer_[current_buffer])
-                                  : -100;
-                    [[unlikely]] (void(0));
-                }
-                if (b_index == int32_t(pos) &&
-                    buffer_is_insertion(buffer_[current_buffer])) {
-                    pop -= buffer_value(buffer_[current_buffer]);
-                    a_pos_offset++;
-                    pos--;
-                    current_buffer--;
-                    b_index = current_buffer < buffer_count_
-                                  ? buffer_index(buffer_[current_buffer])
-                                  : -100;
-                    [[unlikely]] continue;
-                }
+            while (b_index - 1 == int32_t(pos) &&
+                    !buffer_is_insertion(buffer_[current_buffer])) {
+                a_pos_offset--;
+                current_buffer--;
+                b_index = current_buffer < buffer_count_
+                                ? buffer_index(buffer_[current_buffer])
+                                : -100;
+                [[unlikely]] (void(0));
+            }
+            if (b_index == int32_t(pos) &&
+                buffer_is_insertion(buffer_[current_buffer])) {
+                pop -= buffer_value(buffer_[current_buffer]);
+                a_pos_offset++;
+                pos--;
+                current_buffer--;
+                b_index = current_buffer < buffer_count_
+                                ? buffer_index(buffer_[current_buffer])
+                                : -100;
+                [[unlikely]] continue;
             }
             pop -= (data_[(pos + a_pos_offset) / WORD_BITS] >>
                     ((pos + a_pos_offset) % WORD_BITS)) &
@@ -1818,6 +1818,27 @@ class leaf : uncopyable {
 
         size_++;
         p_sum_ += uint64_t(x);
+    }
+
+    uint32_t unb_select(uint32_t x) const {
+        uint32_t pop = 0;
+        uint32_t pos = 0;
+        uint32_t prev_pop = 0;
+        uint32_t j = 0;
+
+        // Step one 64-bit word at a time considering the buffer until pop >= x
+        for (; j < capacity_; j++) {
+            prev_pop = pop;
+            pop += __builtin_popcountll(data_[j]);
+            pos += WORD_BITS;
+            if (pop >= x) {
+                [[unlikely]] break;
+            }
+        }
+        pos -= WORD_BITS;
+        uint64_t add_loc = x - prev_pop;
+        add_loc = uint64_t(1) << add_loc;
+        return pos + 64 - __builtin_clzll(_pdep_u64(add_loc, data_[j]));
     }
 
     /**
