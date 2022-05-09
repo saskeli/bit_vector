@@ -396,12 +396,15 @@ class bit_vector : uncopyable {
     dtype rank(dtype index) const {
         return !root_is_leaf_ ? n_root_->rank(index) : l_root_->rank(index);
     }
-    uint64_t rank0(uint64_t index) const {
+    dtype rank0(dtype index) const {
         if (index == 0) {
             [[unlikely]] return 0;
         }
-        uint64_t ret = index - rank(index);
+        dtype ret = index - rank(index);
         return ret;
+    }
+    dtype rank(bool v, dtype index) const {
+        return v ? rank(index) : rank0(index);
     }
 
     /**
@@ -422,12 +425,12 @@ class bit_vector : uncopyable {
         return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
     }
 
-    uint64_t select0(uint64_t count) const {
-        uint64_t a = 0;
-        uint64_t b = size();
+    dtype select0(dtype count) const {
+        dtype a = 0;
+        dtype b = size();
         while (a < b) {
-            uint64_t m = (a + b) / 2;
-            uint64_t r_m = rank0(m);
+            dtype m = (a + b) / 2;
+            dtype r_m = rank0(m);
             if (r_m < count) {
                 a = m + 1;
             } else if (r_m > count) {
@@ -438,6 +441,10 @@ class bit_vector : uncopyable {
         }
         return a - 1;
     }
+    dtype select(bool v, dtype count) const {
+        return v ? select(count) : select0(count);
+    }
+
 
     /**
      * @brief Sets the bit at "index" to "value".

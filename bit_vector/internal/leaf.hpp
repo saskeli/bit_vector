@@ -1836,9 +1836,9 @@ class leaf : uncopyable {
             }
         }
         pos -= WORD_BITS;
-        uint64_t add_loc = x - prev_pop;
+        uint64_t add_loc = x - prev_pop - 1;
         add_loc = uint64_t(1) << add_loc;
-        return pos + 64 - __builtin_clzll(_pdep_u64(add_loc, data_[j]));
+        return pos + 63 - __builtin_clzll(_pdep_u64(add_loc, data_[j]));
     }
 
     /**
