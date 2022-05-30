@@ -15,6 +15,7 @@
 #include "rle_leaf_test.hpp"
 #include "rle_management_test.hpp"
 #include "run_tests.hpp"
+#include "packed_array_test.hpp"
 
 #define SIZE 16384
 #define BRANCH 16
@@ -326,6 +327,27 @@ TEST(QuerySupport, DoubleSelect2) {
 
 TEST(QuerySupport, SparseSelect) {
     qs_sparse_bv_select_test<bv::bv>(100000, 34);
+}
+
+// Packed array tests
+TEST(PackedArray, Init) {
+    packed_array_init_test<32, 7>();
+}
+
+TEST(PackedArray, SingleSet) {
+    packed_array_single_set_test<32, 5>();
+}
+
+TEST(PackedArray, SetClean) {
+    packed_array_set_test<16, 8>();
+}
+
+TEST(PackedArray, Set) {
+    packed_array_set_test<32, 7>();
+}
+
+TEST(PackedArray, OperatorSet) {
+    packed_array_operator_set_test<128, 11>();
 }
 
 // Run tests

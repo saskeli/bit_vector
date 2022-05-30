@@ -26,11 +26,12 @@ namespace bv {
  *
  * ### Practical limitations
  *
- * The maximum leaf size for a buffered leaf without risking undefined behaviour
- * is \f$2^{24} - 1\f$ due to buffer elements storing reference indexes in
- * 24-bits of 32-bit integers. The practical upper limit of leaf size due to
- * performance concerns is no more than \f$2^{20}\f$ and optimal leaf size is
- * likely to be closer to the \f$2^{12}\f$ to \f$2^{15}\f$ range.
+ * The maximum leaf size for a buffered leaf would be \f$2^{24} - 1\f$ due to
+ * buffer elements storing reference indexes in 24-bits of 32-bit integers. The
+ * practical upper limit of leaf size due to performance concerns is no more
+ * than \f$2^{20}\f$ and optimal leaf size is likely to be closer to the
+ * \f$2^{12}\f$ to \f$2^{15}\f$ range. As such, an arbitrary limit has been set
+ * at \f$2^{22} - 1\f$ to enable some indexing with 16 bit words.
  *
  * Maximum leaf size can't in effect be non-divisible by 64, since 64-bit
  * integers are used for storage and a leaf "will use" all available words fully
@@ -90,6 +91,10 @@ class leaf : uncopyable {
 
     // Hybrid compressed leaves should be buffered.
     static_assert(!compressed || buffer_size > 0);
+
+    // Larger leaf size would lead to undecided behaviour. due to buffer
+    // overflow.
+    static_assert(leaf_size < (uint32_t(1) << 22));
 
    public:
     /**
@@ -583,10 +588,9 @@ class leaf : uncopyable {
                         pos++;
                         a_pos_offset--;
                     } else {
-                        pop -=
-                            (data_[(b_index + a_pos_offset) / WORD_BITS] >>
+                        pop -= (data_[(b_index + a_pos_offset) / WORD_BITS] >>
                                 ((b_index + a_pos_offset) % WORD_BITS)) &
-                            MASK;
+                               MASK;
                         pos--;
                         a_pos_offset++;
                     }
@@ -603,16 +607,16 @@ class leaf : uncopyable {
 
         current_buffer -= 1;
         b_index = current_buffer < buffer_count_
-                        ? buffer_index(buffer_[current_buffer])
-                        : -100;
+                      ? buffer_index(buffer_[current_buffer])
+                      : -100;
         if ((b_index - 1 >= int32_t(pos) &&
-                !buffer_is_insertion(buffer_[current_buffer])) ||
+             !buffer_is_insertion(buffer_[current_buffer])) ||
             (b_index >= int32_t(pos) &&
-                buffer_is_insertion(buffer_[current_buffer]))) {
+             buffer_is_insertion(buffer_[current_buffer]))) {
             current_buffer--;
             b_index = current_buffer < buffer_count_
-                            ? buffer_index(buffer_[current_buffer])
-                            : -100;
+                          ? buffer_index(buffer_[current_buffer])
+                          : -100;
         }
 
         // Make sure we have not overshot the logical end of the structure.
@@ -623,12 +627,12 @@ class leaf : uncopyable {
         pos--;
         while (pop >= x && pos < capacity_ * WORD_BITS) {
             while (b_index - 1 == int32_t(pos) &&
-                    !buffer_is_insertion(buffer_[current_buffer])) {
+                   !buffer_is_insertion(buffer_[current_buffer])) {
                 a_pos_offset--;
                 current_buffer--;
                 b_index = current_buffer < buffer_count_
-                                ? buffer_index(buffer_[current_buffer])
-                                : -100;
+                              ? buffer_index(buffer_[current_buffer])
+                              : -100;
                 [[unlikely]] (void(0));
             }
             if (b_index == int32_t(pos) &&
@@ -638,8 +642,8 @@ class leaf : uncopyable {
                 pos--;
                 current_buffer--;
                 b_index = current_buffer < buffer_count_
-                                ? buffer_index(buffer_[current_buffer])
-                                : -100;
+                              ? buffer_index(buffer_[current_buffer])
+                              : -100;
                 [[unlikely]] continue;
             }
             pop -= (data_[(pos + a_pos_offset) / WORD_BITS] >>
@@ -794,49 +798,54 @@ class leaf : uncopyable {
      * be completed without undefined behaviour.
      */
     bool need_realloc() {
-        //if (compressed && do_debug) {
-        //    std::cerr << "need_realloc called" << std::endl;
-        //}
+        // if (compressed && do_debug) {
+        //     std::cerr << "need_realloc called" << std::endl;
+        // }
         if constexpr (compressed) {
             if (is_compressed()) {
                 if (size_ >= (~uint32_t(0)) >> 1) {
-                    //if (compressed && do_debug) {
-                    //    std::cerr << " Size limit reached" << std::endl;
-                    //}
+                    // if (compressed && do_debug) {
+                    //     std::cerr << " Size limit reached" << std::endl;
+                    // }
                     [[unlikely]] return true;
                 }
                 if (buffer_count_ < buffer_size - 1) {
-                    //if (compressed && do_debug) {
-                    //    std::cerr << " Buffer has room" << std::endl;
-                    //}
+                    // if (compressed && do_debug) {
+                    //     std::cerr << " Buffer has room" << std::endl;
+                    // }
                     [[likely]] return false;
                 }
                 if (type_info_ & C_RUN_REMOVAL_MASK) {
-                    //if (compressed && do_debug) {
-                    //    std::cerr << " Attempting to clean up runs" << std::endl;
-                    //}
+                    // if (compressed && do_debug) {
+                    //     std::cerr << " Attempting to clean up runs" <<
+                    //     std::endl;
+                    // }
                     c_commit<false>();
                 }
-                //if (compressed && do_debug) {
-                //    std::cerr << " capacity_ * 8 = " << (capacity_ * 8)
-                //          << " vs. run_index + buffer_size * (1 + (type_info_ >> 5) = "
-                //          << run_index_[0] << " + " << buffer_size << " * (1 + "
-                //          << (type_info_ >> 5) << ") = "
-                //          << run_index_[0] + int(buffer_size) * (1u + (type_info_ >> 5))
-                //          << std::endl;
-                //}
+                // if (compressed && do_debug) {
+                //     std::cerr << " capacity_ * 8 = " << (capacity_ * 8)
+                //           << " vs. run_index + buffer_size * (1 + (type_info_
+                //           >> 5) = "
+                //           << run_index_[0] << " + " << buffer_size << " * (1
+                //           + "
+                //           << (type_info_ >> 5) << ") = "
+                //           << run_index_[0] + int(buffer_size) * (1u +
+                //           (type_info_ >> 5))
+                //           << std::endl;
+                // }
                 bool ret =
                     (capacity_ * 8 <
                      run_index_[0] + buffer_size * (1u + (type_info_ >> 5)));
-                //if (compressed && do_debug) {
-                //    std::cerr << " returning " << ret << std::endl;
-                //}
+                // if (compressed && do_debug) {
+                //     std::cerr << " returning " << ret << std::endl;
+                // }
                 return ret;
             }
         }
-        //if (compressed && do_debug) {
-        //    std::cerr << size_ << " >= " << capacity_ << " * " << WORD_BITS << " = " << (capacity_ * WORD_BITS) << std::endl;
-        //}
+        // if (compressed && do_debug) {
+        //     std::cerr << size_ << " >= " << capacity_ << " * " << WORD_BITS
+        //     << " = " << (capacity_ * WORD_BITS) << std::endl;
+        // }
         return size_ >= capacity_ * WORD_BITS;
     }
 
@@ -1138,11 +1147,11 @@ class leaf : uncopyable {
      * @param elems Number of elements to transfer.
      */
     void transfer_append(leaf* other, uint32_t elems) {
-        //if (compressed && do_debug) {
-        //    std::cout << "Transfer append" << std::endl;
-        //    print(false);
-        //    std::cout << std::endl;
-        //}
+        // if (compressed && do_debug) {
+        //     std::cout << "Transfer append" << std::endl;
+        //     print(false);
+        //     std::cout << std::endl;
+        // }
         if constexpr (compressed) {
             if (is_compressed()) {
                 flatten();
@@ -1162,11 +1171,10 @@ class leaf : uncopyable {
         } else {
             other->commit();
         }
-        //if (compressed && do_debug) {
-        //    std::cout << "Other is not compressed and I am flat" << std::endl;
-        //    print(false);
-        //    std::cout << std::endl;
-        //}
+        // if (compressed && do_debug) {
+        //     std::cout << "Other is not compressed and I am flat" <<
+        //     std::endl; print(false); std::cout << std::endl;
+        // }
         const uint64_t* o_data = other->data();
         uint32_t split_point = size_ % WORD_BITS;
         uint32_t target_word = size_ / WORD_BITS;
@@ -1850,7 +1858,7 @@ class leaf : uncopyable {
      * Slightly complicated but linear time function for committing all buffered
      * operations to the underlying data.
      */
-    template<bool allow_convert = true>
+    template <bool allow_convert = true>
     void commit() {
         if constexpr (compressed) {
             if (is_compressed()) {
@@ -2012,9 +2020,9 @@ class leaf : uncopyable {
     }
 
     void c_insert(uint32_t i, bool v) {
-        //if (compressed && do_debug) {
-        //    std::cout << "c_insert(" << i << ", " << v << ")" << std::endl;
-        //}
+        // if (compressed && do_debug) {
+        //     std::cout << "c_insert(" << i << ", " << v << ")" << std::endl;
+        // }
         uint8_t i_idx = 0;
         for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
             uint32_t e_index = buffer_[b_idx] & C_INDEX;
