@@ -5,18 +5,19 @@
 
 namespace bv {
 
-template<uint16_t elems, uint8_t width>
+template <uint16_t elems, uint8_t width>
 class packed_array {
-  private:
+   private:
     class array_ref {
-      private:    
+       private:
         packed_array* _arr;
         uint32_t _idx;
 
-      public:
+       public:
         array_ref(packed_array* arr, uint32_t idx) : _arr(arr), _idx(idx) {}
 
-        array_ref(const array_ref& other) : _arr(other._arr), _idx(other._idx) {}
+        array_ref(const array_ref& other)
+            : _arr(other._arr), _idx(other._idx) {}
 
         array_ref& operator=(const array_ref& other) {
             _arr = other._arr;
@@ -24,9 +25,7 @@ class packed_array {
             return *this;
         }
 
-        operator uint16_t() const {
-            return _arr->at(_idx);
-        }
+        operator uint16_t() const { return _arr->at(_idx); }
 
         array_ref const& operator=(uint16_t val) const {
             _arr->set(_idx, val);
@@ -39,16 +38,15 @@ class packed_array {
 
     uint32_t _data[elems * width / WORD_BITS];
 
-    // Setting blocks or block bits to 0 is effectively the same as using an
-    // unbuffered leaf.
-    static_assert(elems > 0);
-    static_assert(width > 0);
+    static_assert(elems > 0 && width > 0,
+                  "Setting blocks or block bits to 0 is effectively the same "
+                  "as using an unbuffered leaf.");
 
-    // Meta-data is packed into 32-bit integers. Space is wasted if blocks *
-    // block_bits % 32 != 0.
-    static_assert(elems * width % WORD_BITS == 0);
+    static_assert(elems * width % WORD_BITS == 0,
+                  "Meta-data is packed into 32-bit integers. Space is wasted "
+                  "if blocks * block_bits % 32 != 0.");
 
-  public:
+   public:
     packed_array() : _data(0) {}
 
     uint16_t at(uint16_t index) const {
@@ -77,12 +75,8 @@ class packed_array {
         }
     }
 
-    array_ref operator[](uint32_t index) {
-        return {this, index};
-    }
-
+    array_ref operator[](uint32_t index) { return {this, index}; }
 };
-} // namespace BV
-
+}  // namespace bv
 
 #endif
