@@ -75,6 +75,10 @@ class packed_array {
         }
     }
 
+    void clear() {
+        memset(_data, 0, elems * width / 8);
+    }
+
     array_ref operator[](uint32_t index) { return {this, index}; }
 };
 }  // namespace bv

@@ -413,11 +413,11 @@ class leaf : uncopyable {
      *
      * Counts the number of bits set in the first n bits.
      *
-     * This is a simple linear operations of population counting.
+     * This is a simple linear operation of population counting.
      *
      * @param n Number of elements to include in the "summation".
      *
-     * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
+     * @return \f$\sum_{i = 0}^{n - 1} \mathrm{bv}[i]\f$.
      */
     uint32_t rank(uint32_t n) const {
         if constexpr (compressed) {
@@ -474,7 +474,7 @@ class leaf : uncopyable {
      * @return \f$\sum_{i = \mathrm{offset}}^{\mathrm{n- 1}} \mathrm{bv}[i]\f$.
      */
     uint32_t rank(uint32_t n, uint32_t offset) const {
-        if (compressed) {
+        if constexpr (compressed) {
             if (is_compressed()) {
                 return c_rank(n);
             }
@@ -780,7 +780,7 @@ class leaf : uncopyable {
      * additional insertion of new elements (or modification).
      *
      * For uncompressed leaves, only insertions may require reallocation. For
-     * compressed leaves modification may also require modification as
+     * compressed leaves modification may also require reallocation as
      * modifications are typically converted into a remove operation followed by
      * an insertion, and the type of encoding used may cause additional space to
      * be required.
@@ -1825,7 +1825,7 @@ class leaf : uncopyable {
         uint32_t prev_pop = 0;
         uint32_t j = 0;
 
-        // Step one 64-bit word at a time considering the buffer until pop >= x
+        // Step one 64-bit word at a time until pop >= x
         for (; j < capacity_; j++) {
             prev_pop = pop;
             pop += __builtin_popcountll(data_[j]);
