@@ -70,7 +70,7 @@ class branchless_scan : uncopyable {
 
     /**
      * @brief Increments all values in \f$[\mathrm{from},
-     * \mathrm{array\_size})\f$ range
+     * \mathrm{array\size_})\f$ range
      *
      * Cumulative sums will always increment all subsequent values. Has to be
      * passed as a parameter, since the value is not maintained by the

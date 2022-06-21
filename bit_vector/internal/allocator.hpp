@@ -73,8 +73,9 @@ class malloc_alloc : uncopyable {
         allocations_++;
         constexpr size_t leaf_bytes = sizeof(leaf_type) + sizeof(leaf_type) % 8;
         void* leaf = malloc(leaf_bytes + size * sizeof(uint64_t));
-        if (leaf == NULL) [[unlikely]]
-            raise(SIGSEGV);
+        if (leaf == NULL) {
+            [[unlikely]] raise(SIGSEGV);
+        }
         uint8_t* data_ptr = reinterpret_cast<uint8_t*>(leaf) + leaf_bytes;
         memset(data_ptr, 0, size * sizeof(uint64_t));
         return new (leaf)

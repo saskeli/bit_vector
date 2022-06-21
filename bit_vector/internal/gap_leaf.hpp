@@ -18,17 +18,47 @@ class gap_leaf : uncopyable {
     static const constexpr uint64_t LAST_BIT == ONE << (WORD_BITS - 1);
     static const constexpr uint32_t BLOCK_SIZE = leaf_size / blocks;
     static const constexpr uint32_t GAP_SIZE = (uint32_t(1) << block_bits) - 1;
-    static const constexpr uint16_t BLOCK_WORDS =
-        leaf_size / (WORD_BITS * blocks);
+    static const constexpr uint16_t BLOCK_WORDS = BLOCK_SIZE / WORD_BITS;
+    
+    inline static uint64_t data_scratch_[leaf_size / 64];
 
-    uint64_t* _data;
-    packed_array<blocks, block_bits> _gaps;
-    uint32_t _size;
-    uint32_t _p_sum;
-    uint16_t _capacity;
-    uint16_t _last_block;
-    uint16_t _last_block_space;
-    bool _need_realloc;
+    template <uint32_t block_size, uint32_t word_size>
+    class Block : uncopyable {
+      private:
+        uint64_t data_[block_size / word_size];
+
+      public:
+        Block() = delete;
+
+        void inset(uint32_t i, bool v) {
+            static_assert(false, "Not yet implemented");
+        }
+
+        void append_from(Block* otherm, uint32_t elems) {
+            static_assert(false, "Not yet implemented");
+        }
+
+        void prepend_from(Block* other, uint32_t elems) {
+            static_assert(false, "Not yet implemented");
+        }
+
+        void dump(uint64_t* target, uint64_t offset) {
+            static_assert(false, "Not yet implemented");
+        }
+
+        void read(uint64_t* source, uint64_t start, uint32_t elems) {
+            static_assert(false, "Not yet implemented");
+        }
+    }
+
+    uint64_t* data_;
+    packed_array<blocks, block_bits> gaps_;
+    uint32_t size_;
+    uint32_t p_sum_;
+    uint16_t capacity_;
+    uint16_t last_block_;
+    uint16_t last_block_space_;
+    bool need_realloc_;
 
     static_assert(leaf_size % WORD_BITS == 0,
                   "Bits are packed into words. No point in leaf sizes that do "
@@ -52,103 +82,113 @@ class gap_leaf : uncopyable {
    public:
     gap_leaf(uint16_t capacity, uint64_t* data, uint32_t elems = 0,
              bool val = false)
-        : _data(data),
-          _gaps(),
-          _size(0),
-          _p_sum(0),
-          _capacity(capacity),
-          _last_block(0),
-          _last_block_space(leaf_size / blocks),
-          _need_realloc(false) {
+        : data_(data),
+          gaps_(),
+          size_(0),
+          p_sum_(0),
+          capacity_(capacity),
+          last_block_(0),
+          last_block_space_(leaf_size / blocks),
+          need_realloc_(false) {
         assert(elems == 0);
         assert(val == false);
     }
 
     void insert(uint32_t index, bool v) {
+        Block* data = reinterpret_cast<Block*>(data_);
         uint16_t target_block = 0;
         uint32_t target_offset = 0;
         uint32_t block_sum = 0;
-        for (uint16_t i = 0; i < _last_block; i++) {
-            block_sum += BLOCK_SIZE - _gaps[i];
+        for (uint16_t i = 0; i < last_block_; i++) {
+            block_sum += BLOCK_SIZE - gaps_[i];
             target_offset = block_sum > index ? target_offset : block_sum;
             target_block += block_sum > index ? 0 : 1;
         }
 
-        if (target_block == _last_block) {
-            last_block_insert(index - target_offset, v);
+        if (target_block == last_block_) {
+            data[target_block].insert(index - target_offset, v);
+            last_block_space_--;
+            if (last_block_space_ <= GAP_SIZE) {
+                gaps_[last_block_] = last_block_space_;
+                last_block_++;
+                [[unlikely]] last_block_space_ = BLOCK_SIZE;
+            }
             [[unlikely]] return;
         }
-        if (_gaps[target_block] == 0) {
+        if (gaps_[target_block] == 0) {
             make_space(target_block)
             [[unlikely]] return insert(index, v);
         }
-        block_insert(target_block, index - target_offset, v);
-        _size++;
-        _p_sum += v ? 1 : 0;
+        data[target_block].insert(index - target_offset, v);
+        gaps_[target_block] -= 1;
+        size_++;
+        p_sum_ += v ? 1 : 0;
     }
 
   private:
-    void last_block_insert(uint32_t index, bool v) {
-        uint64_t word = index / WORD_BITS;
-        word += _last_block * BLOCK_WORDS;
-        uint64_t offset = index % WORD_BITS;
-        uint64_t mask = (ONE << offset) - 1;
-        uint64_t overflow = _data[word] & (~mask);
-        _data[word] &= mask;
-        _data[word] |= (v ? ONE : uint64_t(0)) << offset;
-        _data[word] |= overflow << 1;
-        overflow &= LAST_BIT;
-        for (uint64_t i = word + 1; i < (_last_block + 1) * BLOCK_WORDS; i++) {
-            uint64_t n_overflow = _data[i] & LAST_BIT;
-            _data[i] <<= 1;
-            _data[i] |= overflow ? ONE : uint64_t(0);
-            overflow = n_overflow;
-        }
-        _last_block_space--;
-        if (_last_block_space <= GAP_SIZE) {
-            _gaps[_last_block] = _last_block_space;
-            _last_block++;
-            _last_block_space = BLOCK_SIZE;
-        }
-    }
-
-    void block_insert(uint32_t target_block, uint32_t index, bool v) {
-        uint64_t word = index / WORD_BITS;
-        word += target_block * BLOCK_WORDS;
-        uint64_t offset = index & WORD_BITS;
-        uint64_t mask = (ONE << offset) - 1;
-        uint64_t overflow = _data[word] & (~mask);
-        _data[word] &= mask;
-        _data[word] |= (v ? ONE : uint64_t(0)) << offset;
-        _data[word] |= overflow << 1;
-        overflow &= LAST_BIT;
-        for (uint64_t i = word + 1; i < (target_block + 1) * BLOCK_WORDS; i++) {
-            uint64_t n_overflow = _data[i] & LAST_BIT;
-            _data[i] <<= 1;
-            _data[i] |= overflow ? ONE : uint64_t(0);
-            overflow = n_overflow;
-        }
-        _gaps[target_block] -= 1;
-    }
 
     void make_space(uint32_t target_block) {
-        uint32_t gap;
+        Block* data = reinterpret_cast<Block*>(data_);
+        uint32_t gap = 0;
+        bool next = true;
+        if (target_block + 1 < last_block_) {
+            [[likely]] gap = gaps_[target_block + 1];
+        } else if (target_block + 1 < blocks && target_block + 1 == last_block_){
+            constexpr uint32_t elems = GAP_SIZE / 2 + GAP_SIZE % 2;
+            data[target_block + 1].prepend_from(data[target_block], elems);
+            gaps_[target_block] += elems;
+            last_block_space_ -= elems;
+            if (last_block_space_ <= GAP_SIZE) {
+                gaps_[last_block_++] = last_block_space_;
+                last_block_space_ = BLOCK_SIZE;
+                [[unlikely]] (void(0));
+            }
+            [[unlikely]] return;
+        }
         if (target_block > 0) {
-            gap = _gaps[target_block - 1] > 0;
-            if (gap > 0) {
-                uint32_t source_word = target_block * BLOCK_WORDS;
-                uint64_t target_offset = BLOCK_SIZE - gap;
-                uint32_t target_word = source_word + BLOCK_WORDS;
-                target_word += target_offset / WORD_BITS;
-                target_offset %= WORD_BITS:
-                gap = gap / 2 + gap % 2;
-                if constexpr ((ONE << block_bits) > WORD_BITS) {
-                    while (gap >= WORD_BITS) {
-
-                    }
-                }
+            uint32_t p_gap = gaps_[target_block - 1];
+            if (p_gap > gap) {
+                gap = p_gap;
+                n_block = false;
             }
         }
+        if (gap == 0) {
+            rebalance();
+            [[unlikely]] return;
+        }
+        gap = gap / 2 + gap % 2;
+        if (next) {
+            data[target_block + 1].prepend_from(data[target_block], gap);
+            gaps_[target_block] -= gap;
+            gaps_[target_block + 1] += gap;
+        } else {
+            data[target_block - 1].append_from(data[target_block], gap);
+            gaps_[target_block] -= gap;
+            gaps_[target_block - 1] += gap;
+        }
+    }
+
+    void rebalance() {
+        uint32_t start = 0;
+        Block* data = reinterpret_cast<Block*>(data_);
+        for (uint64_t i = 0; i < last_block_) {
+            data[i].dump(data_scratch_, start);
+            start += leaf_size - gaps_[i];
+        }
+        data[last_block_].dump(data_scratch_, start);
+        constexpr uint32_t n_gap = GAP_SIZE / 2;
+        constexpr uint32_t n_size = leaf_size - n_gap;
+        uint32_t i = 0;
+        start = 0;
+        while (start + n_size <= p_sum_) {
+            data[i].read(data_scratch_, start, n_size);
+            gaps_[i] = n_gap;
+            start += n_size;
+            i++
+        }
+        data[i].read(data_scratch_, start, p_sum_ - start);
+        last_block_ = 1;
+        last_block_space_ = leaf_size - (p_sum_ - start);
     }
 };
 }  // namespace bv

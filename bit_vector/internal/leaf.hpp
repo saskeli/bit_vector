@@ -110,26 +110,18 @@ class leaf : uncopyable {
      * storage.
      */
     leaf(uint16_t capacity, uint64_t* data, uint32_t elems = 0,
-         bool val = false) {
+         bool val = false) : capacity_(capacity), data_(data) {
         if constexpr (!compressed) {
-            if (elems > 0) {
-                std::cerr << "Uncompressed leaf does not support instantiation "
-                             "to non-empty"
-                          << std::endl;
-                exit(1);
-            }
+            // Uncompressed leaf does not support instantiation to non-empty
+            assert(elems == 0);
         } else {
-            if (elems > ~VALUE_MASK) {
-                std::cerr << "Maximum size for leaves is " << ~VALUE_MASK
-                          << std::endl;
-                exit(1);
-            }
+            // Maximum size for leaves is ~VALUE_MASK
+            assert(elems <= ~VALUE_MASK);
         }
         if constexpr (buffer_size > 0) {
             buffer_count_ = 0;
             memset(buffer_, 0, sizeof(buffer_));
         }
-        capacity_ = capacity;
         type_info_ = 0;
         size_ = elems;
         p_sum_ = 0;
@@ -137,7 +129,6 @@ class leaf : uncopyable {
             p_sum_ = val ? elems : p_sum_;
             run_index_[0] = 0;
         }
-        data_ = data;
         if constexpr (compressed) {
             if (elems > 8) {
                 write_run(elems);
