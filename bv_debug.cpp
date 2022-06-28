@@ -18,25 +18,61 @@ typedef bv::node<leaf, uint64_t, 16384, 64> node;
 typedef bv::simple_bv<16, 16384, 64, true, true, true> h_rle;//*/
 
 int main() {
+    uint32_t elems = 10000;
+    uint32_t offset = 1000;
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>();
-    assert((l->p_sum()) == (0ul));
-    assert((l->size()) == (0ul));
-    assert((l->need_realloc()) == (false));
-    assert((l->desired_capacity()) == (leaf::init_capacity()));
-    assert(l->capacity() * leaf::WORD_BITS >= leaf::BLOCK_SIZE);
-    for (uint32_t i = 0; i < leaf::BLOCK_SIZE; i++) {
+    for (uint32_t i = 0; i < offset * 2; i++) {
+        if (l->need_realloc()) {
+            l = allocator->template reallocate_leaf<leaf>(l, l->capacity(), l->desired_capacity());
+        }
         l->insert(i, i % 2);
+        for (uint32_t j = 0; j < l->size(); j++) {
+            if (l->at(j) != j % 2) {
+                std::cerr << "i = " << i << ", j = " << j << std::endl;
+                exit(1); 
+            }
+            l->validate();
+        }
     }
-    assert((l->p_sum()) == (leaf::BLOCK_SIZE / 2));
-    assert((l->size()) == (leaf::BLOCK_SIZE));
-    for (uint32_t i = 0; i < leaf::BLOCK_SIZE; i++) {
-        assert((l->at(i)) == (bool(i % 2)));
+    for (uint32_t i = offset * 2; i < elems; i++) {
+        if (l->need_realloc()) {
+            //std::cerr << "Ralloc " << l->capacity() << " to " << l->desired_capacity() << " at i = " << i << std::endl;
+            l = allocator->template reallocate_leaf<leaf>(l, l->capacity(), l->desired_capacity());
+        }
+        
+        //std::cerr << "i = " << i << std::endl;
+        if (i == 2144) {
+            l->print(false);
+            std::cerr << std::endl;
+        }
+        l->insert(offset, 0);
+        if (i == 2144) {
+            l->print(false);
+            std::cerr << std::endl;
+        }
+        for (uint32_t j = 0; j < offset; j++) {
+            if (l->at(j) != j % 2) {
+                std::cerr << "i = " << i << ", aj = " << j << std::endl;
+                exit(1); 
+            }
+        }
+        for (uint32_t j = offset; j < l->size() - offset; j++) {
+            if (l->at(j)) {
+                std::cerr << "i = " << i << ", bj = " << j << std::endl;
+                exit(1); 
+            }
+        }
+        for (uint32_t j = 0; j < offset; j++) {
+            if (l->at(l->size() - offset + j) != ((offset + j) % 2)) {
+                std::cerr << "i = " << i << ", cj = " << l->size() - offset + j << std::endl;
+                exit(1);
+            }
+        }
+        l->validate();
     }
-    assert((l->need_realloc()) == (true));
-    assert(l->desired_capacity() > leaf::init_capacity());
-    
-    
+    assert(l->size() == elems);
+
     /*alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 1000, false);
 

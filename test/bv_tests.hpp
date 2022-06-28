@@ -467,4 +467,44 @@ void bv_select_0_test(uint64_t size) {
     delete(cbv);
 }
 
+TEST(SimpleBV, InstantiateWithAlloc) {
+    bv_instantiation_with_allocator_test<ma, test_bv>();
+}
+
+TEST(SimpleBV, InstantiateWithoutAlloc) {
+    bv_instantiation_without_allocator_test<test_bv>();
+}
+
+TEST(SimpleBV, InsertSplitDeallocA) {
+    bv_insert_split_dealloc_a_test<ma, test_bv>(SIZE);
+}
+
+TEST(SimpleBV, InsertSplitDeallocB) {
+    bv_insert_split_dealloc_b_test<ma, test_bv>(SIZE);
+}
+
+TEST(SimpleBV, AccessLeaf) { bv_access_leaf_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, RemoveLeaf) { bv_remove_leaf_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, RemoveNode) { bv_remove_node_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, RemoveNodeNode) { bv_remove_node_node_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, SetLeaf) { bv_set_leaf_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, SetNode) { bv_set_node_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, RankLeaf) { bv_rank_leaf_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, RankNode) { bv_rank_node_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, SelectLeaf) { bv_select_leaf_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, SelectNode) { bv_select_node_test<ma, test_bv>(SIZE); }
+
+TEST(SimpleBV, Select0) {
+    bv_select_0_test<test_bv, dyn::suc_bv>(10000);
+}
+
 #endif

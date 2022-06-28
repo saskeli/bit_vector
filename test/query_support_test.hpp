@@ -194,4 +194,24 @@ void qs_sparse_bv_select_test(uint64_t size, uint64_t ones) {
     delete qs;
 }
 
+TEST(QuerySupport, SingleAccess) { qs_access_single_leaf<qs, sl, ma>(SIZE); }
+
+TEST(QuerySupport, SingleRank) { qs_rank_single_leaf<qs, sl, ma>(SIZE); }
+
+TEST(QuerySupport, SingleSelect) { qs_select_single_leaf<qs, sl, ma>(SIZE); }
+
+TEST(QuerySupport, DoubleAccess) { qs_access_two_leaves<qs, sl, nd, ma>(SIZE); }
+
+TEST(QuerySupport, DoubleRank) { qs_rank_two_leaves<qs, sl, nd, ma>(SIZE); }
+
+TEST(QuerySupport, DoubleSelect) { qs_select_two_leaves<qs, sl, nd, ma>(SIZE); }
+
+TEST(QuerySupport, DoubleSelect2) {
+    qs_select_two_leaves_two<qs, sl, nd, ma>(SIZE);
+}
+
+TEST(QuerySupport, SparseSelect) {
+    qs_sparse_bv_select_test<bv::bv>(100000, 34);
+}
+
 #endif

@@ -82,4 +82,32 @@ void packed_array_set_ref_set_test() {
     }
 }
 
+TEST(PackedArray, Init) {
+    packed_array_init_test<32, 7>();
+}
+
+TEST(PackedArray, SingleSet) {
+    packed_array_single_set_test<32, 5>();
+}
+
+TEST(PackedArray, SetClean) {
+    packed_array_set_test<16, 8>();
+}
+
+TEST(PackedArray, Set) {
+    packed_array_set_test<32, 7>();
+}
+
+TEST(PackedArray, OperatorSet) {
+    packed_array_operator_set_test<128, 11>();
+}
+
+TEST(PackedArray, Clear) {
+    packed_array_clear_test<32, 7>();
+}
+
+TEST(PackedArray, RefSet) {
+    packed_array_set_ref_set_test<128, 11>();
+}
+
 #endif

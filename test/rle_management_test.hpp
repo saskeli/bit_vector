@@ -48,5 +48,8 @@ void root_split_rle_test() {
 
 }
 
+TEST(RleBv, SplitLeaf) { node_split_rle_test<ma, rl_node, rll>(); }
+
+TEST(RleBv, SplitLeafInRoot) { root_split_rle_test<rle_bv>(); }
 
 #endif

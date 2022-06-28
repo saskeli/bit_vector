@@ -681,4 +681,53 @@ void leaf_commit_test(uint64_t size) {
     delete allocator;
 }
 
+TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
+
+TEST(SimpleLeaf, Remove) { leaf_remove_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, Rank) { leaf_rank_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, RankOffset) { leaf_rank_test<sl, ma>(11); }
+
+TEST(SimpleLeaf, RankBlock) { leaf_rank_offset_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, Select) { leaf_select_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, SelectOffset) { leaf_select_test<sl, ma>(11); }
+
+TEST(SimpleLeaf, SelectBlock) { leaf_select_offset_test<sl, ma>(3000); }
+
+TEST(SimpleLeaf, Set) { leaf_set_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, ClearFirst) { leaf_clear_start_test<sl, ma>(); }
+
+TEST(SimpleLeaf, TransferAppend) { leaf_transfer_append_test<sl, ma>(); }
+
+TEST(SimpleLeaf, ClearLast) { leaf_clear_end_test<sl, ma>(); }
+
+TEST(SimpleLeaf, TransferPrepend) { leaf_transfer_prepend_test<sl, ma>(); }
+
+TEST(SimpleLeaf, AppendAll) { leaf_append_all_test<sl, ma>(); }
+
+TEST(SimpleLeaf, BufferHit) { leaf_hit_buffer_test<sl, ma>(); }
+
+TEST(SimpleLeaf, Commit) { leaf_commit_test<sl, ma>(SIZE); }
+
+// A couple of tests to check that unbuffered works as well.
+TEST(SimpleLeafUnb, Insert) { leaf_insert_test<ubl, ma>(10000); }
+
+TEST(SimpleLeafUnb, Remove) { leaf_remove_test<ubl, ma>(10000); }
+
+TEST(SimpleLeafUnb, Rank) { leaf_rank_test<ubl, ma>(10000); }
+
+TEST(SimpleLeafUnb, RankOffset) { leaf_rank_test<ubl, ma>(11); }
+
+TEST(SimpleLeafUnb, Select) { leaf_select_test<ubl, ma>(10000); }
+
+TEST(SimpleLeafUnb, SelectOffset) { leaf_select_test<ubl, ma>(11); }
+
+TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
+
 #endif

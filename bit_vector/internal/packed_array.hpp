@@ -109,6 +109,8 @@ class packed_array {
     }
 
     array_ref operator[](uint32_t index) { return {this, index}; }
+
+    uint16_t operator[](uint32_t index) const {return at(index); }
 };
 }  // namespace bv
 

@@ -1,11 +1,12 @@
 #ifndef BV_GAP_LEAF_HPP
-#define BV_GAP_LEAH_HPP
+#define BV_GAP_LEAF_HPP
 
 #include <immintrin.h>
 
 #include <cassert>
 #include <cstdint>
 #include <cstring>
+#include <bitset>
 
 #include "libpopcnt.h"
 #include "packed_array.hpp"
@@ -22,11 +23,11 @@ class gap_leaf : uncopyable {
     static const constexpr uint32_t GAP_SIZE = (uint32_t(1) << block_bits) - 1;
     static const constexpr uint16_t BLOCK_WORDS = BLOCK_SIZE / WORD_BITS;
     static constexpr uint32_t init_capacity(uint32_t elems = 0) {
-        return BLOCK_WORDS * (1 + elems / (BLOCK_SIZE - (GAP_SIZE / 2)));
+        return BLOCK_WORDS * (1 + elems / (BLOCK_SIZE - ((1 + GAP_SIZE) / 2)));
     }
 
    private:
-    inline static uint64_t data_scratch_[leaf_size / 64];
+    inline static uint64_t data_scratch_[leaf_size / WORD_BITS];
 
     class Block : uncopyable {
        private:
@@ -137,14 +138,13 @@ class gap_leaf : uncopyable {
         }
 
         void prepend_from(Block* other, uint32_t elems, uint32_t size) {
-            uint32_t to_del = elems;
             uint32_t target_word = elems / WORD_BITS;
             if (target_word) {
                 memmove(data_ + target_word, data_, (BLOCK_WORDS - target_word) * sizeof(uint64_t));
             }
             uint64_t target_offset = elems % WORD_BITS;
             if (target_offset) [[likely]] {
-                for (uint32_t i = BLOCK_WORDS; i > target_word; i--) {
+                for (uint32_t i = BLOCK_WORDS - 1; i > target_word; i--) {
                     data_[i] = (data_[i] << target_offset) | (data_[i - 1] >> (WORD_BITS - target_offset));
                 }
                 data_[target_word] <<= target_offset;
@@ -157,7 +157,7 @@ class gap_leaf : uncopyable {
             while (elems) {
                 if (source_offset) [[likely]] {
                     word = other->data_[source_word++] >> source_offset;
-                    word = other->data_[source_word] << (WORD_BITS - source_offset);
+                    word |= (source_word < BLOCK_WORDS ? other->data_[source_word] : uint64_t(0)) << (WORD_BITS - source_offset);
                 } else {
                     word = other->data_[source_word++];
                 }
@@ -168,7 +168,7 @@ class gap_leaf : uncopyable {
             if (elems) {
                 data_[target_word] |= word;
             }
-            other->delete_from(size - to_del);
+            other->delete_from(size);
         }
 
         void dump(uint64_t* target, uint64_t offset) {
@@ -185,12 +185,13 @@ class gap_leaf : uncopyable {
         }
 
         void read(uint64_t* source, uint64_t start, uint32_t elems) {
+            memset(data_, 0, BLOCK_WORDS * sizeof(uint64_t));
             uint32_t source_word = start / WORD_BITS;
             uint64_t source_offset = start % WORD_BITS;
             uint64_t target_offset = elems % WORD_BITS;
             uint32_t n_words = elems / WORD_BITS + (target_offset ? 1 : 0);
             if (source_offset == 0)  [[unlikely]] {
-                memcpy(source + source_word, data_, n_words * sizeof(uint64_t));
+                memcpy(data_, source + source_word, n_words * sizeof(uint64_t));
             } else {
                 for (uint32_t i = 0; i < n_words; i++) {
                     data_[i] = source[source_word++] >> (WORD_BITS - source_offset);
@@ -201,6 +202,17 @@ class gap_leaf : uncopyable {
                 data_[n_words - 1] &= (ONE << target_offset) - 1;
             }
         }
+
+        void validate(uint32_t gap) {
+            uint32_t full_words = gap / WORD_BITS;
+            for (uint32_t i = 0; i < full_words; i++) {
+                assert(data_[BLOCK_WORDS - 1 - i] == 0);
+            }
+            gap %= WORD_BITS;
+            if (gap) {
+                assert((data_[BLOCK_WORDS - full_words - 1] >> (WORD_BITS - gap)) == 0);
+            }
+        } 
     };
 
     uint64_t* data_;
@@ -250,11 +262,11 @@ class gap_leaf : uncopyable {
     /** @brief Getter for size_ */
     uint32_t size() const { return size_; }
 
-    bool at(uint32_t index) {
+    bool at(uint32_t index) const {
         uint64_t loc = 0;
         for (uint32_t i = 0; i < blocks; i++) {
             uint32_t b_elems = BLOCK_SIZE - gaps_[i];
-            if (index > b_elems) [[likely]] {
+            if (index >= b_elems) [[likely]] {
                 index -= b_elems;
                 loc += BLOCK_SIZE;
             } else {
@@ -411,8 +423,8 @@ class gap_leaf : uncopyable {
         return 8 * (sizeof(*this) + capacity_ * sizeof(uint64_t));
     }
 
-    bool need_realloc() { 
-        if (size_ + 1 > blocks * (BLOCK_SIZE - GAP_SIZE / 2)) {
+    bool need_realloc() const { 
+        if (size_ >= (capacity_ / BLOCK_WORDS) * (BLOCK_SIZE - (1 + GAP_SIZE) / 2)) {
             for (uint32_t i = 0; i < blocks; i++) {
                 if (gaps_[i] == 0) {
                     return true;
@@ -422,7 +434,7 @@ class gap_leaf : uncopyable {
         return false;
     }
 
-    uint16_t capacity() {
+    uint16_t capacity() const {
         return capacity_;
     }
 
@@ -430,7 +442,7 @@ class gap_leaf : uncopyable {
         capacity_ = cap;
     }
 
-    uint16_t desired_capacity() { return init_capacity(size_); }
+    uint16_t desired_capacity() const { return init_capacity(size_); }
 
     /**
      * @brief Sets the pointer to the leaf-associated data storage.
@@ -442,6 +454,47 @@ class gap_leaf : uncopyable {
      * @param ptr Pointer to data storage.
      */
     void set_data_ptr(uint64_t* ptr) { data_ = ptr; }
+
+    void print(bool internal_only = true) const {
+        std::cout << "{\n\"type\": \"gap leaf\",\n"
+                  << "\"size\": " << size_ << ",\n"
+                  << "\"capacity\": " << capacity_ << ",\n"
+                  << "\"p_sum\": " << p_sum_ << ",\n"
+                  << "\"last block\": " << last_block_ << ",\n"
+                  << "\"last block space\": " << last_block_space_ << ",\n"
+                  << "\"max gap\": " << GAP_SIZE << ",\n";
+        if (!internal_only) {
+            std::cout << "\"blocks\": [\n";
+            for (uint32_t i = 0; i < capacity_ / BLOCK_WORDS; i++) {
+                std::cout << "\"block\": {\n"
+                          << "\"gap\": " << gaps_.at(i) << "\n"
+                          << "\"data\": [\n";
+                for (uint16_t wi = 0; wi < BLOCK_WORDS; wi++) {
+                    std::bitset<64> b(data_[i * BLOCK_WORDS + wi]);
+                    std::cout << "\"" << b << "\"" << (wi + 1 < BLOCK_WORDS ? "," : "]}") << "\n";
+                }
+                std::cout << (i + 1 < capacity_ / BLOCK_WORDS ? "," : "]") << "\n";
+            }
+        }
+        std::cout << "}";
+    }
+
+    uint32_t validate() {
+        assert(size_ <= capacity_ * WORD_BITS);
+        assert(p_sum_ <= size_);
+        assert(p_sum_ == rank(size_));
+        Block* data = reinterpret_cast<Block*>(data_);
+        for (uint32_t i = 0; i < last_block_; i++) {
+            data[i].validate(gaps_[i]);
+        }
+        for (uint32_t i = last_block_; i < blocks; i++) {
+            assert(gaps_[i] == 0);
+        }
+        if (capacity_ / BLOCK_WORDS > last_block_) {
+            data[last_block_].validate(last_block_space_);
+        }
+        return 1;
+    }
 
    private:
     void make_space(uint32_t target_block) {
@@ -477,9 +530,8 @@ class gap_leaf : uncopyable {
         }
         gap = gap / 2 + gap % 2;
         if (next) {
-            uint32_t b_size = BLOCK_SIZE - gaps_[target_block];
             data[target_block + 1].prepend_from(data + target_block, gap,
-                                                b_size);
+                                                BLOCK_SIZE);
             gaps_[target_block] += gap;
             gaps_[target_block + 1] -= gap;
         } else {
@@ -547,21 +599,21 @@ class gap_leaf : uncopyable {
         Block* data = reinterpret_cast<Block*>(data_);
         for (uint64_t i = 0; i < last_block_; i++) {
             data[i].dump(data_scratch_, start);
-            start += leaf_size - gaps_[i];
+            start += BLOCK_SIZE - gaps_[i];
         }
         data[last_block_].dump(data_scratch_, start);
         gaps_.clear();
-        constexpr uint32_t n_gap = GAP_SIZE / 2;
-        constexpr uint32_t n_size = leaf_size - n_gap;
+        constexpr uint32_t n_gap = (1 + GAP_SIZE) / 2;
+        constexpr uint32_t n_size = BLOCK_SIZE - n_gap;
         uint32_t i = 0;
         start = 0;
-        while (start + n_size <= p_sum_) {
+        while (start + n_size <= size_) {
             data[i].read(data_scratch_, start, n_size);
             gaps_[i] = n_gap;
             start += n_size;
             i++;
         }
-        data[i].read(data_scratch_, start, p_sum_ - start);
+        data[i].read(data_scratch_, start, size_ - start);
         last_block_ = i;
         last_block_space_ = leaf_size - (p_sum_ - start);
     }

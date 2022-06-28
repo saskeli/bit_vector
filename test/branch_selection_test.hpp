@@ -152,4 +152,30 @@ void branch_append_elem_test() {
     }
 }
 
+TEST(SimpleBranch, Access) { branching_set_access_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, Increment) { branching_increment_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, ClearFirst) {
+    branching_delete_first_n_test<branch, BRANCH>();
+}
+
+TEST(SimpleBranch, Appending) { branching_append_n_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, ClearLast) {
+    branching_delete_last_n_test<branch, BRANCH>();
+}
+
+TEST(SimpleBranch, Prepending) { branching_prepend_n_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, TransferPrepend) {
+    branching_transfer_prepend_n_test<branch, BRANCH>();
+}
+
+TEST(SimpleBranch, Insert) { branching_insert_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, Remove) { branch_remove_test<branch, BRANCH>(); }
+
+TEST(SimpleBranch, AppendElem) { branch_append_elem_test<branch, BRANCH>(); }
+
 #endif

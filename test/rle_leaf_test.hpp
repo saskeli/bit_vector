@@ -508,4 +508,38 @@ void rle_leaf_conversion_test() {
     delete a;
 }
 
+TEST(RleLeaf, InitZeros) { rle_leaf_init_zeros_test<rll, ma>(10000); }
+
+TEST(RleLeaf, InitOnes) { rle_leaf_init_ones_test<rll, ma>(10000); }
+
+TEST(RleLeaf, Insert) { rle_leaf_insert_test<rll, ma>(10000, 100); }
+
+TEST(RleLeaf, InsertMiddle) {
+    rle_leaf_insert_middle_test<rll, ma>(10000, 100);
+}
+
+TEST(RleLeaf, InsertEnd) { rle_leaf_insert_end_test<rll, ma>(10000, 100); }
+
+TEST(RleLeaf, Remove) { rle_leaf_remove_test<rll, ma>(200, 100); }
+
+TEST(RleLeaf, Set) { rle_leaf_set_test<rll, ma>(200, 100); }
+
+TEST(RleLeaf, CapCalculation) { rle_leaf_cap_calculation_test<rll, ma>(); }
+
+TEST(RleLeaf, SetCalculations) { rle_leaf_set_calculations_test<rll, ma>(); }
+
+TEST(RleLeaf, ClearFirst) { rle_leaf_clear_first_test<rll, ma>(); }
+
+TEST(RleLeaf, TransferCapacity) { rle_leaf_transfer_capacity_test<rll, ma>(); }
+
+TEST(RleLeaf, ClearLast) { rle_leaf_clear_last_test<rll, ma>(); }
+
+TEST(RleLeaf, AppendAll) { rle_leaf_append_all_test<rll, ma>(); }
+
+TEST(RleLeaf, TransferAppend) { rle_leaf_transfer_append_test<rll, ma>(); }
+
+TEST(RleLeaf, TransferPrepend) { rle_leaf_transfer_prepend_test<rll, ma>(); }
+
+TEST(RleLeaf, Convert) { rle_leaf_conversion_test<rll, ma>(); }
+
 #endif
