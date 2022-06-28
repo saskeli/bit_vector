@@ -5,6 +5,7 @@
 #include "../bit_vector/internal/leaf.hpp"
 #include "../bit_vector/internal/node.hpp"
 #include "../bit_vector/internal/query_support.hpp"
+#include "../bit_vector/internal/gap_leaf.hpp"
 #include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 #include "branch_selection_test.hpp"
@@ -16,6 +17,7 @@
 #include "rle_management_test.hpp"
 #include "run_tests.hpp"
 #include "packed_array_test.hpp"
+#include "gap_leaf_test.hpp"
 
 #define SIZE 16384
 #define BRANCH 16
@@ -30,6 +32,7 @@ typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef branchless_scan<uint64_t, BRANCH> branch;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
 typedef query_support<uint64_t, sl, 2048> qs;
+typedef gap_leaf<SIZE, 32, 7> g_leaf;
 
 // Tests for buffered leaf
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
@@ -348,6 +351,23 @@ TEST(PackedArray, Set) {
 
 TEST(PackedArray, OperatorSet) {
     packed_array_operator_set_test<128, 11>();
+}
+
+TEST(PackedArray, Clear) {
+    packed_array_clear_test<32, 7>();
+}
+
+TEST(PackedArray, RefSet) {
+    packed_array_set_ref_set_test<128, 11>();
+}
+
+// Gap leaf tests
+TEST(GapLeaf, Init) {
+    gap_leaf_init_test<g_leaf, ma>();
+}
+
+TEST(GapLeaf, Insert) {
+    gap_leaf_insert_test<g_leaf, ma>();
 }
 
 // Run tests

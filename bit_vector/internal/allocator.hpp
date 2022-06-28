@@ -82,6 +82,11 @@ class malloc_alloc : uncopyable {
             leaf_type(size, reinterpret_cast<uint64_t*>(data_ptr), elems, val);
     }
 
+    template <class leaf_type>
+    leaf_type* allocate_leaf() {
+        return allocate_leaf<leaf_type>(leaf_type::init_capacity());
+    }
+
     /**
      * @brief Deallocates leaf node.
      *

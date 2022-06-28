@@ -10,25 +10,54 @@ class packed_array {
    private:
     class array_ref {
        private:
-        packed_array* _arr;
-        uint32_t _idx;
+        packed_array* arr_;
+        uint32_t idx_;
+        uint32_t val_;
 
        public:
-        array_ref(packed_array* arr, uint32_t idx) : _arr(arr), _idx(idx) {}
+        array_ref(packed_array* arr, uint32_t idx) : arr_(arr), idx_(idx) {
+            val_ = arr_->at(idx_);
+        }
 
         array_ref(const array_ref& other)
-            : _arr(other._arr), _idx(other._idx) {}
+            : arr_(other.arr_), idx_(other.idx_), val_(other.val_) {
+        }
 
         array_ref& operator=(const array_ref& other) {
-            _arr = other._arr;
-            _idx = other._idx;
+            val_ = other.val_;
+            arr_->set(idx_, val_);
             return *this;
         }
 
-        operator uint16_t() const { return _arr->at(_idx); }
+        operator uint16_t() const { return val_; }
 
-        array_ref const& operator=(uint16_t val) const {
-            _arr->set(_idx, val);
+        array_ref const& operator=(uint16_t val) {
+            val_ = val;
+            arr_->set(idx_, val_);
+            return *this;
+        }
+
+        array_ref const& operator++(int) {
+            val_++;
+            arr_->set(idx_, val_);
+            return *this;
+        }
+
+        array_ref const& operator--(int) {
+            val_--;
+            arr_->set(idx_, val_);
+            return *this;
+        }
+
+        array_ref const& operator+=(uint16_t val) {
+            val_ += val;
+            arr_->set(idx_, val_);
+            return *this;
+        }
+
+        array_ref const& operator-=(uint16_t val) {
+            val_ -= val;
+            arr_->set(idx_, val_);
             return *this;
         }
     };
@@ -36,7 +65,7 @@ class packed_array {
     static const constexpr uint32_t WORD_BITS = 32;
     static const constexpr uint32_t MASK = (uint32_t(1) << width) - 1;
 
-    uint32_t _data[elems * width / WORD_BITS];
+    uint32_t data_[elems * width / WORD_BITS];
 
     static_assert(elems > 0 && width > 0,
                   "Setting blocks or block bits to 0 is effectively the same "
@@ -47,36 +76,36 @@ class packed_array {
                   "if blocks * block_bits % 32 != 0.");
 
    public:
-    packed_array() : _data(0) {}
+    packed_array() : data_(0) {}
 
     uint16_t at(uint16_t index) const {
         uint32_t offset = width * index;
         uint32_t word = offset / WORD_BITS;
         offset %= WORD_BITS;
-        uint32_t res = (_data[word] >> offset) & MASK;
+        uint32_t res = (data_[word] >> offset) & MASK;
 
-        if (offset + width > WORD_BITS) {
-            res |= (_data[word + 1] & (MASK >> (WORD_BITS - offset)))
+        if (offset + width > WORD_BITS) [[unlikely]] {
+            res |= (data_[word + 1] & (MASK >> (WORD_BITS - offset)))
                    << (WORD_BITS - offset);
-            [[unlikely]] (void(0));
         }
         return res & MASK;
     }
 
-    void set(uint16_t index, uint16_t value) {
+    void set(uint16_t index, uint32_t value) {
         uint32_t offset = width * index;
         uint32_t word = offset / WORD_BITS;
         offset %= WORD_BITS;
-        _data[word] |= value << offset;
+        data_[word] &= ~(MASK << offset);
+        data_[word++] |= value << offset;
 
-        if (width + offset > WORD_BITS) {
-            _data[word + 1] |= value >> (WORD_BITS - offset);
-            [[unlikely]] (void(0));
+        if (width + offset > WORD_BITS) [[unlikely]] {
+            data_[word] &= ~(MASK >> (WORD_BITS - offset));
+            data_[word] |= value >> (WORD_BITS - offset);
         }
     }
 
     void clear() {
-        memset(_data, 0, elems * width / 8);
+        memset(data_, 0, elems * width / 8);
     }
 
     array_ref operator[](uint32_t index) { return {this, index}; }

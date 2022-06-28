@@ -5,6 +5,7 @@
 #include "internal/bit_vector.hpp"
 #include "internal/leaf.hpp"
 #include "internal/node.hpp"
+#include "internal/gap_leaf.hpp"
 
 namespace bv {
 

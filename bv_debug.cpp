@@ -6,17 +6,38 @@
 
 #include "bit_vector/bv.hpp"
 //#include "deps/valgrind/callgrind.h"
-#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
-#include "test/run_tests.hpp"
+//#include "deps/DYNAMIC/include/dynamic/dynamic.hpp"
+//#include "test/run_tests.hpp"
 
 typedef bv::malloc_alloc alloc;
-typedef bv::leaf<16, 16384> leaf;
+typedef bv::gap_leaf<16384, 32, 7> leaf;
+
+/*typedef bv::leaf<16, 16384> leaf;
 typedef bv::leaf<16, 16384, true, true> rl_l;
 typedef bv::node<leaf, uint64_t, 16384, 64> node;
-typedef bv::simple_bv<16, 16384, 64, true, true, true> h_rle;
+typedef bv::simple_bv<16, 16384, 64, true, true, true> h_rle;//*/
 
 int main() {
-    alloc* a = new alloc();
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>();
+    assert((l->p_sum()) == (0ul));
+    assert((l->size()) == (0ul));
+    assert((l->need_realloc()) == (false));
+    assert((l->desired_capacity()) == (leaf::init_capacity()));
+    assert(l->capacity() * leaf::WORD_BITS >= leaf::BLOCK_SIZE);
+    for (uint32_t i = 0; i < leaf::BLOCK_SIZE; i++) {
+        l->insert(i, i % 2);
+    }
+    assert((l->p_sum()) == (leaf::BLOCK_SIZE / 2));
+    assert((l->size()) == (leaf::BLOCK_SIZE));
+    for (uint32_t i = 0; i < leaf::BLOCK_SIZE; i++) {
+        assert((l->at(i)) == (bool(i % 2)));
+    }
+    assert((l->need_realloc()) == (true));
+    assert(l->desired_capacity() > leaf::init_capacity());
+    
+    
+    /*alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 1000, false);
 
     for (size_t i = 500; i < 1000; i++) {
@@ -29,7 +50,7 @@ int main() {
     l->clear_last(400);
 
     a->deallocate_leaf(l);
-    delete a;
+    delete a;*/
 
     /*uint64_t size = 16384;
     alloc* a = new alloc();
