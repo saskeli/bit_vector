@@ -97,7 +97,7 @@ class leaf : uncopyable {
     static_assert(leaf_size < (uint32_t(1) << 22));
 
    public:
-    static uint32_t init_capacity(uint32_t elems = 0) {
+    static constexpr uint32_t init_capacity(uint32_t elems = 0) {
         uint32_t cap = elems / WORD_BITS + 2;
         cap += (elems % WORD_BITS ? 1 : 0);
         return cap;

@@ -116,6 +116,7 @@ class malloc_alloc : uncopyable {
                                uint64_t new_size) {
         constexpr size_t leaf_bytes = sizeof(leaf_type) + sizeof(leaf_type) % 8;
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
+
         leaf_type* n_leaf = reinterpret_cast<leaf_type*>(
             realloc(leaf, leaf_bytes + new_size * sizeof(uint64_t)));
 #pragma GCC diagnostic pop

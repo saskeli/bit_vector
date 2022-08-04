@@ -10,7 +10,6 @@
 //#include "test/run_tests.hpp"
 
 typedef bv::malloc_alloc alloc;
-typedef bv::gap_leaf<16384, 32, 7> leaf;
 
 /*typedef bv::leaf<16, 16384> leaf;
 typedef bv::leaf<16, 16384, true, true> rl_l;
@@ -18,60 +17,50 @@ typedef bv::node<leaf, uint64_t, 16384, 64> node;
 typedef bv::simple_bv<16, 16384, 64, true, true, true> h_rle;//*/
 
 int main() {
-    uint32_t elems = 10000;
-    uint32_t offset = 1000;
     alloc* allocator = new alloc();
-    leaf* l = allocator->template allocate_leaf<leaf>();
-    for (uint32_t i = 0; i < offset * 2; i++) {
+    auto* l = allocator->template allocate_leaf<bv::gap_leaf<16384, 32, 7>>();
+    auto* cl = allocator->template allocate_leaf<bv::leaf<16, 16384>>();
+    uint32_t block_size = bv::gap_leaf<16384, 32, 7>::BLOCK_SIZE;
+
+    for (uint32_t i = 0; i < block_size * 2; i++) {
         if (l->need_realloc()) {
-            l = allocator->template reallocate_leaf<leaf>(l, l->capacity(), l->desired_capacity());
+            l = allocator->reallocate_leaf(l, l->capacity(), l->desired_capacity());
         }
-        l->insert(i, i % 2);
-        for (uint32_t j = 0; j < l->size(); j++) {
-            if (l->at(j) != j % 2) {
-                std::cerr << "i = " << i << ", j = " << j << std::endl;
-                exit(1); 
-            }
-            l->validate();
+        if (cl->need_realloc()) {
+            cl = allocator->reallocate_leaf(cl, cl->capacity(), cl->desired_capacity());
+        }
+        l->insert(i, true);
+        cl->insert(i, true);
+    }
+    for (uint32_t i = 0; i < block_size * 2; i++) {
+        if (l->need_realloc()) {
+            l = allocator->reallocate_leaf(l, l->capacity(), l->desired_capacity());
+        }
+        if (cl->need_realloc()) {
+            cl = allocator->reallocate_leaf(cl, cl->capacity(), cl->desired_capacity());
+        }
+        if (l->data()[block_size / 64 - 1] >> 63) {
+            std::cout << "GRAAH" << std::endl;
+            l->print(false);
+            l->insert(block_size, false);
+            l->print(false);
+            exit(0);
+            cl->insert(block_size, false);
+        } else {
+            l->insert(0, true);
+            cl->insert(0, true);
         }
     }
-    for (uint32_t i = offset * 2; i < elems; i++) {
-        if (l->need_realloc()) {
-            //std::cerr << "Ralloc " << l->capacity() << " to " << l->desired_capacity() << " at i = " << i << std::endl;
-            l = allocator->template reallocate_leaf<leaf>(l, l->capacity(), l->desired_capacity());
-        }
-        
-        //std::cerr << "i = " << i << std::endl;
-        if (i == 2144) {
-            l->print(false);
-            std::cerr << std::endl;
-        }
-        l->insert(offset, 0);
-        if (i == 2144) {
-            l->print(false);
-            std::cerr << std::endl;
-        }
-        for (uint32_t j = 0; j < offset; j++) {
-            if (l->at(j) != j % 2) {
-                std::cerr << "i = " << i << ", aj = " << j << std::endl;
-                exit(1); 
-            }
-        }
-        for (uint32_t j = offset; j < l->size() - offset; j++) {
-            if (l->at(j)) {
-                std::cerr << "i = " << i << ", bj = " << j << std::endl;
-                exit(1); 
-            }
-        }
-        for (uint32_t j = 0; j < offset; j++) {
-            if (l->at(l->size() - offset + j) != ((offset + j) % 2)) {
-                std::cerr << "i = " << i << ", cj = " << l->size() - offset + j << std::endl;
-                exit(1);
-            }
-        }
-        l->validate();
+    
+    assert(l->size() == cl->size());
+    assert(l->p_sum() == cl->p_sum());
+    for (uint32_t i = 0; i < cl->size(); i++) {
+        assert(l->at(i) == cl->at(i));
     }
-    assert(l->size() == elems);
+
+    allocator->deallocate_leaf(l);
+    allocator->deallocate_leaf(cl);
+    delete allocator;
 
     /*alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 1000, false);

@@ -70,7 +70,7 @@ class gap_leaf : uncopyable {
             return x;
         }
 
-        bool set(uint32_t index, bool v) {
+        int set(uint32_t index, bool v) {
             uint32_t target_word = index / WORD_BITS;
             uint32_t target_offset = index % WORD_BITS;
 
@@ -87,19 +87,15 @@ class gap_leaf : uncopyable {
             uint32_t target_word = 0;
             uint32_t source_word = elems / WORD_BITS;
             uint32_t source_offset = elems % WORD_BITS;
-            if (source_offset == 0) [[unlikely]] {
+            if (source_word) {
                 std::memmove(data_, data_ + source_word, (BLOCK_WORDS - source_word) * sizeof(uint64_t));
-                std::memset(data_ + target_word, 0, (BLOCK_WORDS - target_word) * sizeof(uint64_t));
-            } else {
-                while (source_word < BLOCK_WORDS - 1) {
-                    uint64_t word = data_[source_word++] >> (WORD_BITS - source_offset);
-                    word |= data_[source_word] << source_offset;
-                    data_[target_word++] = word;
+                std::memset(data_ + BLOCK_WORDS - target_word, 0, (BLOCK_WORDS - target_word) * sizeof(uint64_t));
+            }
+            if (source_offset) {
+                for (uint32_t i = 0; i < BLOCK_WORDS - 1; i++) {
+                    data_[i] = (data_[i] >> source_offset) | (data_[i + 1] << (WORD_BITS - source_offset));
                 }
-                data_[target_word++] = data_[source_word] >> (WORD_BITS - source_offset);
-                while (target_word < BLOCK_WORDS) {
-                    data_[target_word++] = 0;
-                }
+                data_[BLOCK_WORDS - 1] >>= source_offset;
             }
         }
 
@@ -120,6 +116,7 @@ class gap_leaf : uncopyable {
                 elems -= WORD_BITS;
             }
             if (elems > 0) [[likely]] {
+                word &= (ONE << elems) - 1;
                 data_[target_word++] |= word << target_offset;
                 if (target_word < BLOCK_WORDS) {
                     data_[target_word] |= word << (WORD_BITS - target_offset);
@@ -194,8 +191,8 @@ class gap_leaf : uncopyable {
                 memcpy(data_, source + source_word, n_words * sizeof(uint64_t));
             } else {
                 for (uint32_t i = 0; i < n_words; i++) {
-                    data_[i] = source[source_word++] >> (WORD_BITS - source_offset);
-                    data_[i] |= source[source_word] << source_offset;
+                    data_[i] = source[source_word++] >> source_offset;
+                    data_[i] |= source[source_word] << (WORD_BITS - source_offset);
                 }
             }
             if (target_offset) {
@@ -203,15 +200,24 @@ class gap_leaf : uncopyable {
             }
         }
 
-        void validate(uint32_t gap) {
+        bool validate(uint32_t gap) {
+#ifdef DEBUG
             uint32_t full_words = gap / WORD_BITS;
             for (uint32_t i = 0; i < full_words; i++) {
-                assert(data_[BLOCK_WORDS - 1 - i] == 0);
+                if (data_[BLOCK_WORDS - 1 - i] != 0) {
+                    std::cerr << "Word " << BLOCK_WORDS - 1 - i << " is not zero. (gap = " << gap << ")." << std::endl;
+                    return false;
+                }
             }
             gap %= WORD_BITS;
             if (gap) {
-                assert((data_[BLOCK_WORDS - full_words - 1] >> (WORD_BITS - gap)) == 0);
+                if ((data_[BLOCK_WORDS - full_words - 1] >> (WORD_BITS - gap)) != 0) {
+                    std::cerr << "Word: " << BLOCK_WORDS - full_words - 1 << ", with gap " << gap << std::endl;
+                    return false;
+                }
             }
+#endif
+            return true;
         } 
     };
 
@@ -243,7 +249,7 @@ class gap_leaf : uncopyable {
         "Number of free bits in block needs to be encodable in 16 bits.");
 
    public:
-
+#pragma GCC diagnostic ignored "-Wunused-parameter"
     gap_leaf(uint16_t capacity, uint64_t* data, uint32_t elems = 0,
              bool val = false)
         : data_(data),
@@ -256,6 +262,7 @@ class gap_leaf : uncopyable {
         assert(elems == 0);
         assert(val == false);
     }
+#pragma GCC diagnostic pop
 
     /** @brief Getter for p_sum_ */
     uint32_t p_sum() const { return p_sum_; }
@@ -303,7 +310,7 @@ class gap_leaf : uncopyable {
                 target_block < last_block_ - 1 && gaps_[target_block + 1] > 0)
                 [[unlikely]] {
                 data[target_block + 1].insert(0, v);
-                gaps_[target_block + 1]++;
+                gaps_[target_block + 1]--;
             } else {
                 make_space(target_block);
                 return insert(index, v);
@@ -335,7 +342,7 @@ class gap_leaf : uncopyable {
             last_block_space_++;
         } else if (gaps_[target_block] >= GAP_SIZE) [[unlikely]] {
             take_space(target_block);
-            return remove(index, v);
+            return remove(index);
         } else [[likely]] {
             v = data[target_block].remove(index_in_block);
             gaps_[target_block]++;
@@ -455,6 +462,15 @@ class gap_leaf : uncopyable {
      */
     void set_data_ptr(uint64_t* ptr) { data_ = ptr; }
 
+    /**
+     * @brief Provides access to raw leaf-associated data
+     *
+     * Intended for use when rebalancing and splitting leaves.
+     *
+     * @return Pointer to raw leaf data.
+     */
+    const uint64_t* data() { return data_; }
+
     void print(bool internal_only = true) const {
         std::cout << "{\n\"type\": \"gap leaf\",\n"
                   << "\"size\": " << size_ << ",\n"
@@ -482,17 +498,17 @@ class gap_leaf : uncopyable {
     uint32_t validate() {
         assert(size_ <= capacity_ * WORD_BITS);
         assert(p_sum_ <= size_);
-        assert(p_sum_ == rank(size_));
         Block* data = reinterpret_cast<Block*>(data_);
         for (uint32_t i = 0; i < last_block_; i++) {
-            data[i].validate(gaps_[i]);
+            assert(data[i].validate(gaps_[i]));
         }
         for (uint32_t i = last_block_; i < blocks; i++) {
             assert(gaps_[i] == 0);
         }
         if (capacity_ / BLOCK_WORDS > last_block_) {
-            data[last_block_].validate(last_block_space_);
+            assert(data[last_block_].validate(last_block_space_));
         }
+        assert(p_sum_ == rank(size_));
         return 1;
     }
 
@@ -615,7 +631,7 @@ class gap_leaf : uncopyable {
         }
         data[i].read(data_scratch_, start, size_ - start);
         last_block_ = i;
-        last_block_space_ = leaf_size - (p_sum_ - start);
+        last_block_space_ = BLOCK_SIZE - (size_ - start);
     }
 };
 }  // namespace bv

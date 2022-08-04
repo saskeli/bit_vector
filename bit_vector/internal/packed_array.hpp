@@ -65,15 +65,11 @@ class packed_array {
     static const constexpr uint32_t WORD_BITS = 32;
     static const constexpr uint32_t MASK = (uint32_t(1) << width) - 1;
 
-    uint32_t data_[elems * width / WORD_BITS];
+    uint32_t data_[elems * width / WORD_BITS + ((elems * width) % WORD_BITS != 0 ? 1 : 0)];
 
     static_assert(elems > 0 && width > 0,
                   "Setting blocks or block bits to 0 is effectively the same "
                   "as using an unbuffered leaf.");
-
-    static_assert(elems * width % WORD_BITS == 0,
-                  "Meta-data is packed into 32-bit integers. Space is wasted "
-                  "if blocks * block_bits % 32 != 0.");
 
    public:
     packed_array() : data_(0) {}

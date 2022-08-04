@@ -23,11 +23,11 @@ typedef branchless_scan<uint64_t, BRANCH> branch;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
 typedef query_support<uint64_t, sl, 2048> qs;
 typedef leaf<16, SIZE, true, true> rll;
-typedef bv::node<rll, uint64_t, SIZE, 64, true, true> rl_node;
-typedef bv::simple_bv<16, SIZE, 64, true, true, true> rle_bv;
+typedef node<rll, uint64_t, SIZE, 64, true, true> rl_node;
+typedef simple_bv<16, SIZE, 64, true, true, true> rle_bv;
 typedef gap_leaf<SIZE, 32, 7> g_leaf;
-/*
-// Tests for buffered leaf
+
+/*// Tests for buffered leaf
 #include "leaf_tests.hpp"
 
 // Tests for hybrid RLE leaves.
@@ -46,8 +46,8 @@ typedef gap_leaf<SIZE, 32, 7> g_leaf;
 #include "rle_management_test.hpp"
 
 // Query support structure tests
-#include "query_support_test.hpp"
-*/
+#include "query_support_test.hpp"*/
+
 // Packed array tests
 #include "packed_array_test.hpp"
 

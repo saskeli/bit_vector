@@ -59,6 +59,9 @@ queries: queries.cpp $(HEADERS)
 rem_bench: rem_bench.cpp $(HEADERS)
 	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -Ofast -o rem_bench rem_bench.cpp
 
+leaf_michrobench: leaf_michrobench.cpp $(HEADERS)
+	g++ $(CFLAGS) $(INCLUDE) -DNDEBUG -g -Ofast -o leaf_michrobench leaf_michrobench.cpp
+
 bit_vector/%.hpp:
 
 bit_vector/internal/%.hpp:
