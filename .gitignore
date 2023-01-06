@@ -37,6 +37,7 @@ brute
 queries
 comp_bench
 leaf_michrobench
+leaf_comp
 
 # IDE stuff
 .vscode/*

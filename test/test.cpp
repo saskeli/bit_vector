@@ -27,7 +27,7 @@ typedef node<rll, uint64_t, SIZE, 64, true, true> rl_node;
 typedef simple_bv<16, SIZE, 64, true, true, true> rle_bv;
 typedef gap_leaf<SIZE, 32, 7> g_leaf;
 
-/*// Tests for buffered leaf
+// Tests for buffered leaf
 #include "leaf_tests.hpp"
 
 // Tests for hybrid RLE leaves.
@@ -46,7 +46,7 @@ typedef gap_leaf<SIZE, 32, 7> g_leaf;
 #include "rle_management_test.hpp"
 
 // Query support structure tests
-#include "query_support_test.hpp"*/
+#include "query_support_test.hpp"
 
 // Packed array tests
 #include "packed_array_test.hpp"
@@ -55,4 +55,4 @@ typedef gap_leaf<SIZE, 32, 7> g_leaf;
 #include "gap_leaf_test.hpp"
 
 // Run tests
-//#include "run_tests.hpp"
+#include "run_tests.hpp"

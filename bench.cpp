@@ -11,6 +11,8 @@
 #include "dynamic/dynamic.hpp"
 #include "sdsl/bit_vectors.hpp"
 
+#include "bit_vector/internal/deb.hpp"
+
 void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
     bv::simple_bv<16, 16384, 64, true, true> bv;
 
@@ -572,6 +574,6 @@ int main(int argc, char const* argv[]) {
         test<bv::simple_bv<16, 16384, 64, true, true, true>, 1, 16, 64, 16384,
              false>(size, steps, seed);
     }
-
+    std::cout << "mean commit time: " << bv::time_us / bv::n_commits << std::endl;
     return 0;
 }

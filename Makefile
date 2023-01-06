@@ -1,6 +1,6 @@
 CL = $(shell getconf LEVEL1_DCACHE_LINESIZE)
 
-CFLAGS = -std=c++2a -Wall -Wextra -pedantic -DCACHE_LINE=$(CL) -march=native
+CFLAGS = -std=c++2a -Wall -Wextra -Wshadow -pedantic -DCACHE_LINE=$(CL) -march=native
 
 INCLUDE = -I deps/hopscotch-map/include/ -isystem deps/DYNAMIC/include/
 

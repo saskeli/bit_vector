@@ -10,9 +10,12 @@
 #include <iostream>
 #include <utility>
 
+#include <chrono>
+
 //#include "deb.hpp"
 #include "libpopcnt.h"
 #include "uncopyable.hpp"
+#include "deb.hpp"
 
 namespace bv {
 
@@ -42,11 +45,14 @@ namespace bv {
  * could easily be "fixed", but testing indicates that bigger buffer sizes are
  * unlikely to be of practical use.
  *
- * @tparam Size of insertion/removal buffer.
- * @tparam Use avx population counts for rank operations.
+ * @tparam buffer_size Size of insertion/removal buffer.
+ * @tparam leaf_size Logical maximum leaf size.
+ * @tparam avx Use avx population counts for rank operations.
+ * @tparam compressed Control wether leaves are allowed to compress contents.
+ * @tparam sorted_buffers Control wether buffers are kept sorted or not.
  */
 template <uint8_t buffer_size, uint32_t leaf_size, bool avx = true,
-          bool compressed = false>
+          bool compressed = false, bool sorted_buffers = true>
 class leaf : uncopyable {
    private:
     uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
@@ -79,11 +85,9 @@ class leaf : uncopyable {
     static const constexpr uint8_t C_TYPE_MASK = 0b00000010;
     static const constexpr uint8_t C_RUN_REMOVAL_MASK = 0b00000100;
 
-    // The buffer fill rate is stored in part of an 8-bit word.
-    // This could be resolved with using 16 bits instead (without increasing the
-    // sizeof(leaf) value but there does not really appear to be any reason to
-    // do so.
-    static_assert(buffer_size < WORD_BITS);
+    // Committing uses a 64 bit word as buffer, limiting the number of changes 
+    // that can be committed at once.
+    static_assert(buffer_size < 63);
 
     // Number of 32 bit buffer elements should be even to allow using buffer as
     // 64-bit elements if needed.
@@ -92,7 +96,7 @@ class leaf : uncopyable {
     // Hybrid compressed leaves should be buffered.
     static_assert(!compressed || buffer_size > 0);
 
-    // Larger leaf size would lead to undecided behaviour. due to buffer
+    // Larger leaf size would lead to undefined behaviour. due to buffer
     // overflow.
     static_assert(leaf_size < (uint32_t(1) << 22));
 
@@ -160,18 +164,25 @@ class leaf : uncopyable {
                 return c_at(i);
             }
         }
-        if constexpr (buffer_size != 0) {
+        if constexpr (!sorted_buffers && buffer_size != 0) {
+            commit();
+        }
+        if constexpr (sorted_buffers && buffer_size != 0) {
             uint64_t index = i;
-            for (uint8_t idx = 0; idx < buffer_count_; idx++) {
+            for (uint8_t idx = 0; idx < buffer_size; idx++) {
+                if (idx >= buffer_count_) [[unlikely]] {
+                    break;
+                }
                 uint64_t b = buffer_index(buffer_[idx]);
                 if (b == i) {
-                    if (buffer_is_insertion(buffer_[idx])) {
-                        [[unlikely]] return buffer_value(buffer_[idx]);
+                    if (buffer_is_insertion(buffer_[idx])) [[unlikely]] {
+                        return buffer_value(buffer_[idx]);
                     }
                     index++;
-                } else if (b < i) {
-                    [[likely]] index -=
-                        buffer_is_insertion(buffer_[idx]) * 2 - 1;
+                } else if (b < i) [[likely]] {
+                    index -= buffer_is_insertion(buffer_[idx]) * 2 - 1;
+                } else [[unlikely]] {
+                    break;
                 }
             }
             return MASK & (data_[index / WORD_BITS] >> (index % WORD_BITS));
@@ -240,6 +251,15 @@ class leaf : uncopyable {
             assert(size_ < capacity_ * WORD_BITS);
         }
 #endif
+        if constexpr (!sorted_buffers && buffer_size != 0) {
+            buffer_[buffer_count_++] = create_buffer(i, 1, x);
+            p_sum += x ? 1 : 0;
+            size++;
+            if (buffer_count_ >= buffer_size) [[unlikely]] {
+                commit();
+            }
+            return;
+        }
         if (i == size_) {
             // Convert to append if applicable.
             push_back(x);
@@ -265,8 +285,9 @@ class leaf : uncopyable {
             } else {
                 insert_buffer(idx, create_buffer(i, 1, x));
             }
-            if (buffer_count_ >= buffer_size) [[unlikely]]
+            if (buffer_count_ >= buffer_size) [[unlikely]] {
                 commit();
+            }
         } else {
             // If there is no buffer, a simple linear time insertion is done
             // instead.
@@ -304,7 +325,10 @@ class leaf : uncopyable {
                 return c_remove(i);
             }
         }
-        if constexpr (buffer_size != 0) {
+        if constexpr (!sorted_buffers && buffer_size > 0) {
+            commit();
+        }
+        if constexpr (sorted_buffers && buffer_size != 0) {
             bool x = this->at(i);
             p_sum_ -= x;
             --size_;
@@ -378,7 +402,10 @@ class leaf : uncopyable {
             }
         }
         uint32_t idx = i;
-        if constexpr (buffer_size != 0) {
+        if constexpr (!sorted_buffers && buffer_size != 0) {
+            commit();
+        }
+        if constexpr (sorted_buffers && buffer_size != 0) {
             // If buffer exists, the index needs for the underlying structure
             // needs to be modified. And if there exists an insertion to this
             // location in the buffer, the insertion can simply be amended.
@@ -433,7 +460,10 @@ class leaf : uncopyable {
         }
         uint32_t count = 0;
         uint32_t idx = n;
-        if constexpr (buffer_size != 0) {
+        if constexpr (!sorted_buffers && buffer_size >= 0) {
+            commit();
+        }
+        if constexpr (sorted_buffers && buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
                 if (buffer_index(buffer_[i]) >= n) {
                     [[unlikely]] break;
@@ -488,7 +518,10 @@ class leaf : uncopyable {
         uint32_t count = 0;
         uint32_t idx = n;
         uint32_t o_idx = offset;
-        if constexpr (buffer_size != 0) {
+        if constexpr (!sorted_buffers && buffer_size != 0) {
+            commit();
+        }
+        if constexpr (sorted_buffers && buffer_size != 0) {
             for (uint8_t i = 0; i < buffer_count_; i++) {
                 uint32_t b = buffer_index(buffer_[i]);
                 if (b >= n) {
@@ -562,6 +595,10 @@ class leaf : uncopyable {
             }
         }
         if constexpr (buffer_size == 0) {
+            return unb_select(x);
+        }
+        if constexpr (!sorted_buffers) {
+            commit();
             return unb_select(x);
         }
         if (buffer_count_ == 0) {
@@ -669,8 +706,11 @@ class leaf : uncopyable {
         }
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
+        if constexpr (!sorted_buffers && buffer_size != 0) {
+            commit();
+        }
         // Scroll the buffer to the start position and calculate offset.
-        if constexpr (buffer_size != 0) {
+        if constexpr (sorted_buffers && buffer_size != 0) {
             while (current_buffer < buffer_count_) {
                 uint32_t b_index = buffer_index(buffer_[current_buffer]);
                 if (b_index < pos) {
@@ -703,7 +743,7 @@ class leaf : uncopyable {
             if (offset != 0) {
                 pop += __builtin_popcountll(data_[pop_idx++] >> offset);
                 pos += WORD_BITS - offset;
-                if constexpr (buffer_size != 0) {
+                if constexpr (sorted_buffers && buffer_size != 0) {
                     for (uint8_t b = current_buffer; b < buffer_count_; b++) {
                         uint32_t b_index = buffer_index(buffer_[b]);
                         if (b_index < pos) {
@@ -734,7 +774,7 @@ class leaf : uncopyable {
         for (uint32_t j = pop_idx; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += WORD_BITS;
-            if constexpr (buffer_size != 0) {
+            if constexpr (sorted_buffers && buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count_; b++) {
                     uint32_t b_index = buffer_index(buffer_[b]);
                     if (b_index < pos) {
@@ -1863,13 +1903,13 @@ class leaf : uncopyable {
                 return;
             }
         }
-        // std::cout << "Commit is here" << std::endl;
         //  Complicated bit manipulation but whacha gonna do. Hopefully won't
         //  need to debug this anymore.
         if constexpr (buffer_size == 0) return;
-        if (buffer_count_ == 0) [[unlikely]]
+        if (buffer_count_ == 0) [[unlikely]] {
             return;
-
+        }
+            
         uint32_t overflow = 0;
         uint8_t overflow_length = 0;
         uint8_t underflow_length = 0;
@@ -2017,9 +2057,6 @@ class leaf : uncopyable {
     }
 
     void c_insert(uint32_t i, bool v) {
-        // if (compressed && do_debug) {
-        //     std::cout << "c_insert(" << i << ", " << v << ")" << std::endl;
-        // }
         uint8_t i_idx = 0;
         for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
             uint32_t e_index = buffer_[b_idx] & C_INDEX;
