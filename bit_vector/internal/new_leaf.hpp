@@ -67,6 +67,7 @@ class leaf : uncopyable {
      * @param capacity Number of 64-bit integers available for use in data.
      */
     leaf(uint32_t capacity, uint32_t elems = 0, bool val = false) : members_() {
+        capacity_() = capacity;
         if constexpr (!compressed) {
             // Uncompressed leaf does not support instantiation to non-empty
             assert(elems == 0);
@@ -172,9 +173,9 @@ class leaf : uncopyable {
                 data_()[j] |= (data_()[j - 1] >> 63);
             }
             data_()[target_word] =
-                (data_()[target_word] & ((MASK << target_offset) - 1)) |
-                ((data_()[target_word] & ~((MASK << target_offset) - 1)) << 1);
-            data_()[target_word] |= x ? (MASK << target_offset) : uint64_t(0);
+                (data_()[target_word] & ((ONE << target_offset) - 1)) |
+                ((data_()[target_word] & ~((ONE << target_offset) - 1)) << 1);
+            data_()[target_word] |= x ? (ONE << target_offset) : uint64_t(0);
         }
     }
 
@@ -208,12 +209,178 @@ class leaf : uncopyable {
         return size_() + (size_() % 8 ? 1 : 0);
     }
 
+    /**
+     * @brief Add an element to the end of the leaf data.
+     *
+     * If naively writing to the next available position would cause an
+     * overflow, the buffer will be committed and this will guarantee that the
+     * next available position will become valid assuming proper handling of the
+     * leaf by the parent element.
+     *
+     * @param x Value to be appended to the data.
+     */
+    void push_back(const bool x) {
+        if constexpr (compressed) {
+            assert(!is_compressed());
+        }
+        assert(size_() < capacity_ * WORD_BITS);
+        uint32_t pb_size = size_();
+        if constexpr (buffer_size != 0) {
+            typedef buffer<buffer_size, false, sorted_buffers> buf_t;
+            buf_t* buf = reinterpret_cast<buf_t*>(buf_ptr_());
+            for (auto be : *buf) {
+                pb_size += be.is_insertion() ? -1 : 1;
+            }
+        }
+
+        // If the leaf has at some point been full and has subsequently shrunk
+        // due to removals, the next available position to write to without
+        // committing the buffer may be beyond the end of the data_ array. In
+        // this case the buffer will need to be committed before appending the
+        // new element.
+        if (pb_size >= capacity_ * WORD_BITS) [[unlikely]] {
+            commit();
+            data_[size_() / WORD_BITS] |= uint64_t(x) << (size_() % WORD_BITS);
+        } else {
+            data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
+        }
+        size_()++;
+        p_sum_() += uint64_t(x);
+    }
+
    private:
     bool is_compressed() {
         if constexpr (compressed) {
             return (type_info_() & C_TYPE_MASK) == C_TYPE_MASK;
         }
         return false;
+    }
+
+        /**
+     * @brief Commit and clear the Insert/Remove buffer for the leaf.
+     *
+     * Intended for clearing a full buffer before insertion or removal, and for
+     * ensuring an empty buffer before transfer operations.
+     *
+     * Slightly complicated but linear time function for committing all buffered
+     * operations to the underlying data.
+     */
+    template <bool allow_convert = true>
+    void commit() {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                c_commit();
+                return;
+            }
+        }
+        //  Complicated bit manipulation but whacha gonna do. Hopefully won't
+        //  need to debug this anymore.
+        if constexpr (buffer_size == 0) return;
+        typedef buffer<buffer_size, false, sorted_buffers> buf_t;
+        buf_t* buf = reinterpret_cast<buf_t*>(buf_ptr_());
+        if (buf->size() == 0) [[unlikely]] {
+            return;
+        }
+            
+        uint32_t overflow = 0;
+        uint8_t overflow_length = 0;
+        uint8_t underflow_length = 0;
+        auto be = buf->begin();
+        auto buffer_end = buf->end();
+        uint32_t target_word = be->index / WORD_BITS;
+        uint32_t target_offset = be->index % WORD_BITS;
+
+        uint32_t words = size_() / WORD_BITS;
+        words += size_() % WORD_BITS > 0 ? 1 : 0;
+        for (uint32_t current_word = 0; current_word < words; current_word++) {
+            uint64_t underflow =
+                current_word + 1 < capacity_() ? data_()[current_word + 1] : 0;
+            if (overflow_length) [[likely]] {
+                underflow =
+                    (underflow << overflow_length) |
+                    (data_()[current_word] >> (WORD_BITS - overflow_length));
+            }
+
+            uint64_t new_overflow = 0;
+            // If buffers need to be commit to this word:
+            if (current_word == target_word && be != buffer_end) {
+                uint64_t word =
+                    underflow_length
+                        ? (data_()[current_word] >> underflow_length) |
+                              (underflow << (WORD_BITS - underflow_length))
+                        : (data_()[current_word] << overflow_length) | overflow;
+                underflow >>= underflow_length;
+                uint64_t new_word = 0;
+                uint8_t start_offset = 0;
+                // While there are buffers for this word
+                while (current_word == target_word) [[unlikely]] {
+                    new_word |=
+                        (word << start_offset) & ((ONE << target_offset) - 1);
+                    word = (word >> (target_offset - start_offset)) |
+                           (target_offset == 0 ? 0
+                            : target_offset - start_offset == 0
+                                ? 0
+                                : (underflow << (WORD_BITS - (target_offset -
+                                                              start_offset))));
+                    underflow >>= target_offset - start_offset;
+                    if (be->is_insertion) {
+                        if (be->value) {
+                            new_word |= ONE << target_offset;
+                        }
+                        start_offset = target_offset + 1;
+                        if (underflow_length) [[unlikely]] {
+                            underflow_length--;
+                        } else {
+                            overflow_length++;
+                        }
+                    } else {
+                        word >>= 1;
+                        word |= underflow << 63;
+                        underflow >>= 1;
+                        if (overflow_length) {
+                            overflow_length--;
+                        } else [[likely]] {
+                            underflow_length++;
+                        }
+                        start_offset = target_offset;
+                    }
+                    ++be;
+                    if (be == buffer_end) [[unlikely]] {
+                        break;
+                    }
+                    target_word = be->index / WORD_BITS;
+                    target_offset = be->index % WORD_BITS;
+                }
+                new_word |= start_offset < WORD_BITS ? (word << start_offset)
+                                                     : uint64_t(0);
+                new_overflow =
+                    overflow_length
+                        ? data_()[current_word] >> (WORD_BITS - overflow_length)
+                        : 0;
+                [[unlikely]] data_()[current_word] = new_word;
+            } else {
+                if (underflow_length) {
+                    data_()[current_word] =
+                        (data_()[current_word] >> underflow_length) |
+                        (underflow << (WORD_BITS - underflow_length));
+                } else if (overflow_length) [[likely]] {
+                    new_overflow =
+                        data_()[current_word] >> (WORD_BITS - overflow_length);
+                    data_()[current_word] =
+                        (data_()[current_word] << overflow_length) | overflow;
+                } else {
+                    overflow = 0;
+                }
+            }
+            overflow = new_overflow;
+        }
+        if (capacity_() > words) [[likely]] {
+            data_()[words] = 0;
+        }
+        buf->clear();
+        if constexpr (compressed && allow_convert) {
+            c_rle_check_convert();
+        }
     }
 
     bool c_at(uint32_t i) {
@@ -250,6 +417,109 @@ class leaf : uncopyable {
         if (buf->is_full()) {
             c_commit();
         }
+    }
+
+    template <bool commit_buffer = true>
+    void c_commit() {
+        typedef buffer<buffer_size, true, sorted_buffers> buf_t;
+        buf_t* buf = reinterpret_cast<buf_t*>(buf_ptr_());
+
+        uint32_t d_idx = 0;
+        auto be = buf->begin();
+        auto buffer_end = buf->end();
+        uint32_t elem_count = 0;
+        uint32_t copied = 0;
+        bool val = type_info_() & C_ONE_MASK;
+        bool first = val;
+        if constexpr (commit_buffer) {
+            first = be->index == 0 ? be->value : val;  
+        }
+        type_info_() &= 0b00011111;
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_());
+        while (d_idx < run_index_()) {
+            uint32_t rl = read_run(d_idx);
+            
+            // Extend current run while following run for other symbol is empty.
+            while (d_idx < run_index_()) {
+                uint32_t ed_idx = d_idx;
+                uint32_t e_rl = read_run(ed_idx);
+                if (e_rl || ed_idx >= run_index_()) [[likely]] {
+                    break;
+                }
+                e_rl = read_run(ed_idx);
+                rl += e_rl;
+                d_idx = ed_idx;
+            }
+            if constexpr (commit_buffer) {
+                while (be != buffer_end && be->index <= copied + rl) {
+                    if (be->value == val) {
+                        rl++;
+                    } else if (be->index == copied + rl) {
+                        break;
+                    } else {
+                        uint32_t pre_count = be->index - copied;
+                        if (pre_count) {
+                            rl -= pre_count;
+                            elem_count = write_scratch(pre_count, elem_count);
+                            copied += pre_count;
+                        }
+                        pre_count = 1;
+                        while ((b_idx < buffer_count_ - 1) &&
+                               ((buffer_[b_idx + 1] & C_INDEX) == e_idx + 1) &&
+                               ((buffer_[b_idx + 1] >> 31) == !val)) {
+                            pre_count++;
+                            e_idx++;
+                            [[unlikely]] b_idx++;
+                        }
+                        elem_count = write_scratch(pre_count, elem_count);
+                        copied += pre_count;
+                    }
+                    b_idx++;
+                    e_idx =
+                        b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
+                }
+            }
+            if (rl) {
+                elem_count = write_scratch(rl, elem_count);
+                copied += rl;
+            } else if (!commit_buffer && copied == 0) {
+                [[unlikely]] first = !val;
+            }
+            if (elem_count * 8 >= size_) {
+                flatten();
+                return;
+            }
+            val = !val;
+        }
+        if constexpr (commit_buffer) {
+            while (b_idx < buffer_count_) {
+                uint32_t rl = 1;
+                while ((b_idx < buffer_count_ - 1) &&
+                       ((buffer_[b_idx + 1] >> 31) == (buffer_[b_idx] >> 31))) {
+                    rl++;
+                    b_idx++;
+                }
+                elem_count = write_scratch(rl, elem_count);
+                b_idx++;
+            }
+            if (elem_count * 8 > size_) {
+                flatten();
+                return;
+            }
+        }
+        type_info_ &= 0b11100000;
+        type_info_ |= 0b00000010;
+        type_info_ |= first ? 0b00000001 : 0b00000000;
+        assert(capacity_ * 8 >= elem_count);
+        memcpy(data_, data_scratch, elem_count);
+        memset(data + elem_count, 0, 8 * capacity_ - elem_count);
+        if constexpr (commit_buffer) {
+            memset(buffer_, 0, sizeof(buffer_));
+            buffer_count_ = 0;
+        }
+#pragma GCC diagnostic ignored "-Warray-bounds"
+        run_index_[0] = elem_count;
+#pragma GCC diagnostic pop
     }
 
     uint32_t read_run(uint32_t& r_idx) {

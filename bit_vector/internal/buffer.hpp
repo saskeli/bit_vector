@@ -215,9 +215,7 @@ class buffer {
                 assoc_val(buffer_[i])};
     }
 
-    uint8_t size() {
-        return buffer_elems_;
-    }
+    uint8_t size() { return buffer_elems_; }
 
     buffer_iter begin() {
         if constexpr (!sorted) {
