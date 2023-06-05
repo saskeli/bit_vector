@@ -1,5 +1,26 @@
 # Fast dynamic bit vector headers
 
+## Citing
+
+If you find this repository useful, please cite:
+
+S. Dönges, S. J. Puglisi and R. Raman, 
+"On Dynamic Bitvector Implementations," 
+2022 Data Compression Conference (DCC), 
+Snowbird, UT, USA, 2022, pp. 252-261, doi: 10.1109/DCC52660.2022.00033.
+
+```bib
+@INPROCEEDINGS{9810697,
+  author={Dönges, Saska and Puglisi, Simon J. and Raman, Rajeev},
+  booktitle={2022 Data Compression Conference (DCC)}, 
+  title={On Dynamic Bitvector Implementations}, 
+  year={2022},
+  volume={},
+  number={},
+  pages={252-261},
+  doi={10.1109/DCC52660.2022.00033}}
+```
+
 ## Compiling headers
 
 If you wish to use the headers in your project, it should suffice to add the repository as a submodule (non-recursively) or copy the headers in the `bit_vector` sub folder.
