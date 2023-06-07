@@ -774,6 +774,67 @@ class leaf : uncopyable {
     }
 
     /**
+     * @brief Index of the x<sup>th</sup> 0-bit in the data structure 
+     * 
+     * Select is a simple (if somewhat slow) linear time operation.
+     * 
+     * @param x Selection target
+     * 
+     * @return @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) = x\f$.
+     */
+    uint32_t select_zero(uint32_t x) const {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                //return compressed select_zero
+            }
+        }
+        if constexpr (buffer_size == 0) {
+            //return unbuffered select_zero
+        }
+        if (buffer_count_ == 0) {
+            //return unbuffered select_zero
+        }
+        uint32_t population = 0;
+        uint32_t position = 0;
+        uint8_t current_buffer = 0;
+        int8_t a_position_offset = 0;
+        int32_t b_index = -100;
+        
+        //Step one 64-bit word at a time considering the buffer until pop >= x
+        for (uint32_t j = 0; j < capacity_; j++) {
+            //Negate the 64-bit integer to get number of 0's
+            population += builtin_popcountll(~data_[j]);
+            position += WORD_BITS;
+            //Iterate buffer until position or end of the buffer
+            for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                //b_index indicates the insertion/removal location of the operation
+                b_index = buffer_index(buffer_[b]);
+                if (b_index < int32_t(position)) {
+                    if (buffer_is_insertion(buffer_[b])) {
+                        population += ~(buffer_value(buffer_[b]));
+                        position++;
+                        a_position_offset--;
+                    } else {
+                        uint32_t desired_index = b_index + a_position_offset
+                        population += ~(data_[desired_index / WORD_BITS] >> 
+                                        (desired_index % WORD_BITS)) &
+                                        MASK;
+                        position--;
+                        a_pos_offset++;
+                    }
+                    [[unlikely]] current_buffer++;
+                } else {
+                    [[likely]] break;
+                }
+                [[unlikely]] (void(0));
+            }
+            if (pop >= x) {
+                [[unlikely]] break;
+            }
+        }
+    }
+    /**
      * @brief Size of the leaf and associated data in bits.
      */
     uint64_t bits_size() const {
