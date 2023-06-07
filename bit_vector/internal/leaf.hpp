@@ -783,7 +783,7 @@ class leaf : uncopyable {
      * @return @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
      * \mathrm{bv}[j]\right) = x\f$.
      */
-    uint32_t select_zero(uint32_t x) const {
+    uint32_t select0(uint32_t x) const {
         if constexpr (compressed) {
             if (is_compressed()) {
                 //return compressed select_zero
@@ -804,24 +804,27 @@ class leaf : uncopyable {
         //Step one 64-bit word at a time considering the buffer until pop >= x
         for (uint32_t j = 0; j < capacity_; j++) {
             //Negate the 64-bit integer to get number of 0's
-            population += builtin_popcountll(~data_[j]);
+            population += __builtin_popcountll(~data_[j]);
             position += WORD_BITS;
+
             //Iterate buffer until position or end of the buffer
-            for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                //b_index indicates the insertion/removal location of the operation
-                b_index = buffer_index(buffer_[b]);
+            for (uint8_t buffer = current_buffer; buffer < buffer_count_; buffer++) {
+                //buffer_index indicates the insertion/removal location of the operation
+                b_index = buffer_index(buffer_[buffer]);
+
                 if (b_index < int32_t(position)) {
-                    if (buffer_is_insertion(buffer_[b])) {
-                        population += ~(buffer_value(buffer_[b]));
+                    if (buffer_is_insertion(buffer_[buffer])) {
+                        population += !buffer_value(buffer_[buffer]);
                         position++;
                         a_position_offset--;
+
                     } else {
-                        uint32_t desired_index = b_index + a_position_offset
-                        population += ~(data_[desired_index / WORD_BITS] >> 
+                        uint32_t desired_index = b_index + a_position_offset;
+                        population -= !((data_[desired_index / WORD_BITS] >> 
                                         (desired_index % WORD_BITS)) &
-                                        MASK;
+                                        MASK);
                         position--;
-                        a_pos_offset++;
+                        a_position_offset++;
                     }
                     [[unlikely]] current_buffer++;
                 } else {
@@ -829,11 +832,62 @@ class leaf : uncopyable {
                 }
                 [[unlikely]] (void(0));
             }
-            if (pop >= x) {
+            if (population >= x) {
                 [[unlikely]] break;
             }
         }
+
+        current_buffer -= 1;
+        b_index = current_buffer < buffer_count_
+                        ? buffer_index(buffer_[current_buffer])
+                        : -100;
+        if ((b_index - 1 >= int32_t(position) &&
+                !buffer_is_insertion(buffer_[current_buffer])) ||
+            (b_index >= int32_t(position) &&
+                buffer_is_insertion(buffer_[current_buffer]))) {
+            current_buffer--;
+            b_index = current_buffer < buffer_count_
+                            ? buffer_index(buffer_[current_buffer])
+                            : -100;
+        }
+
+        // Make sure we have not overshot the logical end of the structure.
+        position = size_ < position ? size_ : position;
+
+        // Decrement one bit at a time until we can't anymore without going
+        // under x.
+        position--;
+        while (population >= x && position < capacity_ * WORD_BITS) {
+            while (b_index - 1 == int32_t(position) &&
+                    !buffer_is_insertion(buffer_[current_buffer])) {
+                a_position_offset--;
+                current_buffer--;
+                b_index = current_buffer < buffer_count_
+                                ? buffer_index(buffer_[current_buffer])
+                                : -100;
+                [[unlikely]] (void(0));
+            }
+            if (b_index == int32_t(position) &&
+                buffer_is_insertion(buffer_[current_buffer])) {
+                population -= !buffer_value(buffer_[current_buffer]);
+                a_position_offset++;
+                position--;
+                current_buffer--;
+                b_index = current_buffer < buffer_count_
+                                ? buffer_index(buffer_[current_buffer])
+                                : -100;
+                [[unlikely]] continue;
+            }
+            population -= !((data_[(position + a_position_offset) / WORD_BITS] >>
+                    ((position + a_position_offset) % WORD_BITS)) &
+                   MASK);
+            position--;
+        }
+        return ++position;
     }
+
+    
+
     /**
      * @brief Size of the leaf and associated data in bits.
      */

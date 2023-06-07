@@ -211,6 +211,30 @@ void leaf_select_test(uint64_t n) {
 }
 
 template <class leaf, class alloc>
+void leaf_select0_test(uint64_t n) {
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>(8);
+    for (uint64_t i = 0; i < n; i++) {
+        l->insert(0, !bool(i & uint64_t(1)));
+        if (l->need_realloc()) {
+            uint64_t cap = l->capacity();
+            l = allocator->template reallocate_leaf<leaf>(l, cap, 2*cap);
+        }
+    }
+
+    //if n even, then is_even = 1
+    uint64_t is_first = (n - 1) % 2;
+    for (uint64_t i = 1; i <= n / 2; i++) {
+        uint64_t ex = (i - is_first) * 2 + is_first - 1;
+        uint64_t val = l->select0(i);
+        ASSERT_EQ(val, ex) << "Select(" << i << ") should be " << ex;
+    }
+
+    allocator->template deallocate_leaf<leaf>(l);
+    delete allocator;
+}
+
+template <class leaf, class alloc>
 void leaf_select_offset_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);

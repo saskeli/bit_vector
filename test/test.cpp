@@ -49,6 +49,8 @@ TEST(SimpleLeaf, SelectOffset) { leaf_select_test<sl, ma>(11); }
 
 TEST(SimpleLeaf, SelectBlock) { leaf_select_offset_test<sl, ma>(3000); }
 
+TEST(SimpleLeaf, Select0) { leaf_select0_test<sl, ma>(5000); }
+
 TEST(SimpleLeaf, Set) { leaf_set_test<sl, ma>(10000); }
 
 TEST(SimpleLeaf, ClearFirst) { leaf_clear_start_test<sl, ma>(); }
