@@ -13,12 +13,12 @@ template <uint8_t buffer_size, bool compressed, bool sorted>
 class buffer {
    private:
     static_assert(buffer_size > 0);
-    static_assert(buffer_size < 256);
+    static_assert(buffer_size < 1024);
     static_assert(__builtin_popcount(buffer_size) == 1);
     inline static uint32_t scratch[buffer_size];
 
     uint32_t buffer_[buffer_size];
-    uint8_t buffer_elems_;
+    uint16_t buffer_elems_;
 
     struct buffer_ref {
         const uint32_t index;
@@ -50,16 +50,10 @@ class buffer {
             offset++;
             return *this;
         }
-
-        buffer_iter operator++(int) {
-            buffer_iter clone(buf, offset);
-            offset++;
-            return clone;
-        }
     };
 
    public:
-    buffer() : buffer_(), buffer_elems_(){};
+    buffer() : buffer_(), buffer_elems_() {}
     buffer(const buffer& other) { std::memcpy(this, &other, sizeof(buffer)); }
     buffer& operator=(const buffer& other) {
         std::memcpy(this, &other, sizeof(buffer));
