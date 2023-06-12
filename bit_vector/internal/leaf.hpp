@@ -793,97 +793,107 @@ class leaf : uncopyable {
             //return unbuffered select_zero
         }
         if (buffer_count_ == 0) {
-            //return unbuffered select_zero
+            return unb_select0(x);
         }
-        uint32_t population = 0;
-        uint32_t position = 0;
+
+        uint64_t pop = 0;
+        uint64_t pos = 0;
         uint8_t current_buffer = 0;
-        int8_t a_position_offset = 0;
-        int32_t b_index = -100;
+        int8_t a_pos_offset = 0;
         
         //Step one 64-bit word at a time considering the buffer until pop >= x
-        for (uint32_t j = 0; j < capacity_; j++) {
+        for (uint16_t j = 0; j < capacity_; j++) {
             //Negate the 64-bit integer to get number of 0's
-            population += __builtin_popcountll(~data_[j]);
-            position += WORD_BITS;
-
+            pop += __builtin_popcountll(~data_[j]);
+            pos += WORD_BITS;
             //Iterate buffer until position or end of the buffer
-            for (uint8_t buffer = current_buffer; buffer < buffer_count_; buffer++) {
-                //buffer_index indicates the insertion/removal location of the operation
-                b_index = buffer_index(buffer_[buffer]);
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                    //buffer_index indicates the insertion/removal location of the operation
+                    uint32_t b_index = buffer_index(buffer_[b]);
 
-                if (b_index < int32_t(position)) {
-                    if (buffer_is_insertion(buffer_[buffer])) {
-                        population += !buffer_value(buffer_[buffer]);
-                        position++;
-                        a_position_offset--;
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer_[b])) {
+                            pop += 1-buffer_value(buffer_[b]);
+                            pos++;
+                            a_pos_offset--;
 
+                        } else {
+                            uint32_t desired_index = b_index + a_pos_offset;
+                            pop -= 1-((data_[desired_index / WORD_BITS] >> 
+                                    (desired_index % WORD_BITS)) &
+                                    MASK);
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        [[unlikely]] current_buffer++;
                     } else {
-                        uint32_t desired_index = b_index + a_position_offset;
-                        population -= !((data_[desired_index / WORD_BITS] >> 
-                                        (desired_index % WORD_BITS)) &
-                                        MASK);
-                        position--;
-                        a_position_offset++;
+                        [[likely]] break;
                     }
-                    [[unlikely]] current_buffer++;
-                } else {
-                    [[likely]] break;
+                    [[unlikely]] (void(0));
                 }
+            }
+            if (pop >= x) {
+                [[unlikely]] break;
+            }
+        }
+        
+        // Make sure we have not overshot the logical end of the structure.
+        if (pos > size_) {
+            //Subtract unwanted zeros caused by going over the logical end
+            //of the structure
+            pop -= pos-size_;
+            pos = size_;
+        }
+
+        // Decrement one bit at a time until we can't anymore without going
+        // under x.
+        uint32_t b_index = buffer_index(buffer_[--current_buffer]);
+        pos--;
+        while (pop >= x) {
+            //Check if removals in the buffer and decrease offset
+            while (!buffer_is_insertion(buffer_[current_buffer]) &&
+                    b_index > pos) {
+                a_pos_offset--;
+                b_index = buffer_index(buffer_[--current_buffer]);
                 [[unlikely]] (void(0));
             }
-            if (population >= x) {
+            if (buffer_is_insertion(buffer_[current_buffer]) &&
+                b_index == pos) {
+                    pop -= 1-buffer_value(buffer_[current_buffer]);
+                    a_pos_offset++;
+                    pos--;
+                    b_index = buffer_index(buffer_[--current_buffer]);
+                    [[unlikely]] continue;
+                }
+            pop -= 1 - ((data_[(pos + a_pos_offset) / WORD_BITS] >>
+                        ((pos + a_pos_offset) % WORD_BITS)) &
+                        MASK);
+            pos--;
+        }
+
+        return ++pos;
+    }
+
+    uint32_t unb_select0(uint32_t x) const{
+
+        uint32_t pop = 0;
+        uint32_t pos = 0;
+        uint32_t prev_pop = 0;
+        uint32_t j = 0;
+
+        for(; j < capacity_; j++) {
+            prev_pop = pop;
+            pop += __builtin_popcountll(~data_[j]);
+            if (pop >= x) {
                 [[unlikely]] break;
             }
         }
 
-        current_buffer -= 1;
-        b_index = current_buffer < buffer_count_
-                        ? buffer_index(buffer_[current_buffer])
-                        : -100;
-        if ((b_index - 1 >= int32_t(position) &&
-                !buffer_is_insertion(buffer_[current_buffer])) ||
-            (b_index >= int32_t(position) &&
-                buffer_is_insertion(buffer_[current_buffer]))) {
-            current_buffer--;
-            b_index = current_buffer < buffer_count_
-                            ? buffer_index(buffer_[current_buffer])
-                            : -100;
-        }
-
-        // Make sure we have not overshot the logical end of the structure.
-        position = size_ < position ? size_ : position;
-
-        // Decrement one bit at a time until we can't anymore without going
-        // under x.
-        position--;
-        while (population >= x && position < capacity_ * WORD_BITS) {
-            while (b_index - 1 == int32_t(position) &&
-                    !buffer_is_insertion(buffer_[current_buffer])) {
-                a_position_offset--;
-                current_buffer--;
-                b_index = current_buffer < buffer_count_
-                                ? buffer_index(buffer_[current_buffer])
-                                : -100;
-                [[unlikely]] (void(0));
-            }
-            if (b_index == int32_t(position) &&
-                buffer_is_insertion(buffer_[current_buffer])) {
-                population -= !buffer_value(buffer_[current_buffer]);
-                a_position_offset++;
-                position--;
-                current_buffer--;
-                b_index = current_buffer < buffer_count_
-                                ? buffer_index(buffer_[current_buffer])
-                                : -100;
-                [[unlikely]] continue;
-            }
-            population -= !((data_[(position + a_position_offset) / WORD_BITS] >>
-                    ((position + a_position_offset) % WORD_BITS)) &
-                   MASK);
-            position--;
-        }
-        return ++position;
+        pos -= WORD_BITS;
+        uint64_t add_loc = x - prev_pop - 1;
+        add_loc = uint64_t(1) << add_loc;
+        return pos + 63 - __builtin_clzll(_pdep_u64(add_loc, ~data_[j]));
     }
 
     
