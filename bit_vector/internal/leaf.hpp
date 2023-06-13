@@ -875,6 +875,143 @@ class leaf : uncopyable {
         return ++pos;
     }
 
+    /**
+     * @brief Index of the x<sup>th</sup> 0-bit in the data structure starting at `pos` with `pop`
+     * 
+     * @param x Selection target.
+     * @param pos Start position of Select calculation.
+     * @param pop Start population as `pos`
+     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) = x\f$.
+     */
+    uint32_t select0(uint32_t x, uint32_t pos, uint32_t pop) const {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_select(x);
+            }
+        }
+        uint8_t current_buffer = 0;
+        int8_t a_pos_offset = 0;
+        //Scroll the buffer to the start position and calculate offset.
+        if constexpr (buffer_size != 0) {
+            while (current_buffer < buffer_count_) {
+                uint32_t b_index = buffer_index(buffer_[current_buffer]);
+                if (b_index < pos) {
+                    if (buffer_is_insertion(buffer_[current_buffer])) {
+                        a_pos_offset--;
+                    } else {
+                        a_pos_offset++;
+                    }
+                    [[unlikely]] current_buffer++;
+                } else {
+                    [[likely]] break;
+                }
+            }
+        }
+
+        //pop_idx = starting index in the data array
+        uint32_t pop_idx = 0;
+
+        // Step to the next 64-bit word boundary
+        if (pos + a_pos_offset > 0) {
+            pop_idx = (pos + a_pos_offset) / WORD_BITS; 
+            uint32_t offset = (pos + a_pos_offset) % WORD_BITS;
+            if (offset != 0) {
+                pop += __builtin_popcountll((~data_[pop_idx++]) >> offset);
+                pos += WORD_BITS - offset;
+                if constexpr (buffer_size != 0) {
+                    for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                        uint32_t b_index = buffer_index(buffer_[b]);
+                        if (b_index < pos) {
+                            if (buffer_is_insertion(buffer_[b])) {
+                                pop += 1-buffer_value(buffer_[b]);
+                                pos++;
+                                a_pos_offset--;
+                            } else {
+                                pop -= 1-((data_[(b_index + a_pos_offset) / WORD_BITS] >> 
+                                    ((b_index + a_pos_offset) % WORD_BITS)) &
+                                    MASK);
+                                pos--;
+                                a_pos_offset++;
+                            }
+                            [[unlikely]] current_buffer++;
+                        } else {
+                            [[likely]] break;
+                        }
+                        [[unlikely]] (void(0));
+                    }
+                }
+            }
+        }
+
+        //Step one 64-bit word at a time considering the buffer until pop >= x
+        for (uint32_t j = pop_idx; j < capacity_; j++) {
+            pop += __builtin_popcountll(~data_[j]);
+            pos += WORD_BITS;
+            if constexpr (buffer_size != 0) {
+                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
+                    uint32_t b_index = buffer_index(buffer_[b]);
+                    if (b_index < pos) {
+                        if (buffer_is_insertion(buffer_[b])) {
+                            pop += 1-buffer_value(buffer_[b]);
+                            pos++;
+                            a_pos_offset--;
+                        } else {
+                            pop -= 1-((data_[(b_index + a_pos_offset) / WORD_BITS] >> 
+                                    ((b_index + a_pos_offset) % WORD_BITS)) &
+                                    MASK);
+                            pos--;
+                            a_pos_offset++;
+                        }
+                        [[unlikely]] current_buffer++;
+                    } else {
+                        [[likely]] break;
+                    }
+                    [[unlikely]] (void(0));
+                }
+            }
+            if (pop >= x) [[unlikely]] {
+                break;
+            }
+        }
+
+        //Bits over the end of the logical structure are set as 0 which need to be subtracted
+        if (pos > size_) {
+            pop -= pos-size_;
+            pos = size_;
+        }
+
+        // Decrement one bit at a time until we can't anymore without going
+        // under x.
+        uint32_t b_index = buffer_index(buffer_[--current_buffer]);
+        pos--;
+        while (pop >= x) {
+            //Check if removals in the buffer and decrease offset
+            while (!buffer_is_insertion(buffer_[current_buffer]) &&
+                    b_index > pos) {
+                a_pos_offset--;
+                b_index = buffer_index(buffer_[--current_buffer]);
+                [[unlikely]] (void(0));
+            }
+            if (buffer_is_insertion(buffer_[current_buffer]) &&
+                b_index == pos) {
+                    pop -= 1-buffer_value(buffer_[current_buffer]);
+                    a_pos_offset++;
+                    pos--;
+                    b_index = buffer_index(buffer_[--current_buffer]);
+                    [[unlikely]] continue;
+                }
+            pop -= 1 - ((data_[(pos + a_pos_offset) / WORD_BITS] >>
+                        ((pos + a_pos_offset) % WORD_BITS)) &
+                        MASK);
+            pos--;
+        }
+
+        return ++pos;
+
+    }
+
+
     uint32_t unb_select0(uint32_t x) const{
 
         uint32_t pop = 0;

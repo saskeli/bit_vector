@@ -211,6 +211,31 @@ void leaf_select_test(uint64_t n) {
 }
 
 template <class leaf, class alloc>
+void leaf_select_offset_test(uint64_t n) {
+    alloc* allocator = new alloc();
+    leaf* l = allocator->template allocate_leaf<leaf>(8);
+    for (uint64_t i = 0; i < n; i++) {
+        l->insert(0, bool(i & uint64_t(1)));
+        if (l->need_realloc()) {
+            uint64_t cap = l->capacity();
+            l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
+        }
+    }
+
+    uint64_t lim = l->p_sum();
+    for (uint64_t i = 0; i < n; i += 50) {
+        uint64_t i_rank = l->rank(i);
+        for (uint64_t j = i_rank + 1; j <= lim; j++) {
+            ASSERT_EQ(l->select(j), l->select(j, i, i_rank))
+                << "i = " << i << ", j = " << j;
+        }
+    }
+
+    allocator->template deallocate_leaf<leaf>(l);
+    delete allocator;
+}
+
+template <class leaf, class alloc>
 void leaf_select0_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
@@ -235,27 +260,27 @@ void leaf_select0_test(uint64_t n) {
 }
 
 template <class leaf, class alloc>
-void leaf_select_offset_test(uint64_t n) {
+void leaf_select0_offset_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
     for (uint64_t i = 0; i < n; i++) {
-        l->insert(0, bool(i & uint64_t(1)));
+        l->insert(0, !bool(i & uint64_t(1)));
         if (l->need_realloc()) {
             uint64_t cap = l->capacity();
             l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
         }
     }
 
-    uint64_t lim = l->p_sum();
-    for (uint64_t i = 0; i < n; i += 50) {
-        uint64_t i_rank = l->rank(i);
+    uint64_t lim = (l->size() - l->p_sum());
+    for (uint64_t i = 0; i < n; i+= 50) {
+        uint64_t i_rank = i-l->rank(i);
         for (uint64_t j = i_rank + 1; j <= lim; j++) {
-            ASSERT_EQ(l->select(j), l->select(j, i, i_rank))
+            ASSERT_EQ(l->select0(j), l->select0(j, i, i_rank))
                 << "i = " << i << ", j = " << j;
         }
     }
 
-    allocator->template deallocate_leaf<leaf>(l);
+    allocator-> template deallocate_leaf<leaf>(l);
     delete allocator;
 }
 
