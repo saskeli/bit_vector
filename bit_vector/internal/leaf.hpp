@@ -850,7 +850,7 @@ class leaf : uncopyable {
         // under x.
         uint32_t b_index = buffer_index(buffer_[--current_buffer]);
         pos--;
-        while (pop >= x) {
+        while (pop >= x && pos < uint64_t(capacity_ * WORD_BITS)) {
             //Check if removals in the buffer and decrease offset
             while (!buffer_is_insertion(buffer_[current_buffer]) &&
                     b_index > pos) {
@@ -985,7 +985,7 @@ class leaf : uncopyable {
         // under x.
         uint32_t b_index = buffer_index(buffer_[--current_buffer]);
         pos--;
-        while (pop >= x) {
+        while (pop >= x && pos < uint64_t(capacity_ * WORD_BITS)) {
             //Check if removals in the buffer and decrease offset
             while (!buffer_is_insertion(buffer_[current_buffer]) &&
                     b_index > pos) {

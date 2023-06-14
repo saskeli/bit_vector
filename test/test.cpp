@@ -193,6 +193,14 @@ TEST(SimpleNode, SelectLeaf) { node_select_leaf_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, SelectNode) { node_select_node_test<nd, sl, ma>(BRANCH); }
 
+TEST(SimpleNode, Select0SingleLeaf) {
+    node_select0_single_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, Select0Leaf) { node_select0_leaf_test<nd, sl, ma>(BRANCH); }
+
+TEST(SimpleNode, Select0Node) { node_select0_node_test<nd, sl, ma>(BRANCH); }
+
 TEST(SimpleNode, InsertSingleLeaf) {
     node_insert_single_leaf_test<nd, sl, ma>();
 }

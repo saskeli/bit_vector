@@ -285,6 +285,38 @@ class node : uncopyable {
             return res + child->select(count);
         }
     }
+    
+    /**
+     * @brief Calculates the index of the count<sup>tu<\sup> 0-bit
+     * 
+     * Recurses to children based on cumulative sums and returns subtree Select0
+     * based on the results of the recurrence and local cumulative sizes.
+     * 
+     * @param count Number to sum up to
+     *  
+     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) =  \f$ count
+     */
+    dtype select0(dtype count) const {
+        uint8_t child_index = 0;
+        for (size_t i = 0; i < child_count_; i++) {
+            child_index += (child_sizes_.get(i) - child_sums_.get(i)) < count;
+        }
+
+        dtype res = 0;
+        if (child_index != 0) {
+            res = child_sizes_.get(child_index - 1);
+            [[likely]] count -= (res-child_sums_.get(child_index - 1));
+        }
+        if (has_leaves()) {
+            leaf_type* child =
+                reinterpret_cast<leaf_type*>(children_[child_index]);
+            [[unlikely]] return res + child->select0(count);
+        } else {
+            node* child = reinterpret_cast<node*>(children_[child_index]);
+            return res + child->select0(count);
+        }
+    }
 
     /**
      * @brief Recursively deallocates all children.
