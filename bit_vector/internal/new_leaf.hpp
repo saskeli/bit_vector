@@ -12,7 +12,7 @@
 #include "uncopyable.hpp"
 
 namespace bv {
-template <uint8_t buffer_size, uint32_t leaf_size, bool avx = true,
+template <uint16_t buffer_size, uint32_t leaf_size, bool avx = true,
           bool compressed = false, bool sorted_buffers = true>
 class leaf : uncopyable {
    private:
@@ -26,10 +26,6 @@ class leaf : uncopyable {
         sizeof(uint8_t) *
             (compressed ? 1 : 0);  // meta data for compressed leaves.
     uint8_t members_[LEAF_BYTES];
-
-    // Committing uses a 64 bit word as buffer, limiting the number of changes 
-    // that can be committed at once.
-    static_assert(buffer_size < 63);
 
     // Hybrid compressed leaves should be buffered.
     static_assert(!compressed || buffer_size > 0);
@@ -105,19 +101,20 @@ class leaf : uncopyable {
             uint64_t index = i;
             typedef buffer<buffer_size, false, sorted_buffers> buf_t;
             for (auto be : *reinterpret_cast<buf_t*>(buf_ptr_())) {
-                if (be.index == i) {
+                uint32_t be_idx = be.index();
+                if (be_idx == i) {
                     if constexpr (!sorted_buffers) {
-                        return be.value;
+                        return be.value();
                     }
-                    if (be.is_insertion) [[unlikely]] {
-                        return be.value;
+                    if (be.is_insertion()) [[unlikely]] {
+                        return be.value();
                     }
                     index++;
-                } else if (be.index < i) [[likely]] {
+                } else if (be_idx < i) [[likely]] {
                     if constexpr (!sorted_buffers) {
                         index--;
                     } else {
-                        index += be.is_insertion ? -1 : 1;
+                        index += be.is_insertion() ? -1 : 1;
                     } 
                 } else {
                     break;
@@ -153,8 +150,8 @@ class leaf : uncopyable {
             push_back(x);
             return;
         }
-        p_sum_() += x ? 1 : 0;
-        size_()++;
+        p_sum_() += uint32_t(x);
+        ++size_();
         if constexpr (buffer_size) {
             typedef buffer<buffer_size, false, sorted_buffers> buf_t;
             buf_t* buf = reinterpret_cast<buf_t*>(buf_ptr_());
@@ -165,7 +162,6 @@ class leaf : uncopyable {
         } else {
             // If there is no buffer, a simple linear time insertion is done
             // instead.
-            size_()++;
             uint32_t target_word = i / WORD_BITS;
             uint32_t target_offset = i % WORD_BITS;
             for (uint32_t j = capacity_() - 1; j > target_word; j--) {
@@ -180,27 +176,34 @@ class leaf : uncopyable {
     }
 
     /** @brief Getter for p_sum_ */
-    uint32_t p_sum() { return p_sum_(); }
+    uint32_t p_sum() const { return p_sum_(); }
     /** @brief Getter for size_ */
-    uint32_t size() { return size_(); }
+    uint32_t size() const { return size_(); }
     /** @brief Getter for number of buffer elements */
-    uint8_t buffer_count() { 
-        typedef buffer<buffer_size, compressed, sorted_buffers> buf_t;
-        return reinterpret_cast<buf_t*>(buf_ptr_())->size(); 
+    uint8_t buffer_count() const {
+        if (is_compressed()) {
+            typedef buffer<buffer_size, true, sorted_buffers> buf_t;
+            return reinterpret_cast<buf_t*>(buf_ptr_())->size(); 
+        } else {
+            typedef buffer<buffer_size, false, sorted_buffers> buf_t;
+            return reinterpret_cast<buf_t*>(buf_ptr_())->size(); 
+        }
+        
     }
     ///** @brief Get pointer to the buffer */
     //uint32_t* buffer() { return buffer_; }
     /** @brief Get the values for the first run */
-    bool first_value() {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                return type_info_() & C_ONE_MASK;
-            }
+    bool first_value() const {
+        // Don't know if this is a good idea, but this function only
+        // makes sense for compressed leaves.
+        static_assert(compressed); 
+        if (is_compressed()) {
+            return type_info_() & C_ONE_MASK;
         }
         return at(0);
     }
     /** @brief Number of bytes used to encode content */
-    uint32_t used_bytes() {
+    uint32_t used_bytes() const {
         if constexpr (compressed) {
             if (is_compressed()) {
                 return run_index_();
@@ -225,7 +228,7 @@ class leaf : uncopyable {
         }
         assert(size_() < capacity_ * WORD_BITS);
         uint32_t pb_size = size_();
-        if constexpr (buffer_size != 0) {
+        if constexpr (buffer_size) {
             typedef buffer<buffer_size, false, sorted_buffers> buf_t;
             buf_t* buf = reinterpret_cast<buf_t*>(buf_ptr_());
             for (auto be : *buf) {
@@ -238,25 +241,25 @@ class leaf : uncopyable {
         // committing the buffer may be beyond the end of the data_ array. In
         // this case the buffer will need to be committed before appending the
         // new element.
-        if (pb_size >= capacity_ * WORD_BITS) [[unlikely]] {
+        if (pb_size >= capacity_() * WORD_BITS) [[unlikely]] {
             commit();
             data_[size_() / WORD_BITS] |= uint64_t(x) << (size_() % WORD_BITS);
         } else {
             data_[pb_size / WORD_BITS] |= uint64_t(x) << (pb_size % WORD_BITS);
         }
-        size_()++;
+        ++size_();
         p_sum_() += uint64_t(x);
     }
 
    private:
-    bool is_compressed() {
+    bool is_compressed() const {
         if constexpr (compressed) {
-            return (type_info_() & C_TYPE_MASK) == C_TYPE_MASK;
+            return type_info_() & C_TYPE_MASK;
         }
         return false;
     }
 
-        /**
+    /**
      * @brief Commit and clear the Insert/Remove buffer for the leaf.
      *
      * Intended for clearing a full buffer before insertion or removal, and for
@@ -267,24 +270,24 @@ class leaf : uncopyable {
      */
     template <bool allow_convert = true>
     void commit() {
+        if constexpr (buffer_size == 0) return;
         if constexpr (compressed) {
             if (is_compressed()) {
-                c_commit();
+                c_commit<allow_convert>();
                 return;
             }
         }
-        //  Complicated bit manipulation but whacha gonna do. Hopefully won't
+        //  Complicated bit manipulation but wacha gonna do. Hopefully won't
         //  need to debug this anymore.
-        if constexpr (buffer_size == 0) return;
         typedef buffer<buffer_size, false, sorted_buffers> buf_t;
         buf_t* buf = reinterpret_cast<buf_t*>(buf_ptr_());
         if (buf->size() == 0) [[unlikely]] {
             return;
         }
-            
+        // TODO: Replace all of this with a circular buffer...  
         uint32_t overflow = 0;
-        uint8_t overflow_length = 0;
-        uint8_t underflow_length = 0;
+        uint16_t overflow_length = 0;
+        uint16_t underflow_length = 0;
         auto be = buf->begin();
         auto buffer_end = buf->end();
         uint32_t target_word = be->index / WORD_BITS;
