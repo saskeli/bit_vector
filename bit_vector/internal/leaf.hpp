@@ -786,7 +786,7 @@ class leaf : uncopyable {
     uint32_t select0(uint32_t x) const {
         if constexpr (compressed) {
             if (is_compressed()) {
-                return 0;
+                return c_select0(x);
             }
         }
         if constexpr (buffer_size == 0) {
@@ -907,7 +907,7 @@ class leaf : uncopyable {
     uint32_t select0(uint32_t x, uint32_t pos, uint32_t pop) const {
         if constexpr (compressed) {
             if (is_compressed()) {
-                return c_select(x);
+                return c_select0(x);
             }
         }
         uint8_t current_buffer = 0;
@@ -2539,6 +2539,70 @@ class leaf : uncopyable {
             if (count + (val * rl) >= x) {
                 c_i += x - count;
                 // std::cout << "Full run" << std::endl;
+                return --c_i;
+            }
+            count += val * rl;
+            c_i += rl;
+            val = !val;
+        }
+        while (b_idx < buffer_count_) {
+            count += buffer_[b_idx] >> 31;
+            c_i++;
+            if (count == x) break;
+            b_idx++;
+            e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
+        }
+        return --c_i;
+    }
+
+    uint32_t c_select0(uint32_t x) const {
+        //Flip the value to count 0's as 1's
+        bool val = !(type_info_ & C_ONE_MASK);
+        uint8_t* data = reinterpret_cast<uint8_t*>(data_);
+        uint8_t b_idx = 0;
+        uint32_t e_index = buffer_[b_idx] & C_INDEX;
+        uint32_t c_i = 0;
+        uint32_t count = 0;
+        uint32_t d_idx = 0;
+        while (d_idx < run_index_[0]) {
+            uint32_t rl = 0;
+            if ((data[d_idx] & 0b11000000) == 0b11000000) {
+                rl = data[d_idx++] & 0b00111111;
+            } else if ((data[d_idx] >> 7) == 0b00000000) {
+                rl = data[d_idx++] << 24;
+                rl |= data[d_idx++] << 16;
+                rl |= data[d_idx++] << 8;
+                rl |= data[d_idx++];
+            } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
+                rl = (data[d_idx++] & 0b00011111) << 16;
+                rl |= data[d_idx++] << 8;
+                rl |= data[d_idx++]; 
+            } else {
+                rl = (data[d_idx++] & 0b00011111) << 8;
+                rl |= data[d_idx++];
+            }
+            while (b_idx < buffer_count_ && e_index < c_i + rl) {
+                if (count + val * (e_index - c_i) >= x) {
+                    return c_i + x - count - 1;
+                }
+                //Flip the value to count 0's
+                bool b_val = !(buffer_[b_idx] >> 31);
+
+                if (b_val) {
+                    if (count + val * (e_index - c_i) + 1 == x) {
+                        return e_index;
+                    }
+                    count++;
+                }
+                c_i++;
+                b_idx++;
+                e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
+                [[unlikely]] (void(0));
+            }
+            
+            
+            if (count + (val * rl) >= x) {
+                c_i += x - count;
                 return --c_i;
             }
             count += val * rl;
