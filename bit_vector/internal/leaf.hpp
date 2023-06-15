@@ -790,7 +790,7 @@ class leaf : uncopyable {
             }
         }
         if constexpr (buffer_size == 0) {
-            return unb_select0();
+            return unb_select0(x);
         }
         if (buffer_count_ == 0) {
             return unb_select0(x);
@@ -800,6 +800,7 @@ class leaf : uncopyable {
         uint64_t pos = 0;
         uint8_t current_buffer = 0;
         int8_t a_pos_offset = 0;
+        int32_t b_index = -100;
         
         //Step one 64-bit word at a time considering the buffer until pop >= x
         for (uint16_t j = 0; j < capacity_; j++) {
@@ -810,9 +811,9 @@ class leaf : uncopyable {
             if constexpr (buffer_size != 0) {
                 for (uint8_t b = current_buffer; b < buffer_count_; b++) {
                     //buffer_index indicates the insertion/removal location of the operation
-                    uint32_t b_index = buffer_index(buffer_[b]);
+                    b_index = buffer_index(buffer_[b]);
 
-                    if (b_index < pos) {
+                    if (b_index < int32_t(pos)) {
                         if (buffer_is_insertion(buffer_[b])) {
                             pop += 1-buffer_value(buffer_[b]);
                             pos++;
@@ -846,24 +847,43 @@ class leaf : uncopyable {
             pos = size_;
         }
 
+        current_buffer--;
+        b_index = current_buffer < buffer_count_
+                        ? buffer_index(buffer_[current_buffer])
+                        : -100;
+        if ((b_index - 1 >= int32_t(pos) &&
+                !buffer_is_insertion(buffer_[current_buffer])) ||
+            (b_index >= int32_t(pos) &&
+                buffer_is_insertion(buffer_[current_buffer]))) {
+            current_buffer--;
+            b_index = current_buffer < buffer_count_
+                            ? buffer_index(buffer_[current_buffer])
+                            : -100;
+        }
+
         // Decrement one bit at a time until we can't anymore without going
         // under x.
-        uint32_t b_index = buffer_index(buffer_[--current_buffer]);
         pos--;
         while (pop >= x && pos < uint64_t(capacity_ * WORD_BITS)) {
             //Check if removals in the buffer and decrease offset
             while (!buffer_is_insertion(buffer_[current_buffer]) &&
-                    b_index > pos) {
+                    b_index > int32_t(pos)) {
                 a_pos_offset--;
-                b_index = buffer_index(buffer_[--current_buffer]);
+                current_buffer--;
+                b_index = current_buffer < buffer_count_
+                            ? buffer_index(buffer_[current_buffer])
+                            : -100;
                 [[unlikely]] (void(0));
             }
             if (buffer_is_insertion(buffer_[current_buffer]) &&
-                b_index == pos) {
+                b_index == int32_t(pos)) {
                     pop -= 1-buffer_value(buffer_[current_buffer]);
                     a_pos_offset++;
                     pos--;
-                    b_index = buffer_index(buffer_[--current_buffer]);
+                    current_buffer--;
+                    b_index = current_buffer < buffer_count_
+                            ? buffer_index(buffer_[current_buffer])
+                            : -100;
                     [[unlikely]] continue;
                 }
             pop -= 1 - ((data_[(pos + a_pos_offset) / WORD_BITS] >>
