@@ -786,11 +786,11 @@ class leaf : uncopyable {
     uint32_t select0(uint32_t x) const {
         if constexpr (compressed) {
             if (is_compressed()) {
-                //return compressed select_zero
+                return 0;
             }
         }
         if constexpr (buffer_size == 0) {
-            //return unbuffered select_zero
+            return unb_select0();
         }
         if (buffer_count_ == 0) {
             return unb_select0(x);
@@ -1022,6 +1022,7 @@ class leaf : uncopyable {
         for(; j < capacity_; j++) {
             prev_pop = pop;
             pop += __builtin_popcountll(~data_[j]);
+            pos += WORD_BITS;
             if (pop >= x) {
                 [[unlikely]] break;
             }

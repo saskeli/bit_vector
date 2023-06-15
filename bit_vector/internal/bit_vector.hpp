@@ -425,8 +425,11 @@ class bit_vector : uncopyable {
         return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
     }
 
-
     dtype select0(dtype count) const {
+        return !root_is_leaf_ ? n_root_->select0(count) : l_root_->select0(count);
+    }
+
+    dtype select0_bin(dtype count) const {
         dtype a = 0;
         dtype b = size();
         while (a < b) {
@@ -442,6 +445,7 @@ class bit_vector : uncopyable {
         }
         return a - 1;
     }
+
     dtype select(bool v, dtype count) const {
         return v ? select(count) : select0(count);
     }
