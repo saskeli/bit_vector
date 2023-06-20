@@ -16,7 +16,40 @@ typedef bv::node<leaf, uint64_t, 16384, 64> node;
 typedef bv::simple_bv<16, 16384, 64, true, true, true> h_rle;
 
 int main() {
-    alloc* a = new alloc();
+
+    h_rle bv;
+    bv::simple_bv<16, 16384, 64> bv2;
+
+    assert(bv.size() == bv2.size());
+
+    for (size_t i = 0; i < 700; i++) {
+        uint32_t run_length = (i % 32) + 1;
+        uint32_t run_value = i % 2;
+        for (size_t j = 0; j < run_length; j++) {
+            bv.insert(0, run_value);
+            bv2.insert(0, run_value);
+        }
+    }
+    assert(bv.size() == bv2.size());
+
+    for (size_t i = 1; i<bv2.size(); i++) {
+        if (bv.select0(i) != bv2.select0(i)) {
+            std::cout << "select0(" << i << ") for rle is" << bv.select0(i) << " and for simple is " << bv2.select0(i) << std::endl;
+            std::cout << "sizes are " << bv.size() << " and " << bv2.size() << std::endl;
+            std::cout << "last values are " << bv.at(bv.size() - 1) << " and " << bv2.at(bv2.size() - 1) << std::endl;
+        }
+        if (bv.select(i) != bv2.select(i)) {
+            std::cout << "select0(" << i << ") for rle is" << bv.select(i) << " and for simple is " << bv2.select(i) << std::endl;
+            std::cout << "sizes are " << bv.size() << " and " << bv2.size() << std::endl;
+            std::cout << "last values are " << bv.at(bv.size() - 1) << " and " << bv2.at(bv2.size() - 1) << std::endl;
+        }
+        assert(bv.at(i) == bv2.at(i));
+        assert(bv.rank(i) == bv2.rank(i));
+        assert(bv.select(i) == bv2.select(i));
+        assert(bv.rank(i) == bv2.rank(i));
+        assert(bv.select0(i) == bv2.select0(i));
+    }
+    /*alloc* a = new alloc();
     rl_l* l = a->template allocate_leaf<rl_l>(32, 1000, false);
 
     for (size_t i = 500; i < 1000; i++) {
@@ -29,7 +62,7 @@ int main() {
     l->clear_last(400);
 
     a->deallocate_leaf(l);
-    delete a;
+    delete a;*/
 
     /*uint64_t size = 16384;
     alloc* a = new alloc();
