@@ -168,7 +168,7 @@ void run_test(uint64_t* input, uint64_t len, uint64_t s_offset) {
 #endif
         switch (input[index]) {
             case 0:
-                insert(&bv, &cbv, input[index + 1], input[index + 2]);
+                insert(&bv, &cbv, input[index + 1], input[index + 2]); 
                 size++;
                 index += 3;
                 break;

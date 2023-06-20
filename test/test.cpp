@@ -95,6 +95,8 @@ TEST(RleLeaf, InitOnes) { rle_leaf_init_ones_test<rll, ma>(10000); }
 
 TEST(RleLeaf, Insert) { rle_leaf_insert_test<rll, ma>(10000, 100); }
 
+TEST(RleLeaf, InsertB) { rle_leaf_insert_test_b<rll, ma>(10000, 100); }
+
 TEST(RleLeaf, InsertMiddle) {
     rle_leaf_insert_middle_test<rll, ma>(10000, 100);
 }

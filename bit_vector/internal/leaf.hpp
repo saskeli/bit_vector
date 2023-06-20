@@ -851,15 +851,6 @@ class leaf : uncopyable {
         b_index = current_buffer < buffer_count_
                         ? buffer_index(buffer_[current_buffer])
                         : -100;
-        if ((b_index - 1 >= int32_t(pos) &&
-                !buffer_is_insertion(buffer_[current_buffer])) ||
-            (b_index >= int32_t(pos) &&
-                buffer_is_insertion(buffer_[current_buffer]))) {
-            current_buffer--;
-            b_index = current_buffer < buffer_count_
-                            ? buffer_index(buffer_[current_buffer])
-                            : -100;
-        }
 
         // Decrement one bit at a time until we can't anymore without going
         // under x.
@@ -1007,15 +998,6 @@ class leaf : uncopyable {
         b_index = current_buffer < buffer_count_
                         ? buffer_index(buffer_[current_buffer])
                         : -100;
-        if ((b_index - 1 >= int32_t(pos) &&
-                !buffer_is_insertion(buffer_[current_buffer])) ||
-            (b_index >= int32_t(pos) &&
-                buffer_is_insertion(buffer_[current_buffer]))) {
-            current_buffer--;
-            b_index = current_buffer < buffer_count_
-                            ? buffer_index(buffer_[current_buffer])
-                            : -100;
-        }
 
         // Decrement one bit at a time until we can't anymore without going
         // under x.
@@ -2572,6 +2554,9 @@ class leaf : uncopyable {
             b_idx++;
             e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
         }
+        if (c_i >= size_) {
+            return size_;
+        }
         return --c_i;
     }
 
@@ -2588,7 +2573,7 @@ class leaf : uncopyable {
             uint32_t rl = 0;
             if ((data[d_idx] & 0b11000000) == 0b11000000) {
                 rl = data[d_idx++] & 0b00111111;
-            } else if ((data[d_idx] >> 7) == 0b00000000) {
+            } else if ((data[d_idx] >> 7) == 0) {
                 rl = data[d_idx++] << 24;
                 rl |= data[d_idx++] << 16;
                 rl |= data[d_idx++] << 8;
@@ -2596,7 +2581,7 @@ class leaf : uncopyable {
             } else if ((data[d_idx] & 0b10100000) == 0b10100000) {
                 rl = (data[d_idx++] & 0b00011111) << 16;
                 rl |= data[d_idx++] << 8;
-                rl |= data[d_idx++]; 
+                rl |= data[d_idx++];
             } else {
                 rl = (data[d_idx++] & 0b00011111) << 8;
                 rl |= data[d_idx++];
@@ -2618,9 +2603,7 @@ class leaf : uncopyable {
                 b_idx++;
                 e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
                 [[unlikely]] (void(0));
-            }
-            
-            
+            }  
             if (count + (val * rl) >= x) {
                 c_i += x - count;
                 return --c_i;
@@ -2629,12 +2612,16 @@ class leaf : uncopyable {
             c_i += rl;
             val = !val;
         }
+    
         while (b_idx < buffer_count_) {
-            count += buffer_[b_idx] >> 31;
+            count += !(buffer_[b_idx] >> 31);
             c_i++;
             if (count == x) break;
             b_idx++;
             e_index = b_idx < buffer_count_ ? buffer_[b_idx] & C_INDEX : 0;
+        }
+        if (c_i >= size_) {
+            return size_;
         }
         return --c_i;
     }

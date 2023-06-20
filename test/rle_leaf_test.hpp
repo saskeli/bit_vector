@@ -33,6 +33,7 @@ void rle_leaf_init_ones_test(uint32_t size) {
         EXPECT_EQ(l->at(i), true);
         EXPECT_EQ(l->rank(i), i);
         EXPECT_EQ(l->select(i + 1), i);
+        EXPECT_EQ(l->select0(i + 1), size);
     }
 
     a->deallocate_leaf(l);
@@ -55,10 +56,48 @@ void rle_leaf_insert_test(uint32_t size, uint32_t i_count) {
         EXPECT_EQ(l->at(i), true);
         EXPECT_EQ(l->rank(i), i);
         EXPECT_EQ(l->select(i + 1), i);
+        EXPECT_EQ(l->select0(i + 1), i + i_count);
     }
     for (size_t i = i_count; i < size + i_count; i++) {
         EXPECT_EQ(l->at(i), false);
         EXPECT_EQ(l->rank(i), i_count);
+    }
+
+    a->deallocate_leaf(l);
+    delete a;
+}
+
+//UNDER CONSTRUCTION!!!!
+template<class rl_l, class alloc>
+void rle_leaf_insert_test_b(uint32_t size, uint32_t i_count) {
+    alloc* a = new alloc();
+    rl_l* l = a->template allocate_leaf<rl_l>(32, size, false);
+    EXPECT_TRUE(l->is_compressed());
+    EXPECT_EQ(l->size(), size);
+    EXPECT_EQ(l->p_sum(), 0u);
+    //Insert pseudorandom sequences of 1's and 0's as RLE runs of relatively low length (<= 32) up until i_count
+    uint32_t psum = 0;
+    uint32_t expected_inserts = 0;
+    for (size_t i = 0; i < i_count; i++) {
+        uint32_t run_length = (i % 32) + 1;
+        uint32_t run_value = (i / 3) % 2;
+        for (size_t j = 0; j < run_length; j++) {
+            psum += run_value;
+            expected_inserts++;
+            l->insert(0, run_value);
+        }
+    }
+
+    EXPECT_EQ(l->size(), size + expected_inserts);
+    EXPECT_EQ(l->p_sum(), psum);
+
+    for (size_t i = 0; i < i_count; i++) {
+        uint32_t run_length = (i % 32) + 1;
+        uint32_t run_value = (i / 3) % 2;
+        for (size_t j = 0; j < run_length; j++) {
+            EXPECT_EQ(l->at(expected_inserts-1), run_value);
+            expected_inserts--;
+        }
     }
 
     a->deallocate_leaf(l);
@@ -85,6 +124,7 @@ void rle_leaf_insert_middle_test(uint32_t size, uint32_t i_count) {
         EXPECT_EQ(l->at(i + (size >> 1)), true);
         EXPECT_EQ(l->rank(i + (size >> 1)), i);
         EXPECT_EQ(l->select(i + 1), i + (size >> 1));
+        EXPECT_EQ(l->select0(i + 1), i);
     }
     for (size_t i = (size >> 1) + i_count; i < size + i_count; i++) {
         EXPECT_EQ(l->at(i), false);
@@ -188,6 +228,9 @@ void rle_leaf_set_test(uint32_t size, uint32_t i_count) {
     }
     for (size_t i = 0; i < i_count; i++) {
         EXPECT_EQ(l->select(i + 1), i);
+    }
+    for (size_t i = 0; i < i_count; i++) {
+        EXPECT_EQ(l->select0(i + 1), i_count + i);
     }
     for (size_t i = 0; i < size; i++) {
         l->set(i, i >= i_count);
