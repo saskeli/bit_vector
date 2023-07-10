@@ -1,5 +1,9 @@
 # Fast dynamic bit vector headers
 
+Check out the [DCC](https://github.com/saskeli/bit_vector/tree/DCC) branch for a stabile version of what was presented at DCC. 
+
+The main branch may contain additional bugs and experimental code.
+
 ## Citing
 
 If you find this repository useful, please cite:
