@@ -1031,32 +1031,7 @@ class leaf : uncopyable {
         }
 
         return ++pos;
-    }
-
-
-    uint32_t unb_select0(uint32_t x) const{
-
-        uint32_t pop = 0;
-        uint32_t pos = 0;
-        uint32_t prev_pop = 0;
-        uint32_t j = 0;
-
-        for(; j < capacity_; j++) {
-            prev_pop = pop;
-            pop += __builtin_popcountll(~data_[j]);
-            pos += WORD_BITS;
-            if (pop >= x) {
-                [[unlikely]] break;
-            }
-        }
-
-        pos -= WORD_BITS;
-        uint64_t add_loc = x - prev_pop - 1;
-        add_loc = uint64_t(1) << add_loc;
-        return pos + 63 - __builtin_clzll(_pdep_u64(add_loc, ~data_[j]));
-    }
-
-    
+    }    
 
     /**
      * @brief Size of the leaf and associated data in bits.
@@ -2124,6 +2099,28 @@ class leaf : uncopyable {
         uint64_t add_loc = x - prev_pop - 1;
         add_loc = uint64_t(1) << add_loc;
         return pos + 63 - __builtin_clzll(_pdep_u64(add_loc, data_[j]));
+    }
+
+    uint32_t unb_select0(uint32_t x) const{
+
+        uint32_t pop = 0;
+        uint32_t pos = 0;
+        uint32_t prev_pop = 0;
+        uint32_t j = 0;
+
+        for(; j < capacity_; j++) {
+            prev_pop = pop;
+            pop += __builtin_popcountll(~data_[j]);
+            pos += WORD_BITS;
+            if (pop >= x) {
+                [[unlikely]] break;
+            }
+        }
+
+        pos -= WORD_BITS;
+        uint64_t add_loc = x - prev_pop - 1;
+        add_loc = uint64_t(1) << add_loc;
+        return pos + 63 - __builtin_clzll(_pdep_u64(add_loc, ~data_[j]));
     }
 
     /**
