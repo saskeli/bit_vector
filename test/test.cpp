@@ -49,6 +49,12 @@ TEST(SimpleLeaf, SelectOffset) { leaf_select_test<sl, ma>(11); }
 
 TEST(SimpleLeaf, SelectBlock) { leaf_select_offset_test<sl, ma>(3000); }
 
+TEST(SimpleLeaf, Select0) { leaf_select0_test<sl, ma>(10000); }
+
+TEST(SimpleLeaf, Select0Offset) { leaf_select0_test<sl, ma>(11); }
+
+TEST(SimpleLeaf, Select0Block) { leaf_select0_offset_test<sl, ma>(3000); }
+
 TEST(SimpleLeaf, Set) { leaf_set_test<sl, ma>(10000); }
 
 TEST(SimpleLeaf, ClearFirst) { leaf_clear_start_test<sl, ma>(); }
@@ -88,6 +94,8 @@ TEST(RleLeaf, InitZeros) { rle_leaf_init_zeros_test<rll, ma>(10000); }
 TEST(RleLeaf, InitOnes) { rle_leaf_init_ones_test<rll, ma>(10000); }
 
 TEST(RleLeaf, Insert) { rle_leaf_insert_test<rll, ma>(10000, 100); }
+
+TEST(RleLeaf, InsertB) { rle_leaf_insert_test_b<rll, ma>(10000, 100); }
 
 TEST(RleLeaf, InsertMiddle) {
     rle_leaf_insert_middle_test<rll, ma>(10000, 100);
@@ -186,6 +194,14 @@ TEST(SimpleNode, SelectSingleLeaf) {
 TEST(SimpleNode, SelectLeaf) { node_select_leaf_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, SelectNode) { node_select_node_test<nd, sl, ma>(BRANCH); }
+
+TEST(SimpleNode, Select0SingleLeaf) {
+    node_select0_single_leaf_test<nd, sl, ma>();
+}
+
+TEST(SimpleNode, Select0Leaf) { node_select0_leaf_test<nd, sl, ma>(BRANCH); }
+
+TEST(SimpleNode, Select0Node) { node_select0_node_test<nd, sl, ma>(BRANCH); }
 
 TEST(SimpleNode, InsertSingleLeaf) {
     node_insert_single_leaf_test<nd, sl, ma>();

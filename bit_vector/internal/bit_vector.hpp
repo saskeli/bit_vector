@@ -425,7 +425,24 @@ class bit_vector : uncopyable {
         return !root_is_leaf_ ? n_root_->select(count) : l_root_->select(count);
     }
 
+    /**
+     * @brief Index of the count of <sup>th</sup> 0-bit in the data structure
+     * 
+     * When using bv:: and bv::leaf for internal structures, finds the position of the count <sup>th</sup> 0-bit is found in
+     * \f$\mathcal{O}\left(\log_2(b)\log_b(n / l) + l\right) \f$ time, where
+     * \f$b\f$ is the branching factor, \f$l\f$ is the leaf size and \f$n\f$ is
+     * the data structure size.
+     * 
+     * @param count Selection target.
+     * 
+     * @return  \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
+     * \mathrm{bv}[j]\right) =  \f$ count.
+     */
     dtype select0(dtype count) const {
+        return !root_is_leaf_ ? n_root_->select0(count) : l_root_->select0(count);
+    }
+
+    dtype select0_bs(dtype count) const {
         dtype a = 0;
         dtype b = size();
         while (a < b) {
@@ -441,6 +458,7 @@ class bit_vector : uncopyable {
         }
         return a - 1;
     }
+
     dtype select(bool v, dtype count) const {
         return v ? select(count) : select0(count);
     }
