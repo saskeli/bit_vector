@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <utility>
+#include <ranges>
 
 #include <chrono>
 
@@ -16,6 +17,7 @@
 #include "libpopcnt.h"
 #include "uncopyable.hpp"
 #include "deb.hpp"
+#include "buffer.hpp"
 
 namespace bv {
 
@@ -51,19 +53,16 @@ namespace bv {
  * @tparam compressed Control wether leaves are allowed to compress contents.
  * @tparam sorted_buffers Control wether buffers are kept sorted or not.
  */
-template <uint8_t buffer_size, uint32_t leaf_size, bool avx = true,
+template <uint16_t buffer_size, uint32_t leaf_size, bool avx = true,
           bool compressed = false, bool sorted_buffers = true>
 class leaf : uncopyable {
    private:
-    uint8_t buffer_count_;  ///< Number of elements in insert/remove buffer.
     uint8_t type_info_;     ///< Internal metadata for compressed leaves.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
     uint32_t size_;         ///< Logical number of bits stored.
     uint32_t p_sum_;        ///< Logical number of 1-bits stored.
-#pragma GCC diagnostic ignored "-Wpedantic"
-    uint32_t run_index_[compressed ? 1 : 0];  ///< next index to write for runs.
-    uint32_t buffer_[buffer_size];            ///< Insert/remove buffer.
-#pragma GCC diagnostic pop
+    uint32_t run_index_;    ///< next index to write for runs.
+    buffer<buffer_size, compressed, sorted_buffers> buf_;
     uint64_t* data_;  ///< Pointer to data storage.
     inline static uint64_t data_scratch[leaf_size / 64];
 
@@ -84,14 +83,6 @@ class leaf : uncopyable {
     /** @brief Mask for accessing type of possibly compressed leaf */
     static const constexpr uint8_t C_TYPE_MASK = 0b00000010;
     static const constexpr uint8_t C_RUN_REMOVAL_MASK = 0b00000100;
-
-    // Committing uses a 64 bit word as buffer, limiting the number of changes 
-    // that can be committed at once.
-    static_assert(buffer_size < 63);
-
-    // Number of 32 bit buffer elements should be even to allow using buffer as
-    // 64-bit elements if needed.
-    static_assert(buffer_size % 2 == 0);
 
     // Hybrid compressed leaves should be buffered.
     static_assert(!compressed || buffer_size > 0);
@@ -120,7 +111,7 @@ class leaf : uncopyable {
      * storage.
      */
     leaf(uint16_t capacity, uint64_t* data, uint32_t elems = 0,
-         bool val = false) : capacity_(capacity), data_(data) {
+         bool val = false) : capacity_(capacity), data_(data), buf_() {
         if constexpr (!compressed) {
             // Uncompressed leaf does not support instantiation to non-empty
             assert(elems == 0);
@@ -128,24 +119,19 @@ class leaf : uncopyable {
             // Maximum size for leaves is ~VALUE_MASK
             assert(elems <= ~VALUE_MASK);
         }
-        if constexpr (buffer_size > 0) {
-            buffer_count_ = 0;
-            memset(buffer_, 0, sizeof(buffer_));
-        }
         type_info_ = 0;
         size_ = elems;
         p_sum_ = 0;
         if constexpr (compressed) {
             p_sum_ = val ? elems : p_sum_;
-            run_index_[0] = 0;
-        }
-        if constexpr (compressed) {
+            run_index_ = 0;
+
             if (elems > 8) {
                 write_run(elems);
                 type_info_ |= C_TYPE_MASK;
                 type_info_ =
                     val ? type_info_ | C_ONE_MASK : type_info_ & ~C_ONE_MASK;
-            } else {
+            } else if (val) {
                 data_[0] = (uint64_t(1) << elems) - 1;
             }
         }
@@ -164,28 +150,31 @@ class leaf : uncopyable {
                 return c_at(i);
             }
         }
-        if constexpr (!sorted_buffers && buffer_size != 0) {
-            commit();
-        }
         if constexpr (sorted_buffers && buffer_size != 0) {
             uint64_t index = i;
-            for (uint8_t idx = 0; idx < buffer_size; idx++) {
-                if (idx >= buffer_count_) [[unlikely]] {
-                    break;
-                }
-                uint64_t b = buffer_index(buffer_[idx]);
+            for (auto be : buf_) {
+                uint64_t b = be.index();
                 if (b == i) {
-                    if (buffer_is_insertion(buffer_[idx])) [[unlikely]] {
-                        return buffer_value(buffer_[idx]);
+                    if (be.is_insertion()) {
+                        return be.value();
                     }
                     index++;
                 } else if (b < i) [[likely]] {
-                    index -= buffer_is_insertion(buffer_[idx]) * 2 - 1;
+                    index -= be.is_insertion() * 2 - 1;
                 } else [[unlikely]] {
                     break;
                 }
             }
             return MASK & (data_[index / WORD_BITS] >> (index % WORD_BITS));
+        } else if constexpr (!sorted_buffers && buffer_size > 0) {
+            for (auto be : std::ranges::views::reverse(buf_)) {
+                uint64_t b = be.index();
+                if (b == i) [[unlikely]] {
+                    return be.value();
+                } else if (b < i) {
+                    i--;
+                }
+            }
         }
         return MASK & (data_[i / WORD_BITS] >> (i % WORD_BITS));
     }
@@ -195,9 +184,9 @@ class leaf : uncopyable {
     /** @brief Getter for size_ */
     uint32_t size() const { return size_; }
     /** @brief Getter for number of buffer elements */
-    uint8_t buffer_count() const { return buffer_count_; }
+    uint8_t buffer_count() const { return buf_.size(); }
     /** @brief Get pointer to the buffer */
-    uint32_t* buffer() { return buffer_; }
+    uint32_t& buffer() { return buf_; }
     /** @brief Get the values for the first run */
     bool first_value() {
         if constexpr (compressed) {
@@ -211,7 +200,7 @@ class leaf : uncopyable {
     uint32_t used_bytes() {
         if constexpr (compressed) {
             if (is_compressed()) {
-                return run_index_[0];
+                return run_index_;
             }
         }
         return size_ + (size_ % 8 ? 1 : 0);
@@ -232,30 +221,11 @@ class leaf : uncopyable {
      * @param x Value to insert
      */
     void insert(uint32_t i, bool x) {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                return c_insert(i, x);
-            }
-        }
-#ifdef DEBUG
-        if (size_ >= capacity_ * WORD_BITS) {
-            std::cerr << "Overflow. Reallocate before adding elements"
-                      << "\n";
-            std::cerr << "Attempted to insert(" << i << ", " << x << ")"
-                      << std::endl;
-            std::cerr << "cap = " << capacity_ << ", size = " << size_
-                      << std::endl;
-            std::cerr << "compressed = " << compressed << std::endl;
-            print(false);
-            std::cerr << std::endl;
-            assert(size_ < capacity_ * WORD_BITS);
-        }
-#endif
-        if constexpr (!sorted_buffers && buffer_size != 0) {
-            buffer_[buffer_count_++] = create_buffer(i, 1, x);
+        if constexpr (buffer_size != 0) {
+            buf_.insert(i, x);
             p_sum += x ? 1 : 0;
             size++;
-            if (buffer_count_ >= buffer_size) [[unlikely]] {
+            if (buf_.is_full()) [[unlikely]] {
                 commit();
             }
             return;
@@ -265,44 +235,20 @@ class leaf : uncopyable {
             push_back(x);
             [[unlikely]] return;
         }
+        // If there is no buffer, a simple linear time insertion is done
+        // instead.
         p_sum_ += x ? 1 : 0;
-        if constexpr (buffer_size != 0) {
-            uint8_t idx = buffer_count_;
-            while (idx > 0) {
-                uint64_t b = buffer_index(buffer_[idx - 1]);
-                if (b > i ||
-                    (b == i && buffer_is_insertion(buffer_[idx - 1]))) {
-                    [[likely]] set_buffer_index(b + 1, idx - 1);
-                } else {
-                    break;
-                }
-                idx--;
-            }
-            size_++;
-            if (idx == buffer_count_) {
-                buffer_[buffer_count_] = create_buffer(i, 1, x);
-                [[likely]] buffer_count_++;
-            } else {
-                insert_buffer(idx, create_buffer(i, 1, x));
-            }
-            if (buffer_count_ >= buffer_size) [[unlikely]] {
-                commit();
-            }
-        } else {
-            // If there is no buffer, a simple linear time insertion is done
-            // instead.
-            size_++;
-            uint32_t target_word = i / WORD_BITS;
-            uint32_t target_offset = i % WORD_BITS;
-            for (uint32_t j = capacity_ - 1; j > target_word; j--) {
-                data_[j] <<= 1;
-                data_[j] |= (data_[j - 1] >> 63);
-            }
-            data_[target_word] =
-                (data_[target_word] & ((MASK << target_offset) - 1)) |
-                ((data_[target_word] & ~((MASK << target_offset) - 1)) << 1);
-            data_[target_word] |= x ? (MASK << target_offset) : uint64_t(0);
+        size_++;
+        uint32_t target_word = i / WORD_BITS;
+        uint32_t target_offset = i % WORD_BITS;
+        for (uint32_t j = capacity_ - 1; j > target_word; j--) {
+            data_[j] <<= 1;
+            data_[j] |= (data_[j - 1] >> 63);
         }
+        data_[target_word] =
+            (data_[target_word] & ((MASK << target_offset) - 1)) |
+            ((data_[target_word] & ~((MASK << target_offset) - 1)) << 1);
+        data_[target_word] |= x ? (MASK << target_offset) : uint64_t(0);
     }
 
     /**
@@ -320,67 +266,46 @@ class leaf : uncopyable {
      * @return Value of removed element.
      */
     bool remove(uint32_t i) {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                return c_remove(i);
+        if constexpr (buffer_size > 0) {
+            bool x;
+            if (buf_.remove(i, x)) {
+                --size_;
+                return x;
             }
-        }
-        if constexpr (!sorted_buffers && buffer_size > 0) {
-            commit();
-        }
-        if constexpr (sorted_buffers && buffer_size != 0) {
-            bool x = this->at(i);
-            p_sum_ -= x;
-            --size_;
-            uint8_t idx = buffer_count_;
-            while (idx > 0) {
-                uint32_t b = buffer_index(buffer_[idx - 1]);
-                if (b == i) {
-                    if (buffer_is_insertion(buffer_[idx - 1])) {
-                        delete_buffer_element(idx - 1);
-                        return x;
-                    } else {
-                        [[likely]] break;
-                    }
-                } else if (b < i) {
-                    break;
-                } else {
-                    [[likely]] set_buffer_index(b - 1, idx - 1);
+            if constexpr (compressed) {
+                if (is_compressed()) {
+                    return c_remove(i);
                 }
-                idx--;
+            } else if constexpr (sorted_buffers) {
+                x = data_[i / WORD_BITS] >> (data_ % WORD_BITS);
+                --size_;
+                if (buf_.is_full()) {
+                    commit();
+                }
+                return x;
             }
-            if (idx == buffer_count_) {
-                buffer_[idx] = create_buffer(i, 0, x);
-                buffer_count_++;
-            } else {
-                [[likely]] insert_buffer(idx, create_buffer(i, 0, x));
-            }
-            if (buffer_count_ >= buffer_size) [[unlikely]]
-                commit();
-            return x;
-        } else {
-            // If buffer does not exits. A simple linear time removal is done
-            // instead.
-            uint32_t target_word = i / WORD_BITS;
-            uint32_t target_offset = i % WORD_BITS;
-            bool x = MASK & (data_[target_word] >> target_offset);
-            p_sum_ -= x;
-            data_[target_word] =
-                (data_[target_word] & ((MASK << target_offset) - 1)) |
-                ((data_[target_word] >> 1) & (~((MASK << target_offset) - 1)));
-            data_[target_word] |= (uint32_t(capacity_ - 1) > target_word)
-                                      ? (data_[target_word + 1] << 63)
-                                      : 0;
-            for (uint32_t j = target_word + 1; j < uint32_t(capacity_ - 1);
-                 j++) {
-                data_[j] >>= 1;
-                data_[j] |= data_[j + 1] << 63;
-            }
-            data_[capacity_ - 1] >>=
-                (uint32_t(capacity_ - 1) > target_word) ? 1 : 0;
-            size_--;
-            return x;
         }
+        // If buffer does not exits. A simple linear time removal is done
+        // instead.
+        uint32_t target_word = i / WORD_BITS;
+        uint32_t target_offset = i % WORD_BITS;
+        bool x = MASK & (data_[target_word] >> target_offset);
+        p_sum_ -= x;
+        data_[target_word] =
+            (data_[target_word] & ((MASK << target_offset) - 1)) |
+            ((data_[target_word] >> 1) & (~((MASK << target_offset) - 1)));
+        data_[target_word] |= (uint32_t(capacity_ - 1) > target_word)
+                                    ? (data_[target_word + 1] << 63)
+                                    : 0;
+        for (uint32_t j = target_word + 1; j < uint32_t(capacity_ - 1);
+                j++) {
+            data_[j] >>= 1;
+            data_[j] |= data_[j + 1] << 63;
+        }
+        data_[capacity_ - 1] >>=
+            (uint32_t(capacity_ - 1) > target_word) ? 1 : 0;
+        --size_;
+        return x;
     }
 
     /**

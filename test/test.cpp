@@ -1,21 +1,24 @@
-#include "../bit_vector/bv.hpp"
-#include "../bit_vector/internal/allocator.hpp"
-#include "../bit_vector/internal/bit_vector.hpp"
-#include "../bit_vector/internal/branch_selection.hpp"
-#include "../bit_vector/internal/leaf.hpp"
-#include "../bit_vector/internal/node.hpp"
-#include "../bit_vector/internal/query_support.hpp"
-#include "../bit_vector/internal/gap_leaf.hpp"
-#include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
-#include "../deps/googletest/googletest/include/gtest/gtest.h"
-
-#define SIZE 16384
-#define BRANCH 16
-#define BUFFER_SIZE 8
+//#include "../bit_vector/bv.hpp"
+#include "../bit_vector/internal/buffer.hpp"
+//#include "../bit_vector/internal/allocator.hpp"
+//#include "../bit_vector/internal/bit_vector.hpp"
+//#include "../bit_vector/internal/branch_selection.hpp"
+//#include "../bit_vector/internal/leaf.hpp"
+//#include "../bit_vector/internal/node.hpp"
+//#include "../bit_vector/internal/query_support.hpp"
+//#include "../bit_vector/internal/gap_leaf.hpp"
+//#include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
+//#include "../deps/googletest/googletest/include/gtest/gtest.h"
+//
+//#define SIZE 16384
+//#define BRANCH 16
+//#define BUFFER_SIZE 8
 
 using namespace bv;
 
-typedef malloc_alloc ma;
+#include "buffer_tests.hpp"
+
+/*typedef malloc_alloc ma;
 typedef leaf<BUFFER_SIZE, SIZE> sl;
 typedef leaf<0, SIZE> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
@@ -55,4 +58,4 @@ typedef gap_leaf<SIZE, 32, 7> g_leaf;
 #include "gap_leaf_test.hpp"
 
 // Run tests
-#include "run_tests.hpp"
+#include "run_tests.hpp"*/

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <utility>
+#include <algorithm>
 
 #include "uncopyable.hpp"
 
@@ -30,12 +31,17 @@ class buffer {
         }
 
         BufferElement(uint32_t idx, bool v, bool t)
-            : v_((idx << offset) | uint32_t(v) | (uint32_t(t) << ONE)) {
+            : v_((idx << OFFSET) | uint32_t(v) | (uint32_t(t) << ONE)) {
             static_assert(!compressed && sorted);
         }
 
         BufferElement& operator++() {
             v_ += uint32_t(ONE) << OFFSET;
+            return *this;
+        }
+
+        BufferElement& operator--() {
+            v_ -= uint32_t(ONE) << OFFSET;
             return *this;
         }
 
@@ -47,6 +53,11 @@ class buffer {
         BufferElement operator+(uint32_t i) {
             return v_ + (i << OFFSET);
         } 
+
+        BufferElement& operator=(const BufferElement& rhs) {
+            v_ = rhs.v_;
+            return *this;
+        }
 
         bool operator==(const BufferElement& rhs) const { return v_ == rhs.v_; }
 
@@ -68,49 +79,28 @@ class buffer {
             return (v_ >> ONE) >= (rhs.v_ >> ONE);
         }
 
-        uint32_t index() { return v_ >> OFFSET; }
+        uint32_t index() const { return v_ >> OFFSET; }
 
-        bool value() { return v_ & ONE; }
+        bool value() const { return v_ & ONE; }
 
-        bool is_insertion() {
+        bool is_insertion() const {
             if constexpr (compressed || !sorted) {
                 return true;
             }
-            return bool(v_ & TYPE_MASK);
+            return bool(v_ & OFFSET);
+        }
+
+        static BufferElement max() {
+            return {(~uint32_t(0)) >> 1};
         }
     };
 
-    static_assert(buffer_size > 0);
     static_assert(buffer_size <= ((1 << 16) - 1));
     static_assert(__builtin_popcount(buffer_size) == 1);
     inline static BufferElement scratch[buffer_size];
 
     BufferElement buffer_[buffer_size];
     uint16_t buffer_elems_;
-
-    class buffer_iter {
-       private:
-        const buffer& buf_;
-        uint16_t offset_;
-
-       public:
-        buffer_iter(const buffer& buf, uint16_t pos) : buf_(buf), offset_(pos) {}
-
-        bool operator==(const buffer_iter& rhs) const {
-            return (buf_ == rhs.buf_) && (offset_ == rhs.offset_);
-        }
-
-        bool operator!=(const buffer_iter& rhs) const {
-            return !operator==(rhs);
-        }
-
-        const BufferElement& operator*() const { return buf[offset]; }
-
-        buffer_iter& operator++() {
-            ++offset_;
-            return *this;
-        }
-    };
 
    public:
     buffer() : buffer_(), buffer_elems_() {}
@@ -126,9 +116,8 @@ class buffer {
         if (buffer_elems_ <= 1) [[unlikely]] {
             return;
         }
-        const constexpr uint32_t max_val = (uint32_t(1) << 24) - 1;
-        for (uint16_t i = 0; i < buffer_size - buffer_elems_; i++) [[unlikely]] {
-            buffer_[buffer_size - 1 - i] = max_val - i;
+        for (uint16_t i = buffer_elems_; i < buffer_size; i++) [[unlikely]] {
+            buffer_[i] = BufferElement::max();
         }
         sort<buffer_size>(scratch, buffer_);
     }
@@ -136,7 +125,13 @@ class buffer {
     bool is_full() const { return buffer_elems_ == buffer_size; }
 
     void insert(uint32_t idx, bool v) {
-        BufferElement nb = {idx, v};
+        BufferElement nb = [&] () -> BufferElement {
+            if constexpr (!compressed && sorted) {
+                return {idx, v, true};
+            } else {
+                return {idx, v};
+            }
+        }();
         if constexpr (!sorted) {
             buffer_[buffer_elems_++] = nb;
             return;
@@ -144,27 +139,31 @@ class buffer {
         uint16_t i = buffer_elems_;
         while (i > 0) {
             if (nb <= buffer_[i - 1]) [[likely]] {
-                buffer_[i] = ++buffer[i - 1];
+                buffer_[i] = buffer_[i - 1];
+                ++buffer_[i];
             } else {
                 break;
             }
             --i;
         }
         buffer_[i] = nb;
+        ++buffer_elems_;
     }
 
     bool remove(uint32_t& idx, bool& v) {
         if constexpr (sorted && !compressed) {
             uint16_t i = buffer_elems_;
             while (i > 0) {
-                uint32_t b_idx = val(buffer_[i - 1]);
+                uint32_t b_idx = buffer_[i - 1].index();
                 if (b_idx > idx) [[likely]] {
-                    buffer_[i - 1]--;
+                    --buffer_[i - 1];
                 } else if (b_idx == idx) {
-                    if (is_insertion(buffer_[i - 1])) {
+                    if (buffer_[i - 1].is_insertion()) {
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
                         std::memmove(buffer_ + (i - 1), buffer_ + i,
-                                     buffer_elems_ - i - 1);
-                        v = assoc_val(buffer_[i - 1]);
+                                     sizeof(BufferElement) * (buffer_elems_ - i - 1));
+#pragma GCC diagnostic pop
+                        v = buffer_[i - 1].value();
                         buffer_elems_--;
                         return true;
                     } else {
@@ -176,28 +175,48 @@ class buffer {
                 i--;
             }
             if (i < buffer_elems_) {
-                std::memmove(buffer_ + i, buffer_ + (i + 1), buffer_elems_ - i);
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+                std::memmove(buffer_ + i, buffer_ + (i + 1), sizeof(BufferElement) * (buffer_elems_ - i));
+#pragma GCC diagnostic pop
             }
-            buffer_[i] = idx | (uint32_t(1) << 30);
+            buffer_[i] = {idx, false, false};
             buffer_elems_++;
             while (i > 0) {
-                idx += is_insertion(buffer_[i - 1]) ? -1 : 1;
+                idx += buffer_[i - 1].is_insertion() ? -1 : 1;
                 i--;
             }
             return false;
-        } else {
-            if constexpr (!sorted) {
-                sort();
-            }
+        } else if constexpr (!sorted) {
+            bool done = false;
             for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; i--) {
-                uint32_t b_idx = val(buffer_[i]);
+                uint32_t b_idx = buffer_[i].index();
+                if (b_idx == idx) [[unlikely]] {
+                    buffer_elems_--;
+                    done = true;
+                    v = buffer_[i].value();
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+                    std::memmove(buffer_ + i, buffer_ + i + 1,
+                                 sizeof(BufferElement) * (buffer_elems_ - i - 1));
+#pragma GCC diagnostic pop
+                } else if (b_idx > idx) {
+                    --buffer_[i];
+                } else {
+                    idx--;
+                }
+            }
+            return done;
+        } else {
+            for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; i--) {
+                uint32_t b_idx = buffer_[i].index();
                 if (b_idx > idx) [[likely]] {
-                    buffer_[i]--;
+                    --buffer_[i];
                 } else if (b_idx == idx) {
-                    v = assoc_val(buffer_[i]);
+                    v = buffer_[i].value();
                     if (i < buffer_elems_ - 1) {
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
                         std::memmove(buffer_ + i, buffer_ + i + 1,
-                                     buffer_elems_ - i - 1);
+                                     sizeof(BufferElement) * (buffer_elems_ - i - 1));
+#pragma GCC diagnostic pop
                     }
                     buffer_elems_--;
                     return true;
@@ -258,20 +277,23 @@ class buffer {
 
     void clear() { buffer_elems_ = 0; }
 
-    const BufferElement& operator[](uint_t i) const {
+    const BufferElement& operator[](uint16_t i) const {
         return buffer_[i];
     }
 
     uint16_t size() const { return buffer_elems_; }
 
-    buffer_iter begin() {
-        if constexpr (!sorted) {
-            sort();
-        }
-        return buffer_iter(this, 0);
+    const BufferElement* begin() const {
+        return buffer_;
     }
 
-    buffer_iter end() const { return buffer_iter(this, buffer_elems_); }
+    const BufferElement* end() const { 
+        return buffer_ + buffer_elems_;
+    }
+
+    static uint16_t max_elems() {
+        return buffer_size;
+    }
 
    private:
     template <uint16_t block_size>
@@ -328,6 +350,7 @@ class buffer {
         }
         std::sort(source, source + size);
     }
+
 };
 }  // namespace bv
 #endif
