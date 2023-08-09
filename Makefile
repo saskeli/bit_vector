@@ -120,5 +120,5 @@ cover: clean_test test/test.o test/gtest_main.a
 	g++ $(COVERAGE) $(CFLAGS) $(INCLUDE) $(GFLAGS) $(SDSL) -DDEBUG -DGTEST_ON -lpthread test/test.o test/gtest_main.a -o test/test -lsdsl
 	test/test
 	gcov test/test.cpp
-	lcov -c -d . -o index.info
+	lcov -c -d . --ignore-errors mismatch -o index.info
 	genhtml index.info -o target

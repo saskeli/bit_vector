@@ -5,6 +5,7 @@
 #include <cstring>
 #include <utility>
 #include <algorithm>
+#include <iostream>
 
 #include "uncopyable.hpp"
 
@@ -159,11 +160,11 @@ class buffer {
                     --buffer_[i - 1];
                 } else if (b_idx == idx) {
                     if (buffer_[i - 1].is_insertion()) {
+                        v = buffer_[i - 1].value();
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
                         std::memmove(buffer_ + (i - 1), buffer_ + i,
-                                     sizeof(BufferElement) * (buffer_elems_ - i - 1));
+                                     sizeof(BufferElement) * (buffer_elems_ - i));
 #pragma GCC diagnostic pop
-                        v = buffer_[i - 1].value();
                         buffer_elems_--;
                         return true;
                     } else {
@@ -190,14 +191,15 @@ class buffer {
             bool done = false;
             for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; i--) {
                 uint32_t b_idx = buffer_[i].index();
-                if (b_idx == idx) [[unlikely]] {
-                    buffer_elems_--;
+                if (b_idx == idx && !done) [[unlikely]] {
                     done = true;
                     v = buffer_[i].value();
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
                     std::memmove(buffer_ + i, buffer_ + i + 1,
                                  sizeof(BufferElement) * (buffer_elems_ - i - 1));
 #pragma GCC diagnostic pop
+                    buffer_elems_--;
+                    
                 } else if (b_idx > idx) {
                     --buffer_[i];
                 } else {
@@ -223,7 +225,6 @@ class buffer {
                 } else {
                     idx--;
                 }
-                i--;
             }
             return false;
         }
@@ -233,16 +234,13 @@ class buffer {
         uint32_t o_idx = idx;
         if constexpr (sorted && !compressed) {
             for (uint16_t i = 0; i < buffer_elems_; i++) {
-                uint32_t b_idx = val(buffer_[i]);
+                uint32_t b_idx = buffer_[i].index();
                 if (b_idx < o_idx) [[likely]] {
-                    idx += is_insertion(buffer_[i]) ? -1 : 1;
+                    idx += buffer_[i].is_insertion() ? -1 : 1;
                 } else if (b_idx == o_idx) {
                     if (is_insertion(buffer_[i])) {
-                        if (assoc_val(buffer_[i])) {
-                            diff = v ? 0 : -1;
-                        } else {
-                            diff = v ? 1 : 0;
-                        }
+                        diff = v;
+                        diff -= int(buffer_[i].value());
                         return true;
                     } else {
                         idx++;
@@ -252,10 +250,9 @@ class buffer {
                 }
             }
             return false;
+        } else if constexpr(!sorted) {
+
         } else {
-            if constexpr (!sorted) {
-                sort();
-            }
             for (uint16_t i = 0; i < buffer_elems_; i++) {
                 uint32_t b_idx = val(buffer_[i]);
                 if (b_idx < o_idx) [[likely]] {
