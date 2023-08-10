@@ -6,6 +6,7 @@
 #include <utility>
 #include <algorithm>
 #include <iostream>
+#include <ranges>
 
 #include "uncopyable.hpp"
 
@@ -153,17 +154,17 @@ class buffer {
 
     bool remove(uint32_t& idx, bool& v) {
         if constexpr (sorted && !compressed) {
-            uint16_t i = buffer_elems_;
-            while (i > 0) {
-                uint32_t b_idx = buffer_[i - 1].index();
+            uint16_t i = buffer_elems_ - 1;
+            for (; i < buffer_elems_; --i) {
+                uint32_t b_idx = buffer_[i].index();
                 if (b_idx > idx) [[likely]] {
-                    --buffer_[i - 1];
+                    --buffer_[i];
                 } else if (b_idx == idx) {
-                    if (buffer_[i - 1].is_insertion()) {
-                        v = buffer_[i - 1].value();
+                    if (buffer_[i].is_insertion()) {
+                        v = buffer_[i].value();
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
-                        std::memmove(buffer_ + (i - 1), buffer_ + i,
-                                     sizeof(BufferElement) * (buffer_elems_ - i));
+                        std::memmove(buffer_ + i, buffer_ + (i + 1),
+                                     sizeof(BufferElement) * (buffer_elems_ - i - 1));
 #pragma GCC diagnostic pop
                         buffer_elems_--;
                         return true;
@@ -173,18 +174,17 @@ class buffer {
                 } else {
                     break;
                 }
-                i--;
             }
+            ++i;
             if (i < buffer_elems_) {
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
-                std::memmove(buffer_ + i, buffer_ + (i + 1), sizeof(BufferElement) * (buffer_elems_ - i));
+                std::memmove(buffer_ + (i + 1), buffer_ + i, sizeof(BufferElement) * (buffer_elems_ - i));
 #pragma GCC diagnostic pop
             }
-            buffer_[i] = {idx, false, false};
+            buffer_[i--] = {idx, false, false};
             buffer_elems_++;
-            while (i > 0) {
-                idx += buffer_[i - 1].is_insertion() ? -1 : 1;
-                i--;
+            for (; i < buffer_elems_; i--) {
+                idx += buffer_[i].is_insertion() ? -1 : 1;
             }
             return false;
         } else if constexpr (!sorted) {
@@ -238,9 +238,10 @@ class buffer {
                 if (b_idx < o_idx) [[likely]] {
                     idx += buffer_[i].is_insertion() ? -1 : 1;
                 } else if (b_idx == o_idx) {
-                    if (is_insertion(buffer_[i])) {
+                    if (buffer_[i].is_insertion()) {
                         diff = v;
                         diff -= int(buffer_[i].value());
+                        buffer_[i] = {b_idx, v, true};
                         return true;
                     } else {
                         idx++;
@@ -251,18 +252,25 @@ class buffer {
             }
             return false;
         } else if constexpr(!sorted) {
-
+            for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; i--) {
+                if (buffer_[i].index() == idx) [[unlikely]] {
+                    diff = v;
+                    diff -= int(buffer_[i].value());
+                    buffer_[i] = {idx, v};
+                    return true;
+                }
+                idx -= buffer_[i].index() < idx ? 1 : 0;
+            }
+            return false;
         } else {
             for (uint16_t i = 0; i < buffer_elems_; i++) {
-                uint32_t b_idx = val(buffer_[i]);
+                uint32_t b_idx = buffer_[i].index();
                 if (b_idx < o_idx) [[likely]] {
                     idx--;
                 } else if (b_idx == o_idx) {
-                    if (assoc_val(buffer_[i])) {
-                        diff = v ? 0 : -1;
-                    } else {
-                        diff = v ? 1 : 0;
-                    }
+                    diff = v;
+                    diff -= int(buffer_[i].value());
+                    buffer_[i] = {o_idx, v};
                     return true;
                 } else {
                     break;

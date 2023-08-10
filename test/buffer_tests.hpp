@@ -98,6 +98,48 @@ void deferred_removal(buf& b) {
     ASSERT_EQ(idx, 3u);
 }
 
+template <class buf>
+void trivial_set(buf& b) {
+    b.insert(1, false);
+    int diff;
+    uint32_t idx = 1;
+    ASSERT_TRUE(b.set(idx, false, diff));
+    ASSERT_EQ(diff, 0);
+    idx = 1;
+    ASSERT_TRUE(b.set(idx, true, diff));
+    ASSERT_EQ(diff, 1);
+    idx = 1;
+    ASSERT_TRUE(b.set(idx, false, diff));
+    ASSERT_EQ(diff, -1);
+    idx = 1;
+    ASSERT_TRUE(b.set(idx, false, diff));
+    ASSERT_EQ(diff, 0);
+}
+
+template <class buf>
+void non_set(buf& b) {
+    b.insert(4, true);
+    b.insert(2, false);
+    b.insert(6, true);
+    int diff;
+    uint32_t idx = 4;
+    ASSERT_FALSE(b.set(idx, false, diff));
+    ASSERT_EQ(idx, 3u);
+    ASSERT_EQ(b.size(), 3u);
+}
+
+template <class buf>
+void set(buf& b) {
+    b.insert(4, true);
+    b.insert(2, false);
+    b.insert(6, true);
+    int diff;
+    uint32_t idx = 5;
+    ASSERT_TRUE(b.set(idx, false, diff));
+    ASSERT_EQ(diff, -1);
+    ASSERT_EQ(b.size(), 3u);
+}
+
 // Compressed and sorted tests
 TEST(BufferCompSorted, Initialize) {
     buffer<16, true, true> b;
@@ -146,6 +188,21 @@ TEST(BufferCompSorted, NonTrivialRemove) {
 TEST(BufferCompSorted, DeferredRemove) {
     buffer<16, true, true> b;
     deferred_removal(b);
+}
+
+TEST(BufferCompSorted, TrivialSet) {
+    buffer<16, true, true> b;
+    trivial_set(b);
+}
+
+TEST(BufferCompSorted, NonSet) {
+    buffer<16, true, true> b;
+    non_set(b);
+}
+
+TEST(BufferCompSorted, Set) {
+    buffer<16, true, true> b;
+    set(b);
 }
 
 // Compressed and unsorted tests
@@ -198,6 +255,21 @@ TEST(BufferCompUnsorted, DeferredRemove) {
     deferred_removal(b);
 }
 
+TEST(BufferCompUnsorted, TrivialSet) {
+    buffer<16, true, false> b;
+    trivial_set(b);
+}
+
+TEST(BufferCompUnsorted, NonSet) {
+    buffer<16, true, false> b;
+    non_set(b);
+}
+
+TEST(BufferCompUnsorted, Set) {
+    buffer<16, true, false> b;
+    set(b);
+}
+
 // Uncompressed and sorted tests
 TEST(BufferSorted, Initialize) {
     buffer<16, false, true> b;
@@ -248,6 +320,29 @@ TEST(BufferSorted, DeferredRemove) {
     deferred_removal(b);
 }
 
+TEST(BufferSorted, RemoveBug1) {
+    buffer<16, false, true> b;
+    b.insert(7, true);
+    b.insert(1, false);
+    uint32_t idx = 2;
+    bool v = true;
+    ASSERT_FALSE(b.remove(idx, v));
+    ASSERT_EQ(idx, 1u);
+    std::pair<uint32_t, std::pair<bool, bool>> elems[] = {
+        {1, {true, false}},
+        {2, {false, false}},
+        {7, {true, true}}};
+    uint16_t i = 0;
+    for (auto be : b) {
+        ASSERT_EQ(be.index(), elems[i].first) << "i = " << i;
+        ASSERT_EQ(be.is_insertion(), elems[i].second.first) << "i = " << i;
+        if (be.is_insertion()) {
+            ASSERT_EQ(be.value(), elems[i].second.second) << "i = " << i;
+        }
+        ++i;
+    }
+}
+
 TEST(BufferSorted, MixedOrder) {
     buffer<16, false, true> b;
     b.insert(1337, true);
@@ -276,6 +371,45 @@ TEST(BufferSorted, MixedOrder) {
         ASSERT_EQ(be.is_insertion(), elems[i].second.first) << "i = " << i;
         ++i;
     }
+}
+
+TEST(BufferSorted, TrivialSet) {
+    buffer<16, false, true> b;
+    trivial_set(b);
+}
+
+TEST(BufferSorted, NonSet) {
+    buffer<16, false, true> b;
+    non_set(b);
+}
+
+TEST(BufferSorted, Set) {
+    buffer<16, false, true> b;
+    set(b);
+}
+
+TEST(BufferSorted, MixedSet) {
+    buffer<16, false, true> b;
+    b.insert(7, true);
+    b.insert(1, false);
+    uint32_t idx = 2;
+    bool v = true;
+    b.remove(idx, v);
+    idx = 3;
+    b.remove(idx, v);
+    int diff;
+    idx = 7;
+    ASSERT_FALSE(b.set(idx, true, diff));
+    ASSERT_EQ(idx, 7u);
+    ASSERT_EQ(b.size(), 4u);
+    idx = 6;
+    ASSERT_TRUE(b.set(idx, false, diff));
+    ASSERT_EQ(diff, -1);
+    ASSERT_EQ(b.size(), 4u);
+    idx = 3;
+    ASSERT_FALSE(b.set(idx, false, diff));
+    ASSERT_EQ(idx, 4u);
+    ASSERT_EQ(b.size(), 4u);
 }
 
 // Uncompressed and unsorted tests
@@ -318,7 +452,7 @@ TEST(BufferUnsorted, TrivialRemove) {
     ASSERT_EQ(b.size(), 0u);
 }
 
-TEST(BufferUnorted, NonTrivialRemove) {
+TEST(BufferUnsorted, NonTrivialRemove) {
     buffer<16, false, false> b;
     non_trivial_remove<true>(b);
 }
@@ -326,4 +460,20 @@ TEST(BufferUnorted, NonTrivialRemove) {
 TEST(BufferUnsorted, DeferredRemove) {
     buffer<16, false, false> b;
     deferred_removal(b);
+}
+
+TEST(BufferUnsorted, TrivialSet) {
+    buffer<16, false, false> b;
+    trivial_set(b);
+}
+
+
+TEST(BufferUnsorted, NonSet) {
+    buffer<16, false, false> b;
+    non_set(b);
+}
+
+TEST(BufferUnsorted, Set) {
+    buffer<16, false, false> b;
+    set(b);
 }
