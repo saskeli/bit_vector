@@ -57,12 +57,13 @@ template <uint16_t buffer_size, uint32_t leaf_size, bool avx = true,
           bool compressed = false, bool sorted_buffers = true>
 class leaf : uncopyable {
    private:
+    typedef buffer<buffer_size, compressed, sorted_buffers> buf;
     uint8_t type_info_;     ///< Internal metadata for compressed leaves.
     uint16_t capacity_;     ///< Number of 64-bit integers available in data.
     uint32_t size_;         ///< Logical number of bits stored.
     uint32_t p_sum_;        ///< Logical number of 1-bits stored.
     uint32_t run_index_;    ///< next index to write for runs.
-    buffer<buffer_size, compressed, sorted_buffers> buf_;
+    buf buf_;
     uint64_t* data_;  ///< Pointer to data storage.
     inline static uint64_t data_scratch[leaf_size / 64];
 
@@ -76,8 +77,6 @@ class leaf : uncopyable {
     static const constexpr uint32_t INDEX_MASK = ((uint32_t(1) << 8) - 1);
     /** @brief Number of bits in a computer word. */
     static const constexpr uint64_t WORD_BITS = 64;
-    /** @brief Mask for accessing buffer value for compressed leaves */
-    static const constexpr uint32_t C_INDEX = (~uint32_t(0)) >> 1;
     /** @brief Mask for initial value of rle compressed leaves */
     static const constexpr uint8_t C_ONE_MASK = 0b00000001;
     /** @brief Mask for accessing type of possibly compressed leaf */
@@ -186,7 +185,7 @@ class leaf : uncopyable {
     /** @brief Getter for number of buffer elements */
     uint8_t buffer_count() const { return buf_.size(); }
     /** @brief Get pointer to the buffer */
-    uint32_t& buffer() { return buf_; }
+    buf& edit_buffer() { return buf_; }
     /** @brief Get the values for the first run */
     bool first_value() {
         if constexpr (compressed) {
@@ -266,27 +265,34 @@ class leaf : uncopyable {
      * @return Value of removed element.
      */
     bool remove(uint32_t i) {
+        if constexpr (compressed) {
+            if (is_compressed()) {
+                return c_remove(i);
+            }
+        }
         if constexpr (buffer_size > 0) {
             bool x;
-            if (buf_.remove(i, x)) {
+            uint32_t cb_idx = buf_.remove(i, x);
+            if (cb_idx >= buffer_size) {
                 --size_;
+                p_sum_ -= uint32_t(x);
                 return x;
             }
-            if constexpr (compressed) {
-                if (is_compressed()) {
-                    return c_remove(i);
-                }
-            } else if constexpr (sorted_buffers) {
-                x = data_[i / WORD_BITS] >> (data_ % WORD_BITS);
+
+            // The removal got added to the buffer and the value needs to be set.
+            if constexpr (sorted_buffers) {
+                x = data_[i / WORD_BITS] >> (i % WORD_BITS);
                 --size_;
+                p_sum_ -= uint32_t(x);
+                buf_.set_remove_value(cb_idx, x);
                 if (buf_.is_full()) {
                     commit();
                 }
                 return x;
             }
         }
-        // If buffer does not exits. A simple linear time removal is done
-        // instead.
+        // If buffer does not exits, or does not support removals: 
+        // A simple linear time removal is done.
         uint32_t target_word = i / WORD_BITS;
         uint32_t target_offset = i % WORD_BITS;
         bool x = MASK & (data_[target_word] >> target_offset);
@@ -326,42 +332,19 @@ class leaf : uncopyable {
                 return c_set(i, x);
             }
         }
-        uint32_t idx = i;
-        if constexpr (!sorted_buffers && buffer_size != 0) {
-            commit();
-        }
-        if constexpr (sorted_buffers && buffer_size != 0) {
-            // If buffer exists, the index needs for the underlying structure
-            // needs to be modified. And if there exists an insertion to this
-            // location in the buffer, the insertion can simply be amended.
-            for (uint8_t j = 0; j < buffer_count_; j++) {
-                uint32_t b = buffer_index(buffer_[j]);
-                if (b < i) {
-                    [[likely]] idx += buffer_is_insertion(buffer_[j]) ? -1 : 1;
-                } else if (b == i) {
-                    if (buffer_is_insertion(buffer_[j])) {
-                        if (buffer_value(buffer_[j]) != x) {
-                            int change = x ? 1 : -1;
-                            p_sum_ += change;
-                            buffer_[j] ^= VALUE_MASK;
-                            [[likely]] return change;
-                        }
-                        [[likely]] return 0;
-                    }
-                    idx++;
-                } else {
-                    break;
-                }
+        int res = 0;
+        if constexpr (buffer_count) {
+            if (buf_.set(i, x, res)) {
+                return res;
             }
         }
-        uint32_t word_nr = idx / WORD_BITS;
-        uint32_t pos = idx % WORD_BITS;
-
+        uint32_t word_nr = i / WORD_BITS;
+        uint32_t pos = i % WORD_BITS;
         if ((data_[word_nr] & (MASK << pos)) != (uint64_t(x) << pos)) {
             int change = x ? 1 : -1;
             p_sum_ += change;
             data_[word_nr] ^= MASK << pos;
-            [[likely]] return change;
+            return change;
         }
         return 0;
     }
@@ -383,116 +366,15 @@ class leaf : uncopyable {
                 return c_rank(n);
             }
         }
-        uint32_t count = 0;
-        uint32_t idx = n;
-        if constexpr (!sorted_buffers && buffer_size >= 0) {
-            commit();
-        }
-        if constexpr (sorted_buffers && buffer_size != 0) {
-            for (uint8_t i = 0; i < buffer_count_; i++) {
-                if (buffer_index(buffer_[i]) >= n) {
-                    [[unlikely]] break;
-                }
-                // Location of the n<sup>th</sup> element needs to be amended
-                // base on buffer contents.
-                if (buffer_is_insertion(buffer_[i])) {
-                    idx--;
-                    count += buffer_value(buffer_[i]);
-                } else {
-                    idx++;
-                    count -= buffer_value(buffer_[i]);
-                }
-            }
-        }
-        uint32_t target_word = idx / WORD_BITS;
-        uint32_t target_offset = idx % WORD_BITS;
+        uint32_t count = buf_.rank(n);
+        uint32_t target_word = n / WORD_BITS;
+        uint32_t target_offset = n % WORD_BITS;
         if constexpr (avx) {
             if (target_word) {
                 count += pop::popcnt(data_, target_word * 8);
             }
         } else {
             for (uint32_t i = 0; i < target_word; i++) {
-                count += __builtin_popcountll(data_[i]);
-            }
-        }
-        if (target_offset != 0) {
-            count += __builtin_popcountll(data_[target_word] &
-                                          ((MASK << target_offset) - 1));
-        }
-        return count;
-    }
-
-    /**
-     * @brief Number of 1-bits up to position n from position offset.
-     *
-     * Counts the number of bits set in the [offset n) range.
-     *
-     * This is a simple linear operations of population counting.
-     *
-     * @param n End position of summation.
-     * @param offset Start position of summation.
-     *
-     * @return \f$\sum_{i = \mathrm{offset}}^{\mathrm{n- 1}} \mathrm{bv}[i]\f$.
-     */
-    uint32_t rank(uint32_t n, uint32_t offset) const {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                return c_rank(n);
-            }
-        }
-        uint32_t count = 0;
-        uint32_t idx = n;
-        uint32_t o_idx = offset;
-        if constexpr (!sorted_buffers && buffer_size != 0) {
-            commit();
-        }
-        if constexpr (sorted_buffers && buffer_size != 0) {
-            for (uint8_t i = 0; i < buffer_count_; i++) {
-                uint32_t b = buffer_index(buffer_[i]);
-                if (b >= n) {
-                    [[unlikely]] break;
-                }
-                // Location of the n<sup>th</sup> element needs to be amended
-                // base on buffer contents.
-                if (buffer_is_insertion(buffer_[i])) {
-                    if (b >= offset) {
-                        count += buffer_value(buffer_[i]);
-                    } else {
-                        o_idx--;
-                    }
-                    idx--;
-                } else {
-                    if (b >= offset) {
-                        count -= buffer_value(buffer_[i]);
-                    } else {
-                        o_idx++;
-                    }
-                    idx++;
-                }
-            }
-        }
-        uint32_t target_word = idx / WORD_BITS;
-        uint32_t offset_word = o_idx / WORD_BITS;
-        uint32_t target_offset = idx % WORD_BITS;
-        uint32_t offset_offset = o_idx % WORD_BITS;
-        if (target_word == offset_word) {
-            count += __builtin_popcountll(data_[offset_word] &
-                                          ~((MASK << offset_offset) - 1) &
-                                          ((MASK << target_offset) - 1));
-            return count;
-        }
-        if (offset_offset != 0) {
-            count += __builtin_popcountll(data_[offset_word] &
-                                          ~((MASK << offset_offset) - 1));
-            offset_word++;
-        }
-        if constexpr (avx) {
-            if (target_word - offset_word > 0) {
-                count += pop::popcnt(data_ + offset_word,
-                                     (target_word - offset_word) * 8);
-            }
-        } else {
-            for (uint32_t i = offset_word; i < target_word; i++) {
                 count += __builtin_popcountll(data_[i]);
             }
         }
@@ -523,10 +405,10 @@ class leaf : uncopyable {
             return unb_select(x);
         }
         if constexpr (!sorted_buffers) {
-            commit();
+            buf_.sort();
             return unb_select(x);
         }
-        if (buffer_count_ == 0) {
+        if (buf_.size() == 0) {
             return unb_select(x);
         }
         uint32_t pop = 0;
@@ -539,17 +421,15 @@ class leaf : uncopyable {
         for (uint32_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += WORD_BITS;
-            for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                b_index = buffer_index(buffer_[b]);
+            for (uint8_t b = current_buffer; b < buf_.size(); b++) {
+                b_index = buf_[b].index();
                 if (b_index < int32_t(pos)) {
-                    if (buffer_is_insertion(buffer_[b])) {
-                        pop += buffer_value(buffer_[b]);
+                    if (buf_[b].is_insertion()) {
+                        pop += buf_[b].value();
                         pos++;
                         a_pos_offset--;
                     } else {
-                        pop -= (data_[(b_index + a_pos_offset) / WORD_BITS] >>
-                                ((b_index + a_pos_offset) % WORD_BITS)) &
-                               MASK;
+                        pop -= buf_[b].value();
                         pos--;
                         a_pos_offset++;
                     }
@@ -565,16 +445,16 @@ class leaf : uncopyable {
         }
 
         current_buffer -= 1;
-        b_index = current_buffer < buffer_count_
-                      ? buffer_index(buffer_[current_buffer])
+        b_index = current_buffer < buf_.size()
+                      ? buf_[current_buffer].index()
                       : -100;
         if ((b_index - 1 >= int32_t(pos) &&
-             !buffer_is_insertion(buffer_[current_buffer])) ||
+             !buf_[current_buffer].is_insertion()) ||
             (b_index >= int32_t(pos) &&
-             buffer_is_insertion(buffer_[current_buffer]))) {
+             buf_[current_buffer].is_insertion())) {
             current_buffer--;
-            b_index = current_buffer < buffer_count_
-                          ? buffer_index(buffer_[current_buffer])
+            b_index = current_buffer < buf_.size()
+                          ? buf_[current_buffer].index()
                           : -100;
         }
 
@@ -586,154 +466,28 @@ class leaf : uncopyable {
         pos--;
         while (pop >= x && pos < capacity_ * WORD_BITS) {
             while (b_index - 1 == int32_t(pos) &&
-                   !buffer_is_insertion(buffer_[current_buffer])) {
+                   !buf_[current_buffer].is_insertion()) {
                 a_pos_offset--;
                 current_buffer--;
-                b_index = current_buffer < buffer_count_
-                              ? buffer_index(buffer_[current_buffer])
+                b_index = current_buffer < buf_.size()
+                              ? (buf_[current_buffer].index())
                               : -100;
                 [[unlikely]] (void(0));
             }
             if (b_index == int32_t(pos) &&
-                buffer_is_insertion(buffer_[current_buffer])) {
-                pop -= buffer_value(buffer_[current_buffer]);
+                buf_[current_buffer].is_insertion()) {
+                pop -= buf_[current_buffer].value();
                 a_pos_offset++;
                 pos--;
                 current_buffer--;
-                b_index = current_buffer < buffer_count_
-                              ? buffer_index(buffer_[current_buffer])
+                b_index = current_buffer < buf_.size()
+                              ? buf_[current_buffer].index()
                               : -100;
                 [[unlikely]] continue;
             }
             pop -= (data_[(pos + a_pos_offset) / WORD_BITS] >>
                     ((pos + a_pos_offset) % WORD_BITS)) &
                    MASK;
-            pos--;
-        }
-        return ++pos;
-    }
-
-    /**
-     * @brief Index of the x<sup>th</sup> 1-bit in the data structure starting
-     * at `pos` with `pop`
-     *
-     * @param x Selection target.
-     * @param pos Start position of Select calculation.
-     * @param pop Start population as `pos`
-     * @return \f$\underset{i \in [0..n)}{\mathrm{arg min}}\left(\sum_{j = 0}^i
-     * \mathrm{bv}[j]\right) = x\f$.
-     */
-    uint32_t select(uint32_t x, uint32_t pos, uint32_t pop) const {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                return c_select(x);
-            }
-        }
-        uint8_t current_buffer = 0;
-        int8_t a_pos_offset = 0;
-        if constexpr (!sorted_buffers && buffer_size != 0) {
-            commit();
-        }
-        // Scroll the buffer to the start position and calculate offset.
-        if constexpr (sorted_buffers && buffer_size != 0) {
-            while (current_buffer < buffer_count_) {
-                uint32_t b_index = buffer_index(buffer_[current_buffer]);
-                if (b_index < pos) {
-                    if (buffer_is_insertion(buffer_[current_buffer])) {
-                        a_pos_offset--;
-                    } else {
-                        a_pos_offset++;
-                    }
-                    [[unlikely]] current_buffer++;
-                } else {
-                    [[likely]] break;
-                }
-            }
-        }
-
-        uint32_t pop_idx = 0;
-        // Step to the next 64-bit word boundary
-        if (pos + a_pos_offset > 0) {
-            pop_idx = (pos + a_pos_offset) / WORD_BITS;
-            uint32_t offset = (pos + a_pos_offset) % WORD_BITS;
-#ifdef DEBUG
-            if (pop_idx >= capacity_) {
-                std::cerr << "Invalid select query apparently\n"
-                          << "x = " << x << ", pos = " << pos
-                          << ", pop = " << pop << "\npop_idx = " << pop_idx
-                          << ", capacity_ = " << capacity_ << std::endl;
-                assert(pop_idx < capacity_);
-            }
-#endif
-            if (offset != 0) {
-                pop += __builtin_popcountll(data_[pop_idx++] >> offset);
-                pos += WORD_BITS - offset;
-                if constexpr (sorted_buffers && buffer_size != 0) {
-                    for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                        uint32_t b_index = buffer_index(buffer_[b]);
-                        if (b_index < pos) {
-                            if (buffer_is_insertion(buffer_[b])) {
-                                pop += buffer_value(buffer_[b]);
-                                pos++;
-                                a_pos_offset--;
-                            } else {
-                                pop -=
-                                    (data_[(b_index + a_pos_offset) /
-                                           WORD_BITS] >>
-                                     ((b_index + a_pos_offset) % WORD_BITS)) &
-                                    MASK;
-                                pos--;
-                                a_pos_offset++;
-                            }
-                            [[unlikely]] current_buffer++;
-                        } else {
-                            [[likely]] break;
-                        }
-                        [[unlikely]] (void(0));
-                    }
-                }
-            }
-        }
-
-        // Step one 64-bit word at a time considering the buffer until pop >= x
-        for (uint32_t j = pop_idx; j < capacity_; j++) {
-            pop += __builtin_popcountll(data_[j]);
-            pos += WORD_BITS;
-            if constexpr (sorted_buffers && buffer_size != 0) {
-                for (uint8_t b = current_buffer; b < buffer_count_; b++) {
-                    uint32_t b_index = buffer_index(buffer_[b]);
-                    if (b_index < pos) {
-                        if (buffer_is_insertion(buffer_[b])) {
-                            pop += buffer_value(buffer_[b]);
-                            pos++;
-                            a_pos_offset--;
-                        } else {
-                            pop -=
-                                (data_[(b_index + a_pos_offset) / WORD_BITS] >>
-                                 ((b_index + a_pos_offset) % WORD_BITS)) &
-                                MASK;
-                            pos--;
-                            a_pos_offset++;
-                        }
-                        [[unlikely]] current_buffer++;
-                    } else {
-                        [[likely]] break;
-                    }
-                    [[unlikely]] (void(0));
-                }
-            }
-            if (pop >= x) [[unlikely]]
-                break;
-        }
-
-        // Make sure we have not overshot the logical end of the structure.
-        pos = size_ < pos ? size_ : pos;
-
-        // Decrement one bit at a time until we can't anymore without going
-        // under x.
-        pos--;
-        while (pop >= x && pos < capacity_ * WORD_BITS) {
-            pop -= at(pos);
             pos--;
         }
         return ++pos;
@@ -760,54 +514,23 @@ class leaf : uncopyable {
      * be completed without undefined behaviour.
      */
     bool need_realloc() {
-        // if (compressed && do_debug) {
-        //     std::cerr << "need_realloc called" << std::endl;
-        // }
         if constexpr (compressed) {
             if (is_compressed()) {
                 if (size_ >= (~uint32_t(0)) >> 1) {
-                    // if (compressed && do_debug) {
-                    //     std::cerr << " Size limit reached" << std::endl;
-                    // }
                     [[unlikely]] return true;
                 }
-                if (buffer_count_ < buffer_size - 1) {
-                    // if (compressed && do_debug) {
-                    //     std::cerr << " Buffer has room" << std::endl;
-                    // }
+                if (buf_.size() < buf_.size() - 1) {
                     [[likely]] return false;
                 }
                 if (type_info_ & C_RUN_REMOVAL_MASK) {
-                    // if (compressed && do_debug) {
-                    //     std::cerr << " Attempting to clean up runs" <<
-                    //     std::endl;
-                    // }
                     c_commit<false>();
                 }
-                // if (compressed && do_debug) {
-                //     std::cerr << " capacity_ * 8 = " << (capacity_ * 8)
-                //           << " vs. run_index + buffer_size * (1 + (type_info_
-                //           >> 5) = "
-                //           << run_index_[0] << " + " << buffer_size << " * (1
-                //           + "
-                //           << (type_info_ >> 5) << ") = "
-                //           << run_index_[0] + int(buffer_size) * (1u +
-                //           (type_info_ >> 5))
-                //           << std::endl;
-                // }
                 bool ret =
                     (capacity_ * 8 <
-                     run_index_[0] + buffer_size * (1u + (type_info_ >> 5)));
-                // if (compressed && do_debug) {
-                //     std::cerr << " returning " << ret << std::endl;
-                // }
+                     run_index_ + buffer_size * (1u + (type_info_ >> 5)));
                 return ret;
             }
         }
-        // if (compressed && do_debug) {
-        //     std::cerr << size_ << " >= " << capacity_ << " * " << WORD_BITS
-        //     << " = " << (capacity_ * WORD_BITS) << std::endl;
-        // }
         return size_ >= capacity_ * WORD_BITS;
     }
 
@@ -844,8 +567,8 @@ class leaf : uncopyable {
     uint16_t desired_capacity() {
         if constexpr (compressed) {
             if (is_compressed()) {
-                uint64_t n_cap = run_index_[0] % 8;
-                n_cap += run_index_[0] + (n_cap ? 8 - n_cap : 0);
+                uint64_t n_cap = run_index_ % 8;
+                n_cap += run_index_ + (n_cap ? 8 - n_cap : 0);
                 n_cap += buffer_size * (1 + (type_info_ >> 5));
                 uint64_t m = n_cap % 8;
                 n_cap += m ? 8 - m : 0;
@@ -887,6 +610,7 @@ class leaf : uncopyable {
      *
      * Intended for removing elements that have been copied to a neighbouring
      * leaf. Assumes that buffer of uncompressed leaves has been committed
+     * before calling. Also assumes that unsorted buffers have been sorted 
      * before calling.
      *
      * Will update size and p_sum.
@@ -897,25 +621,7 @@ class leaf : uncopyable {
         if constexpr (compressed) {
             if (is_compressed()) {
                 uint32_t q_elems = elems;
-                uint8_t n_delete = 0;
-                for (uint8_t b_idx = 0; b_idx < buffer_count_; b_idx++) {
-                    uint32_t e_index = buffer_[b_idx] & C_INDEX;
-                    if (e_index >= elems) {
-                        buffer_[b_idx] -= elems;
-                    } else {
-                        size_--;
-                        p_sum_ -= buffer_[b_idx] >> 31;
-                        n_delete++;
-                        q_elems--;
-                    }
-                }
-                if (n_delete) {
-                    for (uint8_t i = n_delete; i < buffer_count_; i++) {
-                        buffer_[i - n_delete] = buffer_[i];
-                        buffer_[i] = uint32_t(0);
-                    }
-                }
-                buffer_count_ -= n_delete;
+                p_sum_ -= buf_.clear_firs(q_elems);
                 uint32_t d_idx = 0;
                 bool val = type_info_ & C_ONE_MASK;
                 uint8_t* data = reinterpret_cast<uint8_t*>(data_);
@@ -940,20 +646,19 @@ class leaf : uncopyable {
                         rl |= data[d_idx + 1];
                         c_bytes = 2;
                     }
-                    if (rl > q_elems) {
+                    if (rl > q_elems) [[unlikely]] {
                         write_run(rl - q_elems, d_idx, c_bytes);
-                        size_ -= q_elems;
                         p_sum_ -= val * q_elems;
                         q_elems = 0;
                     } else {
                         write_run(0, d_idx, c_bytes);
                         q_elems -= rl;
-                        size_ -= rl;
                         p_sum_ -= val * rl;
                     }
                     d_idx += c_bytes;
                     val = !val;
                 }
+                size -= elems;
                 c_commit<false>();
                 return;
             }
@@ -1008,18 +713,15 @@ class leaf : uncopyable {
      * @param other Pointer to the sibling to copy from.
      */
     void transfer_capacity(leaf* other) {
-#ifdef DEBUG
-        assert(buffer_count_ == 0);
-        assert(size_ == 0);
-#endif
+        // TODO: Start actually transferring capacity instead of counts?
         type_info_ = C_TYPE_MASK;
         bool val = other->first_value();
         type_info_ |= val ? C_ONE_MASK : 0;
         uint32_t o_bytes = other->used_bytes();
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
-        uint32_t* o_buf = other->buffer();
-        uint8_t o_buf_count = other->buffer_count();
+        buf* o_buf = other->edit_buffer();
+        o_buf->sort();
         uint8_t ob_idx = 0;
         while (d_idx < o_bytes) {
             uint32_t rl = 0;
@@ -1044,17 +746,17 @@ class leaf : uncopyable {
             }
             if ((other->size() - size_ - rl >= leaf_size / 3) &&
                 ((d_idx + r_bytes < o_bytes / 2 ||
-                  buffer_count_ < (buffer_size >> 1)))) {
+                  buf_.size() < (buffer_size >> 1)))) {
                 d_idx += r_bytes;
                 assert(rl != 0);
                 write_run(rl);
                 size_ += rl;
                 p_sum_ += val * rl;
-                for (; ob_idx < o_buf_count; ob_idx++) {
-                    if ((o_buf[ob_idx] & C_INDEX) < size_) {
-                        buffer_[buffer_count_++] = o_buf[ob_idx];
+                for (; ob_idx < o_buf.size(); ob_idx++) {
+                    if (o_buf[ob_idx].index() < size_) {
+                        buf_.append(o_buf[ob_idx]);
                         size_++;
-                        p_sum_ += o_buf[ob_idx] >> 31;
+                        p_sum_ += o_buf[ob_idx].value();
                     } else {
                         [[likely]] break;
                     }
@@ -1074,11 +776,11 @@ class leaf : uncopyable {
                 write_run(to_copy);
                 size_ += to_copy;
                 p_sum_ += val * to_copy;
-                for (; ob_idx < o_buf_count; ob_idx++) {
-                    if ((o_buf[ob_idx] & C_INDEX) < size_) {
-                        buffer_[buffer_count_++] = o_buf[ob_idx];
+                for (; ob_idx < o_buf->size(); ob_idx++) {
+                    if ((o_buf[ob_idx].index()) < size_) {
+                        buf_.append(o_buf[ob_idx]);
                         size_++;
-                        p_sum_ += o_buf[ob_idx] >> 31;
+                        p_sum_ += o_buf[ob_idx].value();
                     } else {
                         [[likely]] break;
                     }
@@ -1182,7 +884,9 @@ class leaf : uncopyable {
      * @brief Remove the last "elems" elements from the leaf.
      *
      * Intended for removing elements that have been copied to a neighbouring
-     * leaf. Assumes that buffer has been committed before calling.
+     * leaf. Assumes that buffers of uncompressed leaves have been committed 
+     * before calling. Also assumes that buffers of compressed leaves are
+     * sorted.
      *
      * Will update size and p_sum.
      *
@@ -1191,12 +895,8 @@ class leaf : uncopyable {
     void clear_last(uint32_t elems) {
         if constexpr (compressed) {
             if (is_compressed()) {
-                // std::cerr << elems
-                //           << " elements are getting deleted:" << std::endl;
-                // print(false);
-                // std::cout << std::endl;
-                uint32_t end = size_ - elems;
-                p_sum_ = 0;
+                uint32_t keep = size_ - elems;
+                p_sum_ = 
                 for (uint8_t b_idx = buffer_count_ - 1; b_idx < buffer_count_;
                      b_idx--) {
                     if ((buffer_[b_idx] & C_INDEX) >= end) {
@@ -1650,107 +1350,6 @@ class leaf : uncopyable {
     }
 
    private:
-    /**
-     * @brief Extract the value of a buffer element
-     *
-     * The First bit (lsb) of a 23-bit buffer element contains the value of the
-     * element.
-     *
-     * I.e. if `bv[i]` is `1`, then the buffer created for `remove(i)` will have
-     * a lsb with value 1.
-     *
-     * @param e Buffer element to extract value from.
-     *
-     * @return Boolean value indicating the value of the element referred to by
-     * the buffer.
-     */
-    inline bool buffer_value(uint32_t e) const { return (e & VALUE_MASK) != 0; }
-
-    /**
-     * @brief Extract type information of a buffer element.
-     *
-     * The fourth least significant bit (`0b1000`), contains a 1 if the buffered
-     * operation is an insertion.
-     *
-     * @param e Buffer element to extract type from.
-     *
-     * @return Boolean value True if the buffer is related to an insert
-     * operations, and false if the buffer is related to a removal.
-     */
-    inline bool buffer_is_insertion(uint32_t e) const {
-        return (e & TYPE_MASK) != 0;
-    }
-
-    /**
-     * @brief Extract index information from a butter element.
-     *
-     * The 24 most significant bits of the 32-bit buffer element contain index
-     * information on the insert/removal operation.
-     *
-     * @param e Buffer element to extract index from.
-     *
-     * @return Index information related to the buffer element.
-     */
-    inline uint32_t buffer_index(uint32_t e) const { return e >> 8; }
-
-    /**
-     * @brief Updates index information for a specified buffer element.
-     *
-     * Clears index information for the i<sup>th</sup> buffer element and
-     * replases it with v.
-     *
-     * @param v Value to set the buffer index to.
-     * @param i Index of buffer element in buffer.
-     */
-    void set_buffer_index(uint32_t v, uint8_t i) {
-        buffer_[i] = (v << 8) | (buffer_[i] & INDEX_MASK);
-    }
-
-    /**
-     * @brief Creates a new 32-bit buffer element with the given parameters.
-     *
-     * A new buffer element is typically created for insertion into the buffer.
-     *
-     * @param idx Index value for the new buffer element.
-     * @param t   Type (Insert/Remove) of new buffer element.
-     * @param v   Value associated with the new buffer element.
-     */
-    uint32_t create_buffer(uint32_t idx, bool t, bool v) {
-        return ((idx << 8) | (t ? TYPE_MASK : uint32_t(0))) |
-               (v ? VALUE_MASK : uint32_t(0));
-    }
-
-    /**
-     * @brief Insert a new element into the buffer.
-     *
-     * Existing elements with index idx or greater gets shuffled forward and the
-     * new element will overwrite the buffer at index idx.
-     *
-     * @param idx Position of the new element in the buffer.
-     * @param buf Element to insert.
-     */
-    void insert_buffer(uint8_t idx, uint32_t buf) {
-        memmove(buffer_ + idx + 1, buffer_ + idx,
-                (buffer_count_ - idx) * sizeof(uint32_t));
-        buffer_[idx] = buf;
-        buffer_count_++;
-    }
-
-    /**
-     * @brief Remove an element from the buffer.
-     *
-     * Existing elements with index greater than idx get shuffled backwards and
-     * the old element at idx will be overwritten.
-     *
-     * @param idx Location of the element in the buffer
-     */
-    void delete_buffer_element(uint8_t idx) {
-        buffer_count_--;
-        memmove(buffer_ + idx, buffer_ + idx + 1,
-                (buffer_count_ - idx) * sizeof(uint32_t));
-        buffer_[buffer_count_] = 0;
-    }
-
     /**
      * @brief Add an element to the end of the leaf data.
      *
@@ -2244,7 +1843,7 @@ class leaf : uncopyable {
         bool val = other->first_value();
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint8_t o_buf_count = other->buffer_count();
-        uint32_t* o_buf = other->buffer();
+        buf* o_buf = other->edit_buffer();
         uint32_t old_size = size_;
         uint8_t b_idx = 0;
         uint32_t d_idx = 0;
@@ -2322,7 +1921,7 @@ class leaf : uncopyable {
 
     void c_transfer_prepend(leaf* other, uint32_t elems) {
         assert(elems < other->size());
-        uint32_t* o_buf = other->buffer();
+        buf* o_buf = other->edit_buffer();
         uint8_t o_buf_count = other->buffer_count();
         uint8_t b_idx = 0;
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());

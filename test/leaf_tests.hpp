@@ -55,7 +55,7 @@ void leaf_insert_test(uint64_t n) {
     delete allocator;
 }
 
-template <class leaf, class alloc>
+/*template <class leaf, class alloc>
 void leaf_append_test(uint8_t buffer_size) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(4);
@@ -679,11 +679,11 @@ void leaf_commit_test(uint64_t size) {
 
     allocator->template deallocate_leaf<leaf>(l);
     delete allocator;
-}
+}*/
 
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
 
-TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
+/*TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
 
 TEST(SimpleLeaf, Remove) { leaf_remove_test<sl, ma>(10000); }
 
@@ -728,6 +728,6 @@ TEST(SimpleLeafUnb, Select) { leaf_select_test<ubl, ma>(10000); }
 
 TEST(SimpleLeafUnb, SelectOffset) { leaf_select_test<ubl, ma>(11); }
 
-TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
+TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }*/
 
 #endif

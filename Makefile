@@ -88,7 +88,7 @@ clean_test:
 
 update_git:
 	git submodule update
-	(cd deps/sdsl-lite && cmake CMakeLists.txt)
+	(cd deps/sdsl-lite && cmake CMakeLists.txt && make)
 
 
 gtest-all.o: $(GTEST_SRCS_)

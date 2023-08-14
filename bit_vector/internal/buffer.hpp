@@ -52,6 +52,11 @@ class buffer {
             return *this;
         }
 
+        BufferElement& operator-=(uint32_t i) {
+            v_ -= i << OFFSET;
+            return *this;
+        }
+
         BufferElement operator+(uint32_t i) {
             return v_ + (i << OFFSET);
         } 
@@ -61,10 +66,6 @@ class buffer {
             return *this;
         }
 
-        bool operator==(const BufferElement& rhs) const { return v_ == rhs.v_; }
-
-        bool operator!=(const BufferElement& rhs) const { return v_ != rhs.v_; }
-
         bool operator<(const BufferElement& rhs) const {
             return (v_ >> ONE) < (rhs.v_ >> ONE);
         }
@@ -73,12 +74,8 @@ class buffer {
             return (v_ >> ONE) <= (rhs.v_ >> ONE);
         }
 
-        bool operator>(const BufferElement& rhs) const {
-            return (v_ >> ONE) > (rhs.v_ >> ONE);
-        }
-
-        bool operator>=(const BufferElement& rhs) const {
-            return (v_ >> ONE) >= (rhs.v_ >> ONE);
+        void set_remove_value(bool v) {
+            v_ |= uint32_t(v);
         }
 
         uint32_t index() const { return v_ >> OFFSET; }
@@ -126,6 +123,53 @@ class buffer {
 
     bool is_full() const { return buffer_elems_ == buffer_size; }
 
+    bool access(uint32_t& idx, bool& v) {
+        if constexpr (sorted && !compressed) {
+            uint32_t o_idx = idx;
+            for (uint16_t i = 0; i < buffer_elems_; ++i) {
+                uint32_t b_idx = buffer_[i].index();
+                if (b_idx == o_idx) {
+                    if (buffer_[i].is_insertion()) {
+                        v = buffer_[i].value();
+                        return true;
+                    } else {
+                        idx++;
+                    }
+                } else if (b_idx < o_idx) [[likely]] {
+                    idx += buffer_[i].is_insertion() ? -1 : 1;
+                } else {
+                    break;
+                }
+            }   
+            return false;
+        } else if constexpr (sorted) {
+            uint32_t o_idx = idx;
+            for (uint16_t i = 0; i < buffer_elems_; ++i) {
+                uint32_t b_idx = buffer_[i].index();
+                if (b_idx == o_idx) {
+                    v = buffer_[i].value();
+                    return true;
+                } else if (b_idx < o_idx) {
+                    --idx;
+                } else {
+                    break;
+                }
+            }
+            return false;
+        } else {
+            for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; --i) {
+                uint32_t b_idx = buffer_[i].index();
+                if (b_idx == idx) {
+                    v = buffer_[i].value();
+                    return true;
+                } else if (b_idx < idx) {
+                    --idx;
+                }
+            }
+            return false;
+        }
+    }
+
     void insert(uint32_t idx, bool v) {
         BufferElement nb = [&] () -> BufferElement {
             if constexpr (!compressed && sorted) {
@@ -152,7 +196,7 @@ class buffer {
         ++buffer_elems_;
     }
 
-    bool remove(uint32_t& idx, bool& v) {
+    uint16_t remove(uint32_t& idx, bool& v) {
         if constexpr (sorted && !compressed) {
             uint16_t i = buffer_elems_ - 1;
             for (; i < buffer_elems_; --i) {
@@ -167,7 +211,7 @@ class buffer {
                                      sizeof(BufferElement) * (buffer_elems_ - i - 1));
 #pragma GCC diagnostic pop
                         buffer_elems_--;
-                        return true;
+                        return buffer_size;
                     } else {
                         break;
                     }
@@ -181,18 +225,19 @@ class buffer {
                 std::memmove(buffer_ + (i + 1), buffer_ + i, sizeof(BufferElement) * (buffer_elems_ - i));
 #pragma GCC diagnostic pop
             }
+            uint16_t index = i;
             buffer_[i--] = {idx, false, false};
             buffer_elems_++;
             for (; i < buffer_elems_; i--) {
                 idx += buffer_[i].is_insertion() ? -1 : 1;
             }
-            return false;
+            return index;
         } else if constexpr (!sorted) {
-            bool done = false;
+            uint16_t done = 0;
             for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; i--) {
                 uint32_t b_idx = buffer_[i].index();
                 if (b_idx == idx && !done) [[unlikely]] {
-                    done = true;
+                    done = buffer_size;
                     v = buffer_[i].value();
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
                     std::memmove(buffer_ + i, buffer_ + i + 1,
@@ -221,13 +266,17 @@ class buffer {
 #pragma GCC diagnostic pop
                     }
                     buffer_elems_--;
-                    return true;
+                    return buffer_size;
                 } else {
                     idx--;
                 }
             }
-            return false;
+            return 0;
         }
+    }
+
+    void set_remove_value(uint16_t idx, bool v) {
+        buffer_[idx].set_remove_value(v);
     }
 
     bool set(uint32_t& idx, bool v, int& diff) {
@@ -279,6 +328,63 @@ class buffer {
             return false;
         }
     }
+    
+    uint32_t rank(uint32_t& idx) const {
+        uint32_t ret = 0;
+        uint32_t o_idx = idx;
+        if constexpr (sorted && !compressed) {
+            for (uint16_t i = 0; i < buffer_elems_; ++i) {
+                if (buffer_[i].index() < o_idx) [[likely]] {
+                    if (buffer_[i].is_insertion()) {
+                        --idx;
+                        ret += buffer_[i].value();
+                    } else {
+                        ++idx;
+                        ret -= buffer_[i].value();
+                    }
+                } else {
+                    break;
+                }
+            }
+            return ret;
+        } else if constexpr (!sorted) {
+            for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; --i) {
+                if (buffer_[i].index() < idx) {
+                    --idx;
+                    ret += buffer_[i].value();
+                }
+            }
+            return ret;
+        } else {
+            for (uint16_t i = 0; i < buffer_elems_; ++i) {
+                if (buffer_[i].index() < o_idx) {
+                    --idx;
+                    ret += buffer_[i].value();
+                } else {
+                    break;
+                }
+            }
+            return ret;
+        }
+    }
+
+    uint32_t clear_first(uint32_t& elems) {
+        static_assert(sorted && compressed);
+        uint16_t i = 0; 
+        uint32_t d_sum = 0;
+        uint32_t lim = elems;
+        while (i < buffer_elems_ && buffer_[i].index() < lim) {
+            --elems;
+            d_sum += buffer_[i++].value();
+        }
+        uint16_t t_idx = 0;
+        for (; i < buffer_elems_; i++) {
+            buffer_[t_idx] = buffer_[i];
+            buffer_[t_idx++] -= lim;
+        }
+        buffer_elems_ = t_idx;
+        return d_sum;
+    }
 
     void clear() { buffer_elems_ = 0; }
 
@@ -294,6 +400,10 @@ class buffer {
 
     const BufferElement* end() const { 
         return buffer_ + buffer_elems_;
+    }
+
+    void append(BufferElement elem) {
+        buffer_[buffer_elems_++] = elem;
     }
 
     static uint16_t max_elems() {
@@ -330,9 +440,10 @@ class buffer {
                             BufferElement be = source[a_idx] + inversions;
                             if (be < source[b_idx]) {
                                 target[offset + i] = be;
+                                ++a_idx;
                             } else {
                                 target[offset + i] = source[b_idx++];
-                                inversions++;
+                                ++inversions;
                             }
                         } else {
                             target[offset + i] = source[a_idx++] + inversions;

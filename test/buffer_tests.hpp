@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
+#include <random>
+#include <ranges>
+#include <set>
 
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 
@@ -69,7 +73,7 @@ void non_trivial_remove(buf& b) {
     b.insert(3, true);
     bool v = true;
     uint32_t idx = 6;
-    ASSERT_TRUE(b.remove(idx, v));
+    ASSERT_EQ(b.remove(idx, v), buf::max_elems());
     ASSERT_FALSE(v);
     if constexpr (sort) {
         b.sort();
@@ -94,7 +98,7 @@ void deferred_removal(buf& b) {
     b.insert(3, true);
     bool v = true;
     uint32_t idx = 5;
-    ASSERT_FALSE(b.remove(idx, v));
+    ASSERT_LT(b.remove(idx, v), buf::max_elems());
     ASSERT_EQ(idx, 3u);
 }
 
@@ -140,6 +144,91 @@ void set(buf& b) {
     ASSERT_EQ(b.size(), 3u);
 }
 
+template <uint16_t b_size, uint32_t max_val> 
+void big_sort() {
+    static_assert(max_val >= b_size);
+    buffer<b_size, false, false> b;
+    const constexpr uint32_t step = max_val / b_size;
+    std::array<std::pair<uint32_t, bool>, b_size> a;
+    for (uint32_t i = 0; i < b_size; i++) {
+        a[i] = {i * step, i % 2};
+    }
+    std::mt19937 gen {1337};
+    std::ranges::shuffle(a, gen);
+    std::set<uint32_t> adds;
+    std::array<uint16_t, b_size> offsets;
+    for (uint16_t i = b_size - 1; i < b_size; --i) {
+        offsets[i] = std::distance(adds.begin(), adds.lower_bound(a[i].first));
+        adds.insert(a[i].first);
+    }
+    for (uint16_t i = 0; i < b_size; i++) {
+        b.insert(a[i].first - offsets[i], a[i].second);
+    }
+    b.sort();
+    ASSERT_EQ(b.size(), b_size);
+    for (uint16_t i = 0; i < b_size; i++) {
+        ASSERT_EQ(b[i].index(), i * step) << "i=" << i;
+        ASSERT_EQ(b[i].value(), bool(i % 2)) << "i=" << i;
+        ASSERT_TRUE(b[i].is_insertion()) << "i=" << i;
+    }
+}
+
+template<class buf>
+void trivial_access(buf& b) {
+    b.insert(7, true);
+    uint32_t idx = 7;
+    bool v = false;
+    ASSERT_TRUE(b.access(idx, v));
+    ASSERT_TRUE(v);
+}
+
+template<class buf>
+void deferred_access(buf& b) {
+    b.insert(4, true);
+    b.insert(1, true);
+    b.insert(3, false);
+    b.insert(8, false);
+    uint32_t idx = 4;
+    bool v = false;
+    ASSERT_FALSE(b.access(idx, v));
+    ASSERT_EQ(idx, 2u);
+}
+
+template<class buf>
+void non_trivial_access(buf& b) {
+    b.insert(4, true);
+    b.insert(1, true);
+    b.insert(3, false);
+    b.insert(8, false);
+    uint32_t idx = 6;
+    bool v = false;
+    ASSERT_TRUE(b.access(idx, v));
+    ASSERT_TRUE(v);
+}
+
+template<class buf>
+void trivial_rank_query(buf& b) {
+    uint32_t idx = 1337;
+    ASSERT_EQ(b.rank(idx), 0u);
+    ASSERT_EQ(idx, 1337u);
+}
+
+template<class buf>
+void non_trivial_rank_query(buf& b) {
+    b.insert(1, false);
+    b.insert(2, true);
+    b.insert(1337, true);
+    uint32_t idx = 2;
+    ASSERT_EQ(b.rank(idx), 0u);
+    ASSERT_EQ(idx, 1u);
+    idx = 20;
+    ASSERT_EQ(b.rank(idx), 1u);
+    ASSERT_EQ(idx, 18u);
+    idx = 2000;
+    ASSERT_EQ(b.rank(idx), 2u);
+    ASSERT_EQ(idx, 1997u);
+}
+
 // Compressed and sorted tests
 TEST(BufferCompSorted, Initialize) {
     buffer<16, true, true> b;
@@ -155,7 +244,7 @@ TEST(BufferCompSorted, EmptyRemove) {
     buffer<16, true, true> b;
     uint32_t idx = 1337;
     bool v = true;
-    ASSERT_FALSE(b.remove(idx, v));
+    ASSERT_LT(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(idx, 1337u);
 }
@@ -175,7 +264,7 @@ TEST(BufferCompSorted, TrivialRemove) {
     b.insert(4, true);
     bool v = false;
     uint32_t idx = 4;
-    ASSERT_TRUE(b.remove(idx, v));
+    ASSERT_EQ(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(b.size(), 0u);
 }
@@ -205,6 +294,42 @@ TEST(BufferCompSorted, Set) {
     set(b);
 }
 
+TEST(BufferCompSorted, TrivialAccess) {
+    buffer<16, true, true> b;
+    trivial_access(b);
+}
+
+TEST(BufferCompSorted, DeferredAccess) {
+    buffer<16, true, true> b;
+    deferred_access(b);
+}
+
+TEST(BufferCompSorted, NonTrivialAccess) {
+    buffer<16, true, true> b;
+    non_trivial_access(b);
+}
+
+TEST(BufferCompSorted, TrivialRankQuery) {
+    buffer<16, true, true> b;
+    trivial_rank_query(b);
+}
+
+TEST(BufferCompSorted, RankQuery) {
+    buffer<16, true, true> b;
+    non_trivial_rank_query(b);
+}
+
+TEST(BufferCompSorted, ClearFirst) {
+    buffer<16, true, true> b;
+    b.insert(4, false);
+    b.insert(6, true);
+    b.insert(14, false);
+    b.insert(24, true);
+    uint32_t elems = 10;
+    ASSERT_EQ(b.clear_first(elems), 1u);
+    ASSERT_EQ(elems, 8u);
+}
+
 // Compressed and unsorted tests
 TEST(BufferCompUnsorted, Initialize) {
     buffer<16, true, false> b;
@@ -220,7 +345,7 @@ TEST(BufferCompUnsorted, EmptyRemove) {
     buffer<16, true, false> b;
     uint32_t idx = 1337;
     bool v = true;
-    ASSERT_FALSE(b.remove(idx, v));
+    ASSERT_LT(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(idx, 1337u);
 }
@@ -240,7 +365,7 @@ TEST(BufferCompUnsorted, TrivialRemove) {
     b.insert(4, true);
     bool v = false;
     uint32_t idx = 4;
-    ASSERT_TRUE(b.remove(idx, v));
+    ASSERT_EQ(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(b.size(), 0u);
 }
@@ -270,6 +395,31 @@ TEST(BufferCompUnsorted, Set) {
     set(b);
 }
 
+TEST(BufferCompUnsorted, TrivialAccess) {
+    buffer<16, true, false> b;
+    trivial_access(b);
+}
+
+TEST(BufferCompUnsorted, DeferredAccess) {
+    buffer<16, true, false> b;
+    deferred_access(b);
+}
+
+TEST(BufferCompUnsorted, NonTrivialAccess) {
+    buffer<16, true, false> b;
+    non_trivial_access(b);
+}
+
+TEST(BufferCompUnsorted, TrivialRankQuery) {
+    buffer<16, true, false> b;
+    trivial_rank_query(b);
+}
+
+TEST(BufferCompUnsorted, RankQuery) {
+    buffer<16, true, false> b;
+    non_trivial_rank_query(b);
+}
+
 // Uncompressed and sorted tests
 TEST(BufferSorted, Initialize) {
     buffer<16, false, true> b;
@@ -285,7 +435,7 @@ TEST(BufferSorted, EmptyRemove) {
     buffer<16, false, true> b;
     uint32_t idx = 1337;
     bool v = true;
-    ASSERT_FALSE(b.remove(idx, v));
+    ASSERT_LT(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(idx, 1337u);
 }
@@ -305,7 +455,7 @@ TEST(BufferSorted, TrivialRemove) {
     b.insert(4, true);
     bool v = false;
     uint32_t idx = 4;
-    ASSERT_TRUE(b.remove(idx, v));
+    ASSERT_EQ(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(b.size(), 0u);
 }
@@ -326,11 +476,13 @@ TEST(BufferSorted, RemoveBug1) {
     b.insert(1, false);
     uint32_t idx = 2;
     bool v = true;
-    ASSERT_FALSE(b.remove(idx, v));
+    uint32_t cb_idx = b.remove(idx, v);
+    ASSERT_LT(cb_idx, 16u);
     ASSERT_EQ(idx, 1u);
+    b.set_remove_value(cb_idx, true);
     std::pair<uint32_t, std::pair<bool, bool>> elems[] = {
         {1, {true, false}},
-        {2, {false, false}},
+        {2, {false, true}},
         {7, {true, true}}};
     uint16_t i = 0;
     for (auto be : b) {
@@ -348,19 +500,23 @@ TEST(BufferSorted, MixedOrder) {
     b.insert(1337, true);
     bool v = false;
     uint32_t idx = 1337;
-    ASSERT_TRUE(b.remove(idx, v));
+    ASSERT_EQ(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(b.size(), 0u);
-    ASSERT_FALSE(b.remove(idx, v));
+    uint32_t cb_idx = b.remove(idx, v);
+    ASSERT_LT(cb_idx, 16u);
+    b.set_remove_value(cb_idx, true);
     ASSERT_EQ(idx, 1337u);
     ASSERT_EQ(b.size(), 1u);
-    ASSERT_FALSE(b.remove(idx, v));
+    cb_idx = b.remove(idx, v);
+    ASSERT_LT(cb_idx, 16u);
+    b.set_remove_value(cb_idx, false);
     ASSERT_EQ(idx, 1338u);
     ASSERT_EQ(b.size(), 2u);
     b.insert(1337, true);
     b.insert(1337, false);
     std::pair<uint32_t, std::pair<bool, bool>> elems[] = {
-        {1337, {false, false}},
+        {1337, {false, true}},
         {1337, {false, false}},
         {1337, {true, false}},
         {1338, {true, true}}};
@@ -412,6 +568,80 @@ TEST(BufferSorted, MixedSet) {
     ASSERT_EQ(b.size(), 4u);
 }
 
+TEST(BufferSorted, TrivialAccess) {
+    buffer<16, false, true> b;
+    trivial_access(b);
+}
+
+TEST(BufferSorted, DeferredAccess) {
+    buffer<16, false, true> b;
+    deferred_access(b);
+}
+
+TEST(BufferSorted, NonTrivialAccess) {
+    buffer<16, false, true> b;
+    non_trivial_access(b);
+}
+
+TEST(BufferSorted, MixedAccess) {
+    buffer<16, false, true> b;
+    b.insert(7, true);
+    b.insert(1, false);
+    uint32_t idx = 2;
+    bool v = true;
+    b.remove(idx, v);
+    idx = 3;
+    b.remove(idx, v);
+    idx = 6;
+    ASSERT_TRUE(b.access(idx, v));
+    ASSERT_TRUE(v);
+    idx = 5;
+    ASSERT_FALSE(b.access(idx, v));
+    ASSERT_EQ(idx, 6u);
+    idx = 3;
+    ASSERT_FALSE(b.access(idx, v));
+    ASSERT_EQ(idx, 4u);
+}
+
+TEST(BufferSorted, TrivialRankQuery) {
+    buffer<16, false, true> b;
+    trivial_rank_query(b);
+}
+
+TEST(BufferSorted, RankQuery) {
+    buffer<16, false, true> b;
+    non_trivial_rank_query(b);
+}
+
+TEST(BuferSorted, MixedRankQuery) {
+    buffer<16, false, true> b;
+    uint32_t index = 3;
+    bool v;
+    uint32_t cb_idx = b.remove(index, v);
+    b.set_remove_value(cb_idx, false);
+    index = 10;
+    cb_idx = b.remove(index, v);
+    b.set_remove_value(cb_idx, true);
+    b.insert(100, true);
+    b.insert(1000, true);
+    index = 5;
+    cb_idx = 0;
+    ASSERT_EQ(b.rank(index), cb_idx);
+    ASSERT_EQ(index, 6u);
+    index = 15;
+    --cb_idx;
+    ASSERT_EQ(b.rank(index), cb_idx);
+    ASSERT_EQ(index, 17u);
+    index = 150;
+    ++cb_idx;
+    ASSERT_EQ(b.rank(index), cb_idx);
+    ASSERT_EQ(index, 151u);
+    index = 1500;
+    ++cb_idx;
+    ASSERT_EQ(b.rank(index), cb_idx);
+    ASSERT_EQ(index, 1500u);
+}
+
 // Uncompressed and unsorted tests
 TEST(BufferUnsorted, Initialize) {
     buffer<16, false, false> b;
@@ -427,7 +657,7 @@ TEST(BufferUnsorted, EmptyRemove) {
     buffer<16, false, false> b;
     uint32_t idx = 1337;
     bool v = true;
-    ASSERT_FALSE(b.remove(idx, v));
+    ASSERT_LT(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(idx, 1337u);
 }
@@ -447,7 +677,7 @@ TEST(BufferUnsorted, TrivialRemove) {
     b.insert(4, true);
     bool v = false;
     uint32_t idx = 4;
-    ASSERT_TRUE(b.remove(idx, v));
+    ASSERT_EQ(b.remove(idx, v), 16u);
     ASSERT_TRUE(v);
     ASSERT_EQ(b.size(), 0u);
 }
@@ -476,4 +706,59 @@ TEST(BufferUnsorted, NonSet) {
 TEST(BufferUnsorted, Set) {
     buffer<16, false, false> b;
     set(b);
+}
+
+TEST(BufferUnsorted, Sort16) {
+    const constexpr uint16_t b_size = 16;
+    big_sort<b_size, b_size * 2>();
+}
+
+TEST(BufferUnsorted, BigSort16) {
+    const constexpr uint16_t b_size = 16;
+    big_sort<b_size, (uint32_t(1) << 30) - 1>();
+}
+
+TEST(BufferUnsorted, Sort256) {
+    const constexpr uint16_t b_size = 256;
+    big_sort<b_size, b_size * 2>();
+}
+
+TEST(BufferUnsorted, BigSort256) {
+    const constexpr uint16_t b_size = 256;
+    big_sort<b_size, (uint32_t(1) << 30) - 1>();
+}
+
+TEST(BufferUnsorted, Sort512) {
+    const constexpr uint16_t b_size = 512;
+    big_sort<b_size, b_size * 2>();
+}
+
+TEST(BufferUnsorted, BigSort512) {
+    const constexpr uint16_t b_size = 512;
+    big_sort<b_size, (uint32_t(1) << 30) - 1>();
+}
+
+TEST(BufferUnsorted, TrivialAccess) {
+    buffer<16, false, false> b;
+    trivial_access(b);
+}
+
+TEST(BufferUnsorted, DeferredAccess) {
+    buffer<16, false, false> b;
+    deferred_access(b);
+}
+
+TEST(BufferUnsorted, NonTrivialAccess) {
+    buffer<16, false, false> b;
+    non_trivial_access(b);
+}
+
+TEST(BufferUnsorted, TrivialRankQuery) {
+    buffer<16, false, false> b;
+    trivial_rank_query(b);
+}
+
+TEST(BufferUnsorted, RankQuery) {
+    buffer<16, false, false> b;
+    non_trivial_rank_query(b);
 }

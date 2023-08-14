@@ -3,7 +3,7 @@
 
 namespace bv {
 
-static bool do_debug = false;
+//static bool do_debug = false;
 
 }
 
