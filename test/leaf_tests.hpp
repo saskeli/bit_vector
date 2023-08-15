@@ -55,7 +55,7 @@ void leaf_insert_test(uint64_t n) {
     delete allocator;
 }
 
-/*template <class leaf, class alloc>
+template <class leaf, class alloc>
 void leaf_append_test(uint8_t buffer_size) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(4);
@@ -92,10 +92,10 @@ void leaf_remove_test(uint64_t n) {
     }
     uint64_t ex = hp;
     uint64_t val = l->size();
-    EXPECT_EQ(val, hp) << "Should have " << hp << " elements pushed";
+    ASSERT_EQ(val, ex) << "Should have " << hp << " elements pushed";
     ex = 0;
     val = l->p_sum();
-    EXPECT_EQ(val, ex) << "Should have 0 ones pushed";
+    ASSERT_EQ(val, ex) << "Should have 0 ones pushed";
 
     for (uint64_t i = hp; i < n; i++) {
         l->insert(i, 1);
@@ -106,31 +106,32 @@ void leaf_remove_test(uint64_t n) {
     }
     ex = n;
     val = l->size();
-    EXPECT_EQ(val, ex) << "Should have " << n << " elements pushed";
+    ASSERT_EQ(val, ex) << "Should have " << ex << " elements pushed";
     ex = n - hp;
     val = l->p_sum();
-    EXPECT_EQ(val, ex) << "Should have " << (n - hp) << " ones pushed";
+    ASSERT_EQ(val, ex) << "Should have " << ex << " ones pushed";
 
+    ex = n;
+    uint64_t ex_ones = n / 2;
     for (uint64_t i = 0; i < n / 2; i++) {
         l->remove(0);
-        ex = n - 2 * i - 1;
+        --ex;
         val = l->size();
-        EXPECT_EQ(val, ex) << "Size should be " << ex << " after "
+        ASSERT_EQ(val, ex) << "Size should be " << ex << " after "
                            << (2 * i + 1) << " removals.";
-        ex = n / 2 - i;
         val = l->p_sum();
-        EXPECT_EQ(val, ex) << " Should have " << ex << " ones after "
+        ASSERT_EQ(val, ex_ones) << " Should have " << ex_ones << " ones after "
                            << (2 * i + 1) << " removals.";
 
         l->remove(l->size() / 2);
-        ex = n - 2 * (i + 1);
+        --ex;
+        --ex_ones;
         val = l->size();
-        EXPECT_EQ(val, ex) << "Size should be " << ex << " after "
-                           << (2 * (i + 1)) << " removals.";
-        ex = n / 2 - i - 1;
+        ASSERT_EQ(val, ex) << "Size should be " << ex << " after "
+                           << (2 * i + 2) << " removals.";
         val = l->p_sum();
-        EXPECT_EQ(val, ex) << " Should have " << ex << " ones after "
-                           << (2 * (i + 1)) << " removals.";
+        ASSERT_EQ(val, ex_ones) << " Should have " << ex_ones << " ones after "
+                           << (2 * i + 2) << " removals.";
     }
 
     allocator->template deallocate_leaf<leaf>(l);
@@ -159,35 +160,6 @@ void leaf_rank_test(uint64_t n) {
 }
 
 template <class leaf, class alloc>
-void leaf_rank_offset_test(uint64_t n) {
-    alloc* allocator = new alloc();
-    leaf* l = allocator->template allocate_leaf<leaf>(8);
-    for (uint64_t i = 0; i < n; i++) {
-        l->insert(0, bool(i & uint64_t(1)));
-        if (l->need_realloc()) {
-            uint64_t cap = l->capacity();
-            l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
-        }
-    }
-
-    uint64_t block_size = n / 4;
-    uint64_t block_start = 0;
-    uint64_t prefix_ones = 0;
-    while (block_start < n) {
-        for (uint64_t i = block_start + 1; i < min(block_start + block_size, n);
-             i++) {
-            ASSERT_EQ(prefix_ones + l->rank(i, block_start), l->rank(i))
-                << "Rank(" << i << ") failed";
-        }
-        block_start += block_size;
-        prefix_ones = l->rank(block_start);
-    }
-
-    allocator->template deallocate_leaf<leaf>(l);
-    delete allocator;
-}
-
-template <class leaf, class alloc>
 void leaf_select_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
@@ -204,31 +176,6 @@ void leaf_select_test(uint64_t n) {
         uint64_t ex = (i - is_first) * 2 + is_first - 1;
         uint64_t val = l->select(i);
         ASSERT_EQ(val, ex) << "Select(" << i << ") should be " << ex;
-    }
-
-    allocator->template deallocate_leaf<leaf>(l);
-    delete allocator;
-}
-
-template <class leaf, class alloc>
-void leaf_select_offset_test(uint64_t n) {
-    alloc* allocator = new alloc();
-    leaf* l = allocator->template allocate_leaf<leaf>(8);
-    for (uint64_t i = 0; i < n; i++) {
-        l->insert(0, bool(i & uint64_t(1)));
-        if (l->need_realloc()) {
-            uint64_t cap = l->capacity();
-            l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
-        }
-    }
-
-    uint64_t lim = l->p_sum();
-    for (uint64_t i = 0; i < n; i += 50) {
-        uint64_t i_rank = l->rank(i);
-        for (uint64_t j = i_rank + 1; j <= lim; j++) {
-            ASSERT_EQ(l->select(j), l->select(j, i, i_rank))
-                << "i = " << i << ", j = " << j;
-        }
     }
 
     allocator->template deallocate_leaf<leaf>(l);
@@ -679,11 +626,11 @@ void leaf_commit_test(uint64_t size) {
 
     allocator->template deallocate_leaf<leaf>(l);
     delete allocator;
-}*/
+}
 
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
 
-/*TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
+TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
 
 TEST(SimpleLeaf, Remove) { leaf_remove_test<sl, ma>(10000); }
 
@@ -691,13 +638,7 @@ TEST(SimpleLeaf, Rank) { leaf_rank_test<sl, ma>(10000); }
 
 TEST(SimpleLeaf, RankOffset) { leaf_rank_test<sl, ma>(11); }
 
-TEST(SimpleLeaf, RankBlock) { leaf_rank_offset_test<sl, ma>(10000); }
-
 TEST(SimpleLeaf, Select) { leaf_select_test<sl, ma>(10000); }
-
-TEST(SimpleLeaf, SelectOffset) { leaf_select_test<sl, ma>(11); }
-
-TEST(SimpleLeaf, SelectBlock) { leaf_select_offset_test<sl, ma>(3000); }
 
 TEST(SimpleLeaf, Set) { leaf_set_test<sl, ma>(10000); }
 
@@ -728,6 +669,6 @@ TEST(SimpleLeafUnb, Select) { leaf_select_test<ubl, ma>(10000); }
 
 TEST(SimpleLeafUnb, SelectOffset) { leaf_select_test<ubl, ma>(11); }
 
-TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }*/
+TEST(SimpleLeafUnb, Set) { leaf_set_test<ubl, ma>(10000); }
 
 #endif

@@ -386,6 +386,24 @@ class buffer {
         return d_sum;
     }
 
+    uint32_t clear_last(uint32_t& keep) {
+        static_assert(sorted && compressed);
+        uint32_t l_keep = keep;
+        uint32_t p_sum = 0;
+        uint16_t n_count = 0;
+        for (auto be : *this) {
+            if (be.index() < l_keep) {
+                p_sum += be.value();
+                --keep;
+                ++n_count;
+            } else {
+                break;
+            }
+        }
+        buffer_elems_ = n_count;
+        return p_sum;
+    }
+
     void clear() { buffer_elems_ = 0; }
 
     const BufferElement& operator[](uint16_t i) const {
