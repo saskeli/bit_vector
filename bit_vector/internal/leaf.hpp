@@ -622,7 +622,7 @@ class leaf : uncopyable {
         if constexpr (compressed) {
             if (is_compressed()) {
                 uint32_t q_elems = elems;
-                p_sum_ -= buf_.clear_firs(q_elems);
+                p_sum_ -= buf_.clear_first(q_elems);
                 uint32_t d_idx = 0;
                 bool val = type_info_ & C_ONE_MASK;
                 uint8_t* data = reinterpret_cast<uint8_t*>(data_);
@@ -659,7 +659,7 @@ class leaf : uncopyable {
                     d_idx += c_bytes;
                     val = !val;
                 }
-                size -= elems;
+                size_ -= elems;
                 c_commit<false>();
                 return;
             }
@@ -721,8 +721,10 @@ class leaf : uncopyable {
         uint32_t o_bytes = other->used_bytes();
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
-        buf* o_buf = other->edit_buffer();
-        o_buf->sort();
+        buf& o_buf = other->edit_buffer();
+        if (!sorted_buffers) {
+            o_buf.sort();
+        }
         uint8_t ob_idx = 0;
         while (d_idx < o_bytes) {
             uint32_t rl = 0;
@@ -754,10 +756,10 @@ class leaf : uncopyable {
                 size_ += rl;
                 p_sum_ += val * rl;
                 for (; ob_idx < o_buf.size(); ob_idx++) {
-                    if ((*o_buf)[ob_idx].index() < size_) {
-                        buf_.append((*o_buf)[ob_idx]);
+                    if (o_buf[ob_idx].index() < size_) {
+                        buf_.append(o_buf[ob_idx]);
                         size_++;
-                        p_sum_ += (*o_buf)[ob_idx].value();
+                        p_sum_ += o_buf[ob_idx].value();
                     } else {
                         [[likely]] break;
                     }
@@ -777,11 +779,11 @@ class leaf : uncopyable {
                 write_run(to_copy);
                 size_ += to_copy;
                 p_sum_ += val * to_copy;
-                for (; ob_idx < o_buf->size(); ob_idx++) {
-                    if (((*o_buf)[ob_idx].index()) < size_) {
-                        buf_.append((*o_buf)[ob_idx]);
+                for (; ob_idx < o_buf.size(); ob_idx++) {
+                    if ((o_buf[ob_idx].index()) < size_) {
+                        buf_.append(o_buf[ob_idx]);
                         size_++;
-                        p_sum_ += (*o_buf)[ob_idx].value();
+                        p_sum_ += o_buf[ob_idx].value();
                     } else {
                         [[likely]] break;
                     }
@@ -1738,7 +1740,7 @@ class leaf : uncopyable {
         uint32_t copied = 0;
         bool val = other->first_value();
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
-        buf* o_buf = other->edit_buffer();
+        buf& o_buf = other->edit_buffer();
         uint32_t old_size = size_;
         uint8_t b_idx = 0;
         uint32_t d_idx = 0;
@@ -1798,7 +1800,7 @@ class leaf : uncopyable {
             copied += rl;
             val = !val;
         }
-        for (b_idx = 0; b_idx < o_buf.siz(); b_idx++) {
+        for (b_idx = 0; b_idx < o_buf.size(); b_idx++) {
             uint32_t e_idx = o_buf[b_idx].index();
             if (e_idx >= copied) break;
             uint32_t w_idx = old_size + e_idx;
@@ -1810,13 +1812,13 @@ class leaf : uncopyable {
             }
             data_[w_idx] &= ~(uint64_t(1) << w_offset);
             data_[w_idx] |= uint64_t(o_buf[b_idx].value()) << w_offset;
-            p_sum_ += (o_buf[b_idx].value()) ? 1 : -1;
+            p_sum_ += o_buf[b_idx].value() ? 1 : -1;
         }
     }
 
     void c_transfer_prepend(leaf* other, uint32_t elems) {
         assert(elems < other->size());
-        buf* o_buf = other->edit_buffer();
+        buf& o_buf = other->edit_buffer();
         uint8_t b_idx = 0;
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
@@ -1841,7 +1843,7 @@ class leaf : uncopyable {
                 rl |= o_data[d_idx++];
             }
             for (; b_idx < o_buf.size(); b_idx++) {
-                if ((o_buf[b_idx].index()) <= loc + rl) {
+                if (o_buf[b_idx].index() <= loc + rl) {
                     rl++;
                 } else {
                     break;
@@ -1879,8 +1881,8 @@ class leaf : uncopyable {
                 rl |= o_data[d_idx++] << 8;
                 rl |= o_data[d_idx++];
             }
-            for (; b_idx < o_buf->size(); b_idx++) {
-                if ((o_buf[b_idx].index()) <= loc + rl) {
+            for (; b_idx < o_buf.size(); b_idx++) {
+                if (o_buf[b_idx].index() <= loc + rl) {
                     rl++;
                 } else {
                     break;
@@ -1913,7 +1915,7 @@ class leaf : uncopyable {
             copied += rl;
             loc += rl;
         }
-        for (b_idx = 0; b_idx < o_buf->size(); b_idx++) {
+        for (b_idx = 0; b_idx < o_buf.size(); b_idx++) {
             uint32_t e_idx = o_buf[b_idx].index();
             if (e_idx >= other->size() - elems) {
                 uint32_t w_idx = e_idx - (other->size() - elems);

@@ -123,7 +123,7 @@ class buffer {
 
     bool is_full() const { return buffer_elems_ == buffer_size; }
 
-    bool access(uint32_t& idx, bool& v) {
+    bool access(uint32_t& idx, bool& v) const {
         if constexpr (sorted && !compressed) {
             uint32_t o_idx = idx;
             for (uint16_t i = 0; i < buffer_elems_; ++i) {

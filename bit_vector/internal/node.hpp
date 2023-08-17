@@ -111,31 +111,6 @@ class node : uncopyable {
     node() : meta_data_(0), child_count_(0), child_sizes_(), child_sums_() {}
 
     /**
-     * @brief Adds elements in this subtree to the given query support
-     * structure.
-     *
-     * The subtree rooted at `this` is traversed and leaves encountered will be
-     * offered to the query support structure.
-     *
-     * @tparam qds Type of query support structure.
-     * @param qs   Pointer to query support structure.
-     */
-    template <class qds>
-    void generate_query_structure(qds* qs) {
-        if (has_leaves()) {
-            leaf_type** children = reinterpret_cast<leaf_type**>(children_);
-            for (size_t i = 0; i < child_count_; i++) {
-                qs->append(children[i]);
-            }
-        } else {
-            node** children = reinterpret_cast<node**>(children_);
-            for (size_t i = 0; i < child_count_; i++) {
-                children[i]->generate_query_structure(qs);
-            }
-        }
-    }
-
-    /**
      * @brief Set whether the children of the node are leaves or internal nodes
      *
      * Intended to be set according to the status of siblings following

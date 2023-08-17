@@ -186,44 +186,6 @@ void run_test(uint64_t* input, uint64_t len, uint64_t s_offset) {
 }
 
 template <class bit_vector>
-void check_sup(bit_vector* bv, uint64_t size) {
-    auto* q = bv->generate_query_structure();
-#ifdef GTEST_ON
-    ASSERT_EQ(q->size(), size);
-    ASSERT_EQ(bv->size(), size);
-#else
-    assert(q->size() == size);
-    assert(bv->size() == size);
-#endif
-
-    for (uint64_t i = 0; i < size; i++) {
-#ifdef GTEST_ON
-        ASSERT_EQ(q->at(i), bv->at(i));
-        ASSERT_EQ(q->rank(i), bv->rank(i));
-#else
-        assert(q->at(i) == bv->at(i));
-        assert(q->rank(i) == bv->rank(i));
-#endif
-    }
-
-    uint64_t ones = bv->rank(size);
-#ifdef GTEST_ON
-    ASSERT_EQ(q->rank(size), ones);
-#else
-    assert(q->rank(size) == ones);
-#endif
-
-    for (uint64_t i = 1; i <= ones; i++) {
-#ifdef GTEST_ON
-        ASSERT_EQ(q->select(i), bv->select(i)) << "i = " << i;
-#else
-        assert(q->select(i) == bv->select(i));
-#endif
-    }
-    delete (q);
-}
-
-template <class bit_vector>
 void insert_sup(bit_vector* bv, uint64_t loc, bool val) {
     bv->insert(loc, val);
 }
@@ -236,37 +198,6 @@ void remove_sup(bit_vector* bv, uint64_t loc) {
 template <class bit_vector>
 void set_sup(bit_vector* bv, uint64_t loc, bool val) {
     bv->set(loc, val);
-}
-
-template <class bit_vector>
-void run_sup_test(uint64_t* input, uint64_t len) {
-    bit_vector bv;
-    uint64_t size = input[0];
-    for (uint64_t i = 0; i < size; i++) {
-        bv.insert(0, i % 2);
-    }
-
-    check_sup(&bv, size);
-
-    uint64_t index = 1;
-    while (index < len) {
-        switch (input[index]) {
-            case 0:
-                insert_sup(&bv, input[index + 1], input[index + 2]);
-                size++;
-                index += 3;
-                break;
-            case 1:
-                remove_sup(&bv, input[index + 1]);
-                size--;
-                index += 2;
-                break;
-            default:
-                set_sup(&bv, input[index + 1], input[index + 2]);
-                index += 3;
-        }
-        check_sup(&bv, size);
-    }
 }
 
 template <class bit_vector>
@@ -419,29 +350,6 @@ TEST(Run, F) {
                     1,  27, 2,  49, 0,  2,  80, 1,  1, 5,  1, 6,  1,
                     58, 0,  19, 0,  1,  53, 1,  78, 2, 13, 1, 1,  62};
     run_test<bv::simple_bv<8, 256, 8>, dyn::suc_bv>(a, 52);
-}
-
-TEST(RunSup, A) {
-    uint64_t a[] = {326};
-    run_sup_test<bv::bv>(a, 1);
-}
-
-TEST(RunSup, B) {
-    uint64_t a[] = {5000};
-    run_sup_test<bv::bv>(a, 1);
-}
-
-TEST(RunSup, C) {
-    uint64_t a[] = {16387, 2,     7184, 1,    1,    9890,  1,    10662,
-                    1,     11795, 1,    7332, 0,    14649, 1,    2,
-                    14480, 1,     2,    6282, 0,    2,     4190, 1,
-                    2,     16170, 0,    1,    12969};
-    run_sup_test<bv::bv>(a, 29);
-}
-
-TEST(RunSup, D) {
-    uint64_t a[] = {10920, 0, 1316, 0, 2, 9930, 0, 0, 2561, 0};
-    run_sup_test<bv::bv>(a, 10);
 }
 
 TEST(RunSdsl, A) {

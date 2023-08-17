@@ -19,7 +19,7 @@ void leaf_insert_test(uint64_t n) {
         }
         uint64_t val = l->p_sum();
         uint64_t expected = 0;
-        EXPECT_EQ(expected, val) << "Sum should be " << expected << " after "
+        ASSERT_EQ(expected, val) << "Sum should be " << expected << " after "
                                  << (i + 1) << " 0-insertions.";
     }
     for (uint64_t i = hp; i < n; i++) {
@@ -30,24 +30,24 @@ void leaf_insert_test(uint64_t n) {
         }
         uint64_t val = l->p_sum();
         uint64_t expected = (1 + i) / 2 - hp / 2;
-        EXPECT_EQ(expected, val) << "Sum should be " << expected << " after "
+        ASSERT_EQ(expected, val) << "Sum should be " << expected << " after "
                                  << (1 + i - hp) << " alternating insertions.";
     }
 
     for (uint64_t i = 0; i < hp / 2; i++) {
-        EXPECT_EQ(false, l->at(i))
+        ASSERT_EQ(false, l->at(i))
             << "Initial " << (hp / 2) << " values should be 0";
     }
 
     bool naw = !bool(n % 2);
     for (uint64_t i = hp / 2; i < n - hp + hp / 2; i++) {
-        EXPECT_EQ(naw, l->at(i))
+        ASSERT_EQ(naw, l->at(i))
             << "Alternating value should be " << !naw << " at " << i << ".";
         naw = !naw;
     }
 
     for (uint64_t i = hp / 2 + n - hp; i < n; i++) {
-        EXPECT_EQ(false, l->at(i))
+        ASSERT_EQ(false, l->at(i))
             << "Final " << (hp / 2) << " values should be 0";
     }
 

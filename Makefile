@@ -6,8 +6,7 @@ INCLUDE = -I deps/hopscotch-map/include/ -isystem deps/DYNAMIC/include/
 
 HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
           bit_vector/internal/leaf.hpp bit_vector/internal/bit_vector.hpp \
-		  bit_vector/bv.hpp bit_vector/internal/query_support.hpp \
-		  bit_vector/internal/branch_selection.hpp \
+		  bit_vector/bv.hpp bit_vector/internal/branch_selection.hpp \
 		  bit_vector/internal/packed_array.hpp \
 		  bit_vector/internal/gap_leaf.hpp
 
@@ -22,7 +21,7 @@ GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
 GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 
 TEST_CODE = test/leaf_tests.hpp test/node_tests.hpp test/test.cpp test/bv_tests.hpp \
-            test/branch_selection_test.hpp test/query_support_test.hpp test/run_tests.hpp \
+            test/branch_selection_test.hpp test/run_tests.hpp \
 			test/packed_array_test.hpp test/gap_leaf_test.hpp
 
 COVERAGE = -g

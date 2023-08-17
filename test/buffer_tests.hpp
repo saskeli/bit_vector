@@ -133,7 +133,7 @@ void non_set(buf& b) {
 }
 
 template <class buf>
-void set(buf& b) {
+void set_test(buf& b) {
     b.insert(4, true);
     b.insert(2, false);
     b.insert(6, true);
@@ -291,7 +291,7 @@ TEST(BufferCompSorted, NonSet) {
 
 TEST(BufferCompSorted, Set) {
     buffer<16, true, true> b;
-    set(b);
+    set_test(b);
 }
 
 TEST(BufferCompSorted, TrivialAccess) {
@@ -392,7 +392,7 @@ TEST(BufferCompUnsorted, NonSet) {
 
 TEST(BufferCompUnsorted, Set) {
     buffer<16, true, false> b;
-    set(b);
+    set_test(b);
 }
 
 TEST(BufferCompUnsorted, TrivialAccess) {
@@ -541,7 +541,7 @@ TEST(BufferSorted, NonSet) {
 
 TEST(BufferSorted, Set) {
     buffer<16, false, true> b;
-    set(b);
+    set_test(b);
 }
 
 TEST(BufferSorted, MixedSet) {
@@ -613,7 +613,7 @@ TEST(BufferSorted, RankQuery) {
     non_trivial_rank_query(b);
 }
 
-TEST(BuferSorted, MixedRankQuery) {
+TEST(BufferSorted, MixedRankQuery) {
     buffer<16, false, true> b;
     uint32_t index = 3;
     bool v;
@@ -705,7 +705,7 @@ TEST(BufferUnsorted, NonSet) {
 
 TEST(BufferUnsorted, Set) {
     buffer<16, false, false> b;
-    set(b);
+    set_test(b);
 }
 
 TEST(BufferUnsorted, Sort16) {

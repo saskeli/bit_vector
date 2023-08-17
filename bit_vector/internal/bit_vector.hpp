@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <utility>
 
-#include "query_support.hpp"
 #include "uncopyable.hpp"
 
 namespace bv {
@@ -180,44 +179,6 @@ class bit_vector : uncopyable {
         if (owned_allocator_) {
             delete (allocator_);
         }
-    }
-
-    /**
-     * @brief Populate a given query support stucture using `this`
-     *
-     * Traverses the tree and ads encountered leaves to the query support
-     * strucutre.
-     *
-     * @tparam block_size Size of blocks used in the query support structure.
-     * @param qs Query support structure.
-     */
-    template <class Q>
-    void generate_query_structure(Q* qs) const {
-        if (root_is_leaf_) {
-            [[unlikely]] qs->append(l_root_);
-        } else {
-            n_root_->generate_query_structure(qs);
-        }
-        qs->finalize();
-    }
-
-    /**
-     * @brief Create and Populate a query support structure using `this`
-     *
-     * Creates a new support structure and adds leaves in order.
-     *
-     * @tparam block_size Size of blocks used in the query support structure.
-     * @return A new query support strucutre.
-     */
-    template <uint32_t block_size = 2048, bool flush = false>
-    query_support<dtype, leaf, block_size, flush>* generate_query_structure()
-        const {
-        static_assert(block_size * 3 <= leaf_size);
-        static_assert(block_size >= 2 * 64);
-        query_support<dtype, leaf, block_size>* qs =
-            new query_support<dtype, leaf, block_size>(size());
-        generate_query_structure(qs);
-        return qs;
     }
 
     /**
