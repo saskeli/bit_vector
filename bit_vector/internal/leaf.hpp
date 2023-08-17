@@ -149,30 +149,10 @@ class leaf : uncopyable {
                 return c_at(i);
             }
         }
-        if constexpr (sorted_buffers && buffer_size != 0) {
-            uint64_t index = i;
-            for (auto be : buf_) {
-                uint64_t b = be.index();
-                if (b == i) {
-                    if (be.is_insertion()) {
-                        return be.value();
-                    }
-                    index++;
-                } else if (b < i) [[likely]] {
-                    index -= be.is_insertion() * 2 - 1;
-                } else [[unlikely]] {
-                    break;
-                }
-            }
-            return MASK & (data_[index / WORD_BITS] >> (index % WORD_BITS));
-        } else if constexpr (!sorted_buffers && buffer_size > 0) {
-            for (auto be : std::ranges::views::reverse(buf_)) {
-                uint64_t b = be.index();
-                if (b == i) [[unlikely]] {
-                    return be.value();
-                } else if (b < i) {
-                    i--;
-                }
+        if constexpr (buffer_size != 0) {
+            bool v;
+            if (buf_.access(i, v)) {
+                return v;
             }
         }
         return MASK & (data_[i / WORD_BITS] >> (i % WORD_BITS));
@@ -202,7 +182,7 @@ class leaf : uncopyable {
                 return run_index_;
             }
         }
-        return size_ + (size_ % 8 ? 1 : 0);
+        return size_ / 8 + (size_ % 8 ? 1 : 0);
     }
 
     /**
@@ -220,6 +200,16 @@ class leaf : uncopyable {
      * @param x Value to insert
      */
     void insert(uint32_t i, bool x) {
+        if (compressed) {
+            if (is_compressed()) {
+                return c_insert(i, x);
+            }
+        }
+        if (i == size_) {
+            // Convert to append if applicable.
+            push_back(x);
+            [[unlikely]] return;
+        }
         if constexpr (buffer_size != 0) {
             buf_.insert(i, x);
             p_sum_ += x ? 1 : 0;
@@ -228,11 +218,6 @@ class leaf : uncopyable {
                 commit();
             }
             return;
-        }
-        if (i == size_) {
-            // Convert to append if applicable.
-            push_back(x);
-            [[unlikely]] return;
         }
         // If there is no buffer, a simple linear time insertion is done
         // instead.
@@ -520,7 +505,7 @@ class leaf : uncopyable {
                 if (size_ >= (~uint32_t(0)) >> 1) {
                     [[unlikely]] return true;
                 }
-                if (buf_.size() < buf_.size() - 1) {
+                if (buf_.size() < buf::max_elems() - 1) {
                     [[likely]] return false;
                 }
                 if (type_info_ & C_RUN_REMOVAL_MASK) {
@@ -931,10 +916,9 @@ class leaf : uncopyable {
                         keep -= rl;
                         d_idx += r_bytes;
                     } else {
-                        uint32_t n_rl = rl - keep;
-                        write_run(n_rl, d_idx, r_bytes);
+                        write_run(keep, d_idx, r_bytes);
                         type_info_ |= C_RUN_REMOVAL_MASK;
-                        p_sum_ += val * n_rl;
+                        p_sum_ += val * keep;
                         d_idx += r_bytes;
                         break;
                     }
@@ -1275,13 +1259,19 @@ class leaf : uncopyable {
                   << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"buffer_size\": " << int(buf_.size()) << ",\n"
                   << "\"buffer_count\": " << int(buf_.size()) << ",\n"
-                  << "\"buffer\": [\n";
+                  << "\"buffer\": [";
+        std::string p_val = "\n";
         for (auto be : buf_) {
-            std::cout << "{\"is_insertion\": "
+            std::cout << p_val << "{\"is_insertion\": "
                       << be.is_insertion() << ", "
                       << "\"buffer_value\": " << be.value() << ", "
-                      << "\"buffer_index\": " << be.index() << "}\n";
+                      << "\"buffer_index\": " << be.index() << "}";
+            p_val = ",\n";
         }
+        if (buf_.size()) {
+            std::cout << "\n";
+        }
+        std::cout << "\n";
         if (!internal_only) {
             std::cout << "],\n\"data\": [\n";
             for (uint64_t i = 0; i < capacity_; i++) {
@@ -1498,6 +1488,7 @@ class leaf : uncopyable {
     }
 
     bool c_at(uint32_t i) const {
+        std::cerr << "c_at(" << i << ")" << std::endl;
         bool ret;
         if (buf_.access(i, ret)) {
             return ret;
@@ -1540,8 +1531,7 @@ class leaf : uncopyable {
 
     bool c_remove(uint32_t i) {
         bool ret;
-        uint16_t cb_idx = buf_.remove(i, ret);
-        if (cb_idx < buffer_size) [[unlikely]] {
+        if (buf_.remove(i, ret) == buf::max_elems()) [[unlikely]] {
             --size_;
             p_sum_ -= ret;
             return ret;
@@ -1576,7 +1566,6 @@ class leaf : uncopyable {
             c_i += rl;
             if (c_i > i) {
                 write_run(rl - 1, d_idx, r_b);
-                buf_.set_remove_value(cb_idx, ret);
                 size_--;
                 p_sum_ -= ret;
                 break;
@@ -1589,6 +1578,7 @@ class leaf : uncopyable {
 
     int c_set(uint32_t i, bool x) {
         int ret;
+        uint32_t buffer_write_index = i;
         if (buf_.set(i, x, ret)) {
             return ret;
         }
@@ -1625,15 +1615,16 @@ class leaf : uncopyable {
                 if (val == x) return ret;
                 type_info_ |= C_RUN_REMOVAL_MASK;
                 write_run(rl - 1, d_idx, r_b);
-                if (buf_.is_full()) {
-                    c_commit();
-                }
+                buf_.insert(buffer_write_index, x);
                 ret = x ? 1 : -1;
                 p_sum_ += ret;
                 break;
             }
             d_idx += r_b;
             val = !val;
+        }
+        if (buf_.is_full()) {
+            c_commit();
         }
         return ret;
     }
@@ -2343,11 +2334,16 @@ class leaf : uncopyable {
                   << "\"Run bytes\": " << run_index_ << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
                   << "\"buffer_count\": " << int(buf_.size()) << ",\n"
-                  << "\"buffer\": [\n";
+                  << "\"buffer\": [";
+        std::string p_val = "\n";
         for (auto be : buf_) {
-            std::cout << "{\"is_insertion\": " << true << ", "
+            std::cout << p_val << "{\"is_insertion\": " << true << ", "
                       << "\"buffer_value\": " << be.value() << ", "
-                      << "\"buffer_index\": " << be.index() << "}\n";
+                      << "\"buffer_index\": " << be.index() << "}";
+            p_val = ",\n";
+        }
+        if (buf_.size()) {
+            std::cout << "\n";
         }
         if (internal_only) {
             std::cout << "]}";

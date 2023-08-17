@@ -342,9 +342,7 @@ void rle_leaf_clear_last_test() {
 
     ASSERT_EQ(l->size(), 1002u);
     ASSERT_EQ(l->p_sum(), 501u);
-
     l->clear_last(400);
-
     ASSERT_EQ(l->size(), 602u);
     ASSERT_EQ(l->p_sum(), 102u);
 
