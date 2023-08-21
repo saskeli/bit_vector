@@ -328,6 +328,30 @@ class buffer {
             return false;
         }
     }
+
+    void set_insert(uint32_t idx, bool v) {
+        static_assert(compressed);
+        if constexpr (sorted) {
+            uint16_t b_e = buffer_elems_ - 1;
+            while (b_e < buffer_elems_ && buffer_[b_e].index() > idx) {
+                buffer_[b_e + 1] = buffer_[b_e];
+                b_e--;
+            }
+            ++b_e;
+            buffer_[b_e] = {idx, v};
+            buffer_elems_++;
+        } else {
+            buffer_[buffer_elems_] = {idx, v};
+            for (uint16_t i = buffer_elems_ - 1; i < buffer_elems_; --i) {
+                if (buffer_[i].index() > idx) {
+                    --buffer_[i];
+                } else {
+                    --idx;
+                }
+            }
+            buffer_elems_++;
+        }
+    }
     
     uint32_t rank(uint32_t& idx) const {
         uint32_t ret = 0;

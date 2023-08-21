@@ -64,27 +64,8 @@ TEST(RleBv, Bug1) {
     }
 
     uint32_t n_ex = n;
-    for (uint32_t i = 0; i < n; i++) {
-        uint32_t set_index = (i % 20) * n + i;
-        if (i == 997) {
-            bv.print(false);
-            std::cout << "i=" << i << "k=" << i % 20 << " => " << set_index << std::endl;
-        }
-        bv.set(set_index, false);
-        if (i == 997) {
-            bv.print(false);
-            ASSERT_TRUE(false);
-        }
-        /*for (uint32_t k = 0; k < n; k++) {
-            uint32_t check_index = (k %  20) * n + k;
-            ASSERT_EQ(bv.at(check_index), k > i) << "i = " << i << ", k = " << k;
-        }*/
-        n_ex--;
-        ASSERT_EQ(bv.sum(), n_ex);
-    }
-
     
-    /*for (uint32_t s = 0; s < sigma; s++) {
+    for (uint32_t s = 0; s < sigma; s++) {
         uint32_t trg = s >= 20 ? 1000000 : s % 20;
         for (uint32_t i = 0; i < n; i++) {
             bv.set(n * s + i, false);
@@ -95,7 +76,7 @@ TEST(RleBv, Bug1) {
             ASSERT_EQ(bv.size(), n * sigma);
             ASSERT_EQ(bv.sum(), n_ex) << "i=" << i << ", s=" << s;
         }
-    }*/
+    }
 }
 
 #endif

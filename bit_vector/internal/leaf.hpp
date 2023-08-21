@@ -1257,9 +1257,13 @@ class leaf : uncopyable {
                   << "\"size\": " << size_ << ",\n"
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
-                  << "\"buffer_size\": " << int(buf_.size()) << ",\n"
-                  << "\"buffer_count\": " << int(buf_.size()) << ",\n"
-                  << "\"buffer\": [";
+                  << "\"buffer_size\": " << int(buf::max_elems()) << ",\n"
+                  << "\"buffer_count\": " << int(buf_.size());
+        if (internal_only) {
+            std::cout << "}";
+            return;
+        }
+        std::cout << ",\n" << "\"buffer\": [";
         std::string p_val = "\n";
         for (auto be : buf_) {
             std::cout << p_val << "{\"is_insertion\": "
@@ -1272,26 +1276,22 @@ class leaf : uncopyable {
             std::cout << "\n";
         }
         std::cout << "\n";
-        if (!internal_only) {
-            std::cout << "],\n\"data\": [\n";
-            for (uint64_t i = 0; i < capacity_; i++) {
-                std::bitset<WORD_BITS> b(data_[i]);
-                std::cout << "\"";
-                for (size_t j = 0; j < 64; j++) {
-                    if (j % 8 == 0 && j > 0) {
-                        std::cout << " ";
-                    }
-                    std::cout << (b[j] ? "1" : "0");
+        std::cout << "],\n\"data\": [\n";
+        for (uint64_t i = 0; i < capacity_; i++) {
+            std::bitset<WORD_BITS> b(data_[i]);
+            std::cout << "\"";
+            for (size_t j = 0; j < 64; j++) {
+                if (j % 8 == 0 && j > 0) {
+                    std::cout << " ";
                 }
-                std::cout << "\"";
-                if (i != uint64_t(capacity_ - 1)) {
-                    std::cout << ",\n";
-                }
+                std::cout << (b[j] ? "1" : "0");
             }
-            std::cout << "]}";
-        } else {
-            std::cout << "]}";
+            std::cout << "\"";
+            if (i != uint64_t(capacity_ - 1)) {
+                std::cout << ",\n";
+            }
         }
+        std::cout << "]}";
     }
 
     std::pair<uint64_t, uint64_t> leaf_usage() const {
@@ -1488,7 +1488,6 @@ class leaf : uncopyable {
     }
 
     bool c_at(uint32_t i) const {
-        std::cerr << "c_at(" << i << ")" << std::endl;
         bool ret;
         if (buf_.access(i, ret)) {
             return ret;
@@ -1582,7 +1581,6 @@ class leaf : uncopyable {
         if (buf_.set(i, x, ret)) {
             return ret;
         }
-
         uint32_t c_i = 0;
         bool val = type_info_ & C_ONE_MASK;
         ret = 0;
@@ -1610,12 +1608,11 @@ class leaf : uncopyable {
                 r_b = 2;
             }
             c_i += rl;
-            // std::cout << c_i << " vs " << q_i << std::endl;
             if (c_i > i) {
                 if (val == x) return ret;
                 type_info_ |= C_RUN_REMOVAL_MASK;
                 write_run(rl - 1, d_idx, r_b);
-                buf_.insert(buffer_write_index, x);
+                buf_.set_insert(buffer_write_index, x);
                 ret = x ? 1 : -1;
                 p_sum_ += ret;
                 break;
@@ -2333,8 +2330,12 @@ class leaf : uncopyable {
                   << bool(type_info_ & C_RUN_REMOVAL_MASK) << ",\n"
                   << "\"Run bytes\": " << run_index_ << ",\n"
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
-                  << "\"buffer_count\": " << int(buf_.size()) << ",\n"
-                  << "\"buffer\": [";
+                  << "\"buffer_count\": " << int(buf_.size());
+        if (internal_only) {
+            std::cout << "}";
+            return;
+        }
+        std::cout << ",\n" << "\"buffer\": [";
         std::string p_val = "\n";
         for (auto be : buf_) {
             std::cout << p_val << "{\"is_insertion\": " << true << ", "
@@ -2344,10 +2345,6 @@ class leaf : uncopyable {
         }
         if (buf_.size()) {
             std::cout << "\n";
-        }
-        if (internal_only) {
-            std::cout << "]}";
-            return;
         }
         std::cout << "],\n\"runs\": [\n";
         uint32_t d_idx = 0;
