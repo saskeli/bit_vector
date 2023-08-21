@@ -96,17 +96,22 @@ class buffer {
 
     static_assert(buffer_size <= ((1 << 16) - 1));
     static_assert(__builtin_popcount(buffer_size) == 1);
-    inline static BufferElement scratch[buffer_size];
+    static const constexpr uint16_t SCRATCH_ELEMS = buffer_size >= 6 ? buffer_size / 2 : 3; 
+    inline static BufferElement scratch[SCRATCH_ELEMS * 2];
 
     BufferElement buffer_[buffer_size];
     uint16_t buffer_elems_;
 
    public:
     buffer() : buffer_(), buffer_elems_() {}
+    buffer(const buffer&) = delete;
+    buffer& operator=(const buffer&) = delete;
+/*#pragma GCC diagnostic ignored "-Wclass-memaccess"
     buffer(const buffer& other) { std::memcpy(this, &other, sizeof(buffer)); }
     buffer& operator=(const buffer& other) {
         std::memcpy(this, &other, sizeof(buffer));
     }
+#pragma GCC diagnostic pop*/
 
     void sort() {
         if constexpr (sorted) {
@@ -450,6 +455,14 @@ class buffer {
 
     static uint16_t max_elems() {
         return buffer_size;
+    }
+
+    static uint64_t* get_scratch() {
+        return reinterpret_cast<uint64_t*>(scratch);
+    }
+
+    static constexpr uint16_t scratch_elem_count() {
+        return SCRATCH_ELEMS;
     }
 
    private:

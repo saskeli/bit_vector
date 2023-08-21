@@ -9,7 +9,8 @@ HEADERS = bit_vector/internal/node.hpp bit_vector/internal/allocator.hpp \
 		  bit_vector/bv.hpp bit_vector/internal/branch_selection.hpp \
 		  bit_vector/internal/packed_array.hpp \
 		  bit_vector/internal/buffer.hpp bit_vector/internal/deb.hpp\
-		  bit_vector/internal/gcc_pragmas.hpp
+		  bit_vector/internal/gcc_pragmas.hpp \
+		  bit_vector/internal/circular_buffer.hpp
 
 SDSL = -isystem deps/sdsl-lite/include -Ldeps/sdsl-lite/lib
 
@@ -24,7 +25,7 @@ GTEST_SRCS_ = $(GTEST_DIR)/src/*.cc $(GTEST_DIR)/src/*.h $(GTEST_HEADERS)
 TEST_CODE = test/leaf_tests.hpp test/node_tests.hpp test/test.cpp test/bv_tests.hpp \
             test/branch_selection_test.hpp test/run_tests.hpp test/buffer_tests.hpp\
 			test/packed_array_test.hpp test/gap_leaf_test.hpp test/rle_leaf_test.hpp\
-			test/rle_management_test.hpp
+			test/rle_management_test.hpp test/circular_buffer_tests.hpp
 
 COVERAGE = -g
 

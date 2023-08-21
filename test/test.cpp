@@ -3,12 +3,12 @@
 #include "../bit_vector/internal/allocator.hpp"
 #include "../bit_vector/internal/bit_vector.hpp"
 #include "../bit_vector/internal/branch_selection.hpp"
+#include "../bit_vector/internal/circular_buffer.hpp"
 #include "../bit_vector/internal/leaf.hpp"
 #include "../bit_vector/internal/node.hpp"
-
 #include "../bit_vector/internal/gcc_pragmas.hpp"
+
 #include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
-#pragma GCC diagnostic pop
 
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 
@@ -20,6 +20,7 @@ using namespace bv;
 
 typedef malloc_alloc ma;
 typedef leaf<BUFFER_SIZE, SIZE> sl;
+typedef leaf<BUFFER_SIZE, SIZE, true, false, false> uns_buf_leaf;
 typedef leaf<0, SIZE> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef branchless_scan<uint64_t, BRANCH> branch;
@@ -31,14 +32,17 @@ typedef simple_bv<16, SIZE, 64, true, true, true> rle_bv;
 // Tests for the buffer implementation
 #include "buffer_tests.hpp"
 
+// Branch selection tests
+#include "branch_selection_test.hpp"
+
+// Circular buffer test
+#include "circular_buffer_tests.hpp"
+
 // Tests for buffered leaf
 #include "leaf_tests.hpp"
 
 // Tests for hybrid RLE leaves.
 #include "rle_leaf_test.hpp"
-
-// Branch selection tests
-#include "branch_selection_test.hpp"
 
 // Node tests
 #include "node_tests.hpp"

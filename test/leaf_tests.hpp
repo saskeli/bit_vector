@@ -12,7 +12,7 @@ void leaf_insert_test(uint64_t n) {
     leaf* l = allocator->template allocate_leaf<leaf>(8);
     uint64_t hp = n / 2;
     for (uint64_t i = 0; i < hp; i++) {
-        l->insert(i, bool(0));
+        l->insert(i, false);
         if (l->need_realloc()) {
             uint64_t cap = l->capacity();
             l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
@@ -33,7 +33,6 @@ void leaf_insert_test(uint64_t n) {
         ASSERT_EQ(expected, val) << "Sum should be " << expected << " after "
                                  << (1 + i - hp) << " alternating insertions.";
     }
-
     for (uint64_t i = 0; i < hp / 2; i++) {
         ASSERT_EQ(false, l->at(i))
             << "Initial " << (hp / 2) << " values should be 0";
@@ -164,13 +163,12 @@ void leaf_select_test(uint64_t n) {
     alloc* allocator = new alloc();
     leaf* l = allocator->template allocate_leaf<leaf>(8);
     for (uint64_t i = 0; i < n; i++) {
-        l->insert(0, bool(i & uint64_t(1)));
+        l->insert(0, i % 2);
         if (l->need_realloc()) {
             uint64_t cap = l->capacity();
             l = allocator->template reallocate_leaf<leaf>(l, cap, 2 * cap);
         }
     }
-
     uint64_t is_first = (n - 1) % 2;
     for (uint64_t i = 1; i <= n / 2; i++) {
         uint64_t ex = (i - is_first) * 2 + is_first - 1;
@@ -630,31 +628,59 @@ void leaf_commit_test(uint64_t size) {
 
 TEST(SimpleLeaf, Insert) { leaf_insert_test<sl, ma>(10000); }
 
+TEST(SimpleUnsLeaf, Insert) {leaf_insert_test<uns_buf_leaf, ma>(10000); }
+
 TEST(SimpleLeaf, OverfullAppend) { leaf_append_test<leaf<8, SIZE>, ma>(8); }
+
+TEST(SimpleUnsLeaf, OverfullAppend) { leaf_append_test<uns_buf_leaf, ma>(8); }
 
 TEST(SimpleLeaf, Remove) { leaf_remove_test<sl, ma>(10000); }
 
+TEST(SimpleUnsLeaf, Remove) {leaf_remove_test<uns_buf_leaf, ma>(10000); }
+
 TEST(SimpleLeaf, Rank) { leaf_rank_test<sl, ma>(10000); }
+
+TEST(SimpleUnsLeaf, Rank) {leaf_rank_test<uns_buf_leaf, ma>(10000); }
 
 TEST(SimpleLeaf, RankOffset) { leaf_rank_test<sl, ma>(11); }
 
+TEST(SimpleUnsLeaf, RankOffset) { leaf_rank_test<uns_buf_leaf, ma>(11); }
+
 TEST(SimpleLeaf, Select) { leaf_select_test<sl, ma>(10000); }
+
+TEST(SimpleUnsLeaf, Select) { leaf_select_test<uns_buf_leaf, ma>(10000); }
 
 TEST(SimpleLeaf, Set) { leaf_set_test<sl, ma>(10000); }
 
+TEST(SimpleUnsLeaf, Set) { leaf_set_test<uns_buf_leaf, ma>(10000); }
+
 TEST(SimpleLeaf, ClearFirst) { leaf_clear_start_test<sl, ma>(); }
+
+TEST(SimpleUnsLeaf, ClearFirst) { leaf_clear_start_test<uns_buf_leaf, ma>(); }
 
 TEST(SimpleLeaf, TransferAppend) { leaf_transfer_append_test<sl, ma>(); }
 
+TEST(SimpleUnsLeaf, TransferAppend) { leaf_transfer_append_test<uns_buf_leaf, ma>(); }
+
 TEST(SimpleLeaf, ClearLast) { leaf_clear_end_test<sl, ma>(); }
+
+TEST(SimpleUnsLeaf, ClearLast) { leaf_clear_end_test<uns_buf_leaf, ma>(); }
 
 TEST(SimpleLeaf, TransferPrepend) { leaf_transfer_prepend_test<sl, ma>(); }
 
+TEST(SimpleUnsLeaf, TransferPrepend) { leaf_transfer_prepend_test<uns_buf_leaf, ma>(); }
+
 TEST(SimpleLeaf, AppendAll) { leaf_append_all_test<sl, ma>(); }
+
+TEST(SimpleUnsLeaf, AppendAll) { leaf_append_all_test<uns_buf_leaf, ma>(); }
 
 TEST(SimpleLeaf, BufferHit) { leaf_hit_buffer_test<sl, ma>(); }
 
+TEST(SimpleUnsLeaf, BufferHit) { leaf_hit_buffer_test<uns_buf_leaf, ma>(); }
+
 TEST(SimpleLeaf, Commit) { leaf_commit_test<sl, ma>(SIZE); }
+
+TEST(SimpleUnsLeaf, Commit) { leaf_commit_test<uns_buf_leaf, ma>(SIZE); }
 
 // A couple of tests to check that unbuffered works as well.
 TEST(SimpleLeafUnb, Insert) { leaf_insert_test<ubl, ma>(10000); }
