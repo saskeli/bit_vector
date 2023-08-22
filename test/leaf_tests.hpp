@@ -112,6 +112,7 @@ void leaf_remove_test(uint64_t n) {
 
     ex = n;
     uint64_t ex_ones = n / 2;
+    uint64_t r_idx = hp;
     for (uint64_t i = 0; i < n / 2; i++) {
         l->remove(0);
         --ex;
@@ -121,16 +122,22 @@ void leaf_remove_test(uint64_t n) {
         val = l->p_sum();
         ASSERT_EQ(val, ex_ones) << " Should have " << ex_ones << " ones after "
                            << (2 * i + 1) << " removals.";
-
-        l->remove(l->size() / 2);
+        
+        l->remove(r_idx--);
         --ex;
         --ex_ones;
         val = l->size();
         ASSERT_EQ(val, ex) << "Size should be " << ex << " after "
                            << (2 * i + 2) << " removals.";
         val = l->p_sum();
+        if (val != ex_ones) {
+            l->print(false);
+        }
         ASSERT_EQ(val, ex_ones) << " Should have " << ex_ones << " ones after "
                            << (2 * i + 2) << " removals.";
+        for (uint64_t j = 0; j < l->size(); j++) {
+            ASSERT_EQ(l->at(j), j >= r_idx) << "i=" << i << ", j=" << j;
+        }
     }
 
     allocator->template deallocate_leaf<leaf>(l);
