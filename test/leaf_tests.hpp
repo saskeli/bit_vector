@@ -112,7 +112,7 @@ void leaf_remove_test(uint64_t n) {
 
     ex = n;
     uint64_t ex_ones = n / 2;
-    uint64_t r_idx = hp;
+    uint64_t r_idx = hp - 1;
     for (uint64_t i = 0; i < n / 2; i++) {
         l->remove(0);
         --ex;
@@ -130,13 +130,11 @@ void leaf_remove_test(uint64_t n) {
         ASSERT_EQ(val, ex) << "Size should be " << ex << " after "
                            << (2 * i + 2) << " removals.";
         val = l->p_sum();
-        if (val != ex_ones) {
-            l->print(false);
-        }
         ASSERT_EQ(val, ex_ones) << " Should have " << ex_ones << " ones after "
                            << (2 * i + 2) << " removals.";
         for (uint64_t j = 0; j < l->size(); j++) {
-            ASSERT_EQ(l->at(j), j >= r_idx) << "i=" << i << ", j=" << j;
+            auto v = l->at(j);
+            ASSERT_EQ(v, j > r_idx) << "i=" << i << ", j=" << j << ", r_idx=" << r_idx;
         }
     }
 

@@ -1385,9 +1385,9 @@ class leaf : uncopyable {
         if constexpr (sorted_buffers == false) {
             buf_.sort();
         }
-        std::cout << "\nBefore" << std::endl;
-        print(false);
-        std::cout << std::endl;
+        //std::cout << "\nBefore" << std::endl;
+        //print(false);
+        //std::cout << std::endl;
         Circular_Buffer<buf::scratch_elem_count()> cs(buf::get_scratch());
 
         uint32_t write_index = 0;
@@ -1406,8 +1406,8 @@ class leaf : uncopyable {
                         read_pos++;
                         cs.push_back(buf_[buffer_elem].value(), 1);
                     } else {
-                        std::cout << " Removal at " << buffer_index << " (" << buf_[buffer_elem].value() << ") precedes copying " << read_pos 
-                                  << " at data[" << read_index << "] >> " << read_offset << std::endl;
+                        //std::cout << " Removal at " << buffer_index << " (" << buf_[buffer_elem].value() << ") precedes copying " << read_pos 
+                        //          << " at data[" << read_index << "] >> " << read_offset << std::endl;
                         read_offset++;
                         read_index += read_offset >= WORD_BITS;
                         read_offset %= WORD_BITS;
@@ -1416,25 +1416,26 @@ class leaf : uncopyable {
                     buffer_index = buffer_elem < buf_.size() ? buf_[buffer_elem].index() : ~uint32_t(0);
                 } else if (WORD_BITS - read_offset < buffer_index - read_pos) {
                     // Write the rest of the "current word" to the circular buffer
-                    std::cout << " Writing " << WORD_BITS - read_offset << " bits of data[" << read_index << "] >> " 
-                              << read_offset << " = " << std::bitset<64>(data_[read_index] >> read_offset) << " to buffer (" << read_pos << ")" << std::endl;
+                    //std::cout << " Writing " << WORD_BITS - read_offset << " bits of data[" << read_index << "] >> " 
+                    //          << read_offset << " = " << std::bitset<64>(data_[read_index] >> read_offset) << " to buffer (" << read_pos;
                     cs.push_back(data_[read_index++] >> read_offset, WORD_BITS - read_offset);
                     read_pos += WORD_BITS - read_offset;
+                    //std::cout << " -> " << read_pos << ")" << std::endl;
                     read_offset = 0;
                 } else {
                     // Write until the next buffer element to the circular buffer
-                    read_pos++;
-                    std::cout << " Writing " << buffer_index - read_pos << " bits of data[" << read_index << "] >> " 
-                              << read_offset << " = " << std::bitset<64>(data_[read_index] >> read_offset) << " to buffer before buffer hit (" << read_pos << ")" << std::endl;
+                    //std::cout << " Writing " << buffer_index - read_pos << " bits of data[" << read_index << "] >> " 
+                    //          << read_offset << " = " << std::bitset<64>(data_[read_index] >> read_offset) << " to buffer before buffer hit (" << read_pos;
                     cs.push_back(data_[read_index] >> read_offset, buffer_index - read_pos);
                     read_offset += buffer_index - read_pos;
                     read_pos = buffer_index;
+                    //std::cout << " -> " << read_pos << ")" << std::endl;
                 }
             }
 
             // take one word from buffer...
             data_[write_index++] = cs.poll();
-            std::cout << " Pulled " << std::bitset<64>(data_[write_index - 1]) << " from circular buffer" << std::endl;
+            //std::cout << " Pulled " << std::bitset<64>(data_[write_index - 1]) << " from circular buffer" << std::endl;
         }
         while (write_index < capacity_) {
             data_[write_index++] = 0;
@@ -1443,9 +1444,9 @@ class leaf : uncopyable {
         if constexpr (compressed && allow_convert) {
             c_rle_check_convert();
         }
-        std::cout << "\nAfter:" << std::endl;
-        print(false);
-        std::cout << std::endl;
+        //std::cout << "\nAfter:" << std::endl;
+        //print(false);
+        //std::cout << std::endl;
     }
 
     /**

@@ -60,5 +60,44 @@ TEST(CircularBuffer, WrapAround) {
         ASSERT_EQ(sc.poll(), 0u);
         ASSERT_EQ(sc.poll(), ~uint64_t(0));
     }
+}
 
+TEST(CircularBuffer, Bug1) {
+    uint64_t buf_s[4];
+    Circular_Buffer<4> sc(buf_s);
+
+    const constexpr uint64_t zeros = 0;
+    const constexpr uint64_t ones = ~zeros;
+
+    sc.push_back(zeros, 60);
+    sc.push_back(zeros, 64);
+    sc.push_back(zeros, 64);
+    sc.push_back(zeros, 64);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(zeros, 64);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(zeros, 64);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(zeros, 64);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(ones << 4, 4);
+    sc.push_back(ones >> 8, 56);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(ones, 64);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(ones, 64);
+    ASSERT_EQ(sc.poll(), zeros);
+    sc.push_back(ones, 64);
+    ASSERT_EQ(sc.poll(), ones);
+    sc.push_back(ones, 64);
+    ASSERT_EQ(sc.poll(), ones);
+    sc.push_back(ones, 64);
+    ASSERT_EQ(sc.poll(), ones);
+    sc.push_back(ones, 64);
+    ASSERT_EQ(sc.poll(), ones);
+    sc.push_back(ones >> 56, 64);
+    ASSERT_EQ(sc.poll(), ones);
+    sc.push_back(zeros, 64);
+    ASSERT_EQ(sc.poll(), ones);
+    ASSERT_EQ(sc.poll(), ones);
 }

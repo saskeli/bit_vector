@@ -32,7 +32,10 @@ class Circular_Buffer : uncopyable {
                 ++end_;
                 end_ %= size;
                 data_[end_] = v >> space_left;
-            } 
+            } else if (elems == space_left) {
+                ++end_;
+                end_ %= size;
+            }
         } else {
             data_[end_] = v;
             end_ += elems == WORD_BITS;
@@ -54,7 +57,7 @@ class Circular_Buffer : uncopyable {
         return size * WORD_BITS - size_;
     }
 
-    void print() {
+    std::ostream& print() {
         std::cout << "{\n"
                   << "\"capacity\": " << size << ",\n"
                   << "\"size\": " << size_ << ",\n"
@@ -70,6 +73,7 @@ class Circular_Buffer : uncopyable {
                 std::cout << ",\n";
             }
         }
+        return std::cout;
     }
 };
 
