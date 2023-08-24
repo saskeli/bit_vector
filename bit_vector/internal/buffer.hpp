@@ -12,7 +12,7 @@
 
 namespace bv {
 
-template <uint16_t buffer_size, bool compressed, bool sorted>
+template <uint16_t buffer_size, bool compressed, bool sorted, uint16_t bf_limit = 16>
 class buffer {
    private:
     class BufferElement {
@@ -106,12 +106,6 @@ class buffer {
     buffer() : buffer_(), buffer_elems_() {}
     buffer(const buffer&) = delete;
     buffer& operator=(const buffer&) = delete;
-/*#pragma GCC diagnostic ignored "-Wclass-memaccess"
-    buffer(const buffer& other) { std::memcpy(this, &other, sizeof(buffer)); }
-    buffer& operator=(const buffer& other) {
-        std::memcpy(this, &other, sizeof(buffer));
-    }
-#pragma GCC diagnostic pop*/
 
     void sort() {
         if constexpr (sorted) {
@@ -123,7 +117,7 @@ class buffer {
         for (uint16_t i = buffer_elems_; i < buffer_size; i++) [[unlikely]] {
             buffer_[i] = BufferElement::max();
         }
-        sort<buffer_size>(scratch, buffer_);
+        sort<buffer_size, true>(scratch, buffer_);
     }
 
     bool is_full() const { return buffer_elems_ == buffer_size; }
@@ -466,22 +460,16 @@ class buffer {
     }
 
    private:
-    template <uint16_t block_size>
+    template <uint16_t block_size, bool in_target>
     void sort(BufferElement source[], BufferElement target[]) {
-        if constexpr (block_size <= 64) {
-            for (uint64_t i = 0; i < buffer_size; i += block_size) {
-                bf_sort<block_size>(target + i);
-            }
-            return;
-        } else if constexpr (block_size == 128 &&
-                             ((__builtin_clz(buffer_size / 16) & uint16_t(1)) == 0)) {
+        if constexpr (block_size <= bf_limit && in_target) {
             for (uint64_t i = 0; i < buffer_size; i += block_size) {
                 bf_sort<block_size>(target + i);
             }
             return;
         } else {
             const constexpr uint16_t sub_block_size = block_size / 2;
-            sort<sub_block_size>(target, source);
+            sort<sub_block_size, !in_target>(target, source);
             for (uint16_t offset = 0; offset < buffer_size;
                  offset += block_size) {
                 uint16_t inversions = 0;
