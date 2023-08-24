@@ -152,7 +152,9 @@ class leaf : uncopyable {
             }
         }
         if constexpr (buffer_size != 0) {
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
             auto& un_buf = reinterpret_cast<const un_comp_buf&>(buf_);
+#pragma GCC diagnostic pop
             bool v;
             if (un_buf.access(i, v)) {
                 return v;
@@ -166,7 +168,7 @@ class leaf : uncopyable {
     /** @brief Getter for size_ */
     uint32_t size() const { return size_; }
     /** @brief Getter for number of buffer elements */
-    uint8_t buffer_count() const { return buf_.size(); }
+    uint16_t buffer_count() const { return buf_.size(); }
     /** @brief Get pointer to the buffer */
     buf& edit_buffer() { return buf_; }
     /** @brief Get the values for the first run */
@@ -214,7 +216,9 @@ class leaf : uncopyable {
             [[unlikely]] return;
         }
         if constexpr (buffer_size != 0) {
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
             auto& un_buf = reinterpret_cast<un_comp_buf&>(buf_);
+#pragma GCC diagnostic pop
             un_buf.insert(i, x);
             p_sum_ += x ? 1 : 0;
             size_++;
@@ -260,8 +264,10 @@ class leaf : uncopyable {
             }
         }
         if constexpr (buffer_size > 0) {
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
             auto& un_buf = reinterpret_cast<un_comp_buf&>(buf_);
-            bool x;
+#pragma GCC diagnostic pop
+            bool x = false;
             uint32_t cb_idx = un_buf.remove(i, x);
             if (cb_idx >= buffer_size) {
                 --size_;
@@ -324,7 +330,9 @@ class leaf : uncopyable {
         }
         int res = 0;
         if constexpr (buffer_size) {
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
             auto& un_buf = reinterpret_cast<un_comp_buf&>(buf_);
+#pragma GCC diagnostic pop
             if (un_buf.set(i, x, res)) {
                 p_sum_ += res;
                 return res;
@@ -358,7 +366,9 @@ class leaf : uncopyable {
                 return c_rank(n);
             }
         }
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
         auto& un_buf = reinterpret_cast<const un_comp_buf&>(buf_);
+#pragma GCC diagnostic pop
         uint32_t count = un_buf.rank(n);
         uint32_t target_word = n / WORD_BITS;
         uint32_t target_offset = n % WORD_BITS;
@@ -401,22 +411,25 @@ class leaf : uncopyable {
             return unb_select(x);
         }
         if constexpr (sorted_buffers == false) {
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
             auto& unc_buf = const_cast<buf&>(buf_);
             unc_buf.sort();
+#pragma GCC diagnostic pop
         }
         uint32_t pop = 0;
         uint32_t pos = 0;
-        uint8_t current_buffer = 0;
+        uint16_t current_buffer = 0;
         int8_t a_pos_offset = 0;
         int32_t b_index = -100;
 
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
         auto& un_buf = reinterpret_cast<const un_comp_buf&>(buf_);
-
+#pragma GCC diagnostic pop
         // Step one 64-bit word at a time considering the buffer until pop >= x
         for (uint32_t j = 0; j < capacity_; j++) {
             pop += __builtin_popcountll(data_[j]);
             pos += WORD_BITS;
-            for (uint8_t b = current_buffer; b < un_buf.size(); b++) {
+            for (uint16_t b = current_buffer; b < un_buf.size(); b++) {
                 b_index = un_buf[b].index();
                 if (b_index < int32_t(pos)) {
                     if (un_buf[b].is_insertion()) {
@@ -1256,50 +1269,50 @@ class leaf : uncopyable {
      *
      * @param internal_only Will not output raw data if true to save space.
      */
-    void print(bool internal_only = true) const {
+    std::ostream& print(bool internal_only = true, std::ostream& out = std::cout) const {
         if (is_compressed()) {
-            c_print(internal_only);
-            return;
+            return c_print(internal_only);
         }
-        std::cout << "{\n\"type\": \"leaf\",\n"
+        out << "{\n\"type\": \"leaf\",\n"
                   << "\"size\": " << size_ << ",\n"
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
                   << "\"buffer_size\": " << int(buf::max_elems()) << ",\n"
                   << "\"buffer_count\": " << int(buf_.size());
         if (internal_only) {
-            std::cout << "}";
-            return;
+            out << "}";
+            return out;
         }
-        std::cout << ",\n" << "\"buffer\": [";
+        out << ",\n" << "\"buffer\": [";
         std::string p_val = "\n";
         for (auto be : buf_) {
-            std::cout << p_val << "{\"is_insertion\": "
+            out << p_val << "{\"is_insertion\": "
                       << be.is_insertion() << ", "
                       << "\"buffer_value\": " << be.value() << ", "
                       << "\"buffer_index\": " << be.index() << "}";
             p_val = ",\n";
         }
         if (buf_.size()) {
-            std::cout << "\n";
+            out << "\n";
         }
-        std::cout << "\n";
-        std::cout << "],\n\"data\": [\n";
+        out << "\n";
+        out << "],\n\"data\": [\n";
         for (uint64_t i = 0; i < capacity_; i++) {
             std::bitset<WORD_BITS> b(data_[i]);
-            std::cout << "\"";
+            out << "\"";
             for (size_t j = 0; j < 64; j++) {
                 if (j % 8 == 0 && j > 0) {
-                    std::cout << " ";
+                    out << " ";
                 }
-                std::cout << (b[j] ? "1" : "0");
+                out << (b[j] ? "1" : "0");
             }
-            std::cout << "\"";
+            out << "\"";
             if (i != uint64_t(capacity_ - 1)) {
-                std::cout << ",\n";
+                out << ",\n";
             }
         }
-        std::cout << "]}";
+        out << "]}";
+        return out;
     }
 
     std::pair<uint64_t, uint64_t> leaf_usage() const {
@@ -1368,6 +1381,18 @@ class leaf : uncopyable {
         return pos + 63 - __builtin_clzll(_pdep_u64(add_loc, data_[j]));
     }
 
+    /**
+     * @brief Commit and clear the Insert/Remove buffer for the leaf.
+     *
+     * Intended for clearing a full buffer before insertion or removal, and for
+     * ensuring an empty buffer before transfer operations.
+     *
+     * Slightly complicated but linear time function for committing all buffered
+     * operations to the underlying data.
+     * 
+     * @tparam allow_convert Allow or disallow encoding conversion when committing.
+     *                       No use converting before a transfer...
+     */
     template <bool allow_convert = true>
     void commit() {
         if constexpr (compressed) {
@@ -1385,9 +1410,6 @@ class leaf : uncopyable {
         if constexpr (sorted_buffers == false) {
             buf_.sort();
         }
-        //std::cout << "\nBefore" << std::endl;
-        //print(false);
-        //std::cout << std::endl;
         Circular_Buffer<buf::scratch_elem_count()> cs(buf::get_scratch());
 
         uint32_t write_index = 0;
@@ -1406,8 +1428,6 @@ class leaf : uncopyable {
                         read_pos++;
                         cs.push_back(buf_[buffer_elem].value(), 1);
                     } else {
-                        //std::cout << " Removal at " << buffer_index << " (" << buf_[buffer_elem].value() << ") precedes copying " << read_pos 
-                        //          << " at data[" << read_index << "] >> " << read_offset << std::endl;
                         read_offset++;
                         read_index += read_offset >= WORD_BITS;
                         read_offset %= WORD_BITS;
@@ -1416,26 +1436,19 @@ class leaf : uncopyable {
                     buffer_index = buffer_elem < buf_.size() ? buf_[buffer_elem].index() : ~uint32_t(0);
                 } else if (WORD_BITS - read_offset < buffer_index - read_pos) {
                     // Write the rest of the "current word" to the circular buffer
-                    //std::cout << " Writing " << WORD_BITS - read_offset << " bits of data[" << read_index << "] >> " 
-                    //          << read_offset << " = " << std::bitset<64>(data_[read_index] >> read_offset) << " to buffer (" << read_pos;
                     cs.push_back(data_[read_index++] >> read_offset, WORD_BITS - read_offset);
                     read_pos += WORD_BITS - read_offset;
-                    //std::cout << " -> " << read_pos << ")" << std::endl;
                     read_offset = 0;
                 } else {
                     // Write until the next buffer element to the circular buffer
-                    //std::cout << " Writing " << buffer_index - read_pos << " bits of data[" << read_index << "] >> " 
-                    //          << read_offset << " = " << std::bitset<64>(data_[read_index] >> read_offset) << " to buffer before buffer hit (" << read_pos;
                     cs.push_back(data_[read_index] >> read_offset, buffer_index - read_pos);
                     read_offset += buffer_index - read_pos;
                     read_pos = buffer_index;
-                    //std::cout << " -> " << read_pos << ")" << std::endl;
                 }
             }
 
             // take one word from buffer...
             data_[write_index++] = cs.poll();
-            //std::cout << " Pulled " << std::bitset<64>(data_[write_index - 1]) << " from circular buffer" << std::endl;
         }
         while (write_index < capacity_) {
             data_[write_index++] = 0;
@@ -1444,140 +1457,7 @@ class leaf : uncopyable {
         if constexpr (compressed && allow_convert) {
             c_rle_check_convert();
         }
-        //std::cout << "\nAfter:" << std::endl;
-        //print(false);
-        //std::cout << std::endl;
     }
-
-    /**
-     * @brief Commit and clear the Insert/Remove buffer for the leaf.
-     *
-     * Intended for clearing a full buffer before insertion or removal, and for
-     * ensuring an empty buffer before transfer operations.
-     *
-     * Slightly complicated but linear time function for committing all buffered
-     * operations to the underlying data.
-     */
-    /*template <bool allow_convert = true>
-    void commit() {
-        if constexpr (compressed) {
-            if (is_compressed()) {
-                c_commit();
-                return;
-            }
-        }
-        // TODO: Support for larger buffers needs to be added. Should be ok to use the static
-        //       allocation for the buffer class as a circular write buffer...
-
-        //  Complicated bit manipulation but whatcha gonna do. Hopefully won't
-        //  need to debug this anymore.
-        if constexpr (buffer_size == 0) return;
-        if (buf_.size() == 0) [[unlikely]] {
-            return;
-        }
-        if constexpr (sorted_buffers == false) {
-            buf_.sort();
-        }
-            
-        uint32_t overflow = 0;
-        uint8_t overflow_length = 0;
-        uint8_t underflow_length = 0;
-        uint8_t current_index = 0;
-        auto be = buf_[current_index];
-        uint32_t target_word = be.index() / WORD_BITS;
-        uint32_t target_offset = be.index() % WORD_BITS;
-
-        uint32_t words = size_ / WORD_BITS;
-        words += size_ % WORD_BITS > 0 ? 1 : 0;
-        for (uint32_t current_word = 0; current_word < words; current_word++) {
-            uint64_t underflow =
-                current_word + 1 < capacity_ ? data_[current_word + 1] : 0;
-            if (overflow_length) {
-                [[likely]] underflow =
-                    (underflow << overflow_length) |
-                    (data_[current_word] >> (WORD_BITS - overflow_length));
-            }
-
-            uint64_t new_overflow = 0;
-            // If buffers need to be commit to this word:
-            if (current_word == target_word && current_index < buf_.size()) {
-                uint64_t word =
-                    underflow_length
-                        ? (data_[current_word] >> underflow_length) |
-                              (underflow << (WORD_BITS - underflow_length))
-                        : (data_[current_word] << overflow_length) | overflow;
-                underflow >>= underflow_length;
-                uint64_t new_word = 0;
-                uint8_t start_offset = 0;
-                // While there are buffers for this word
-                while (current_word == target_word) {
-                    new_word |=
-                        (word << start_offset) & ((MASK << target_offset) - 1);
-                    word = (word >> (target_offset - start_offset)) |
-                           (target_offset == 0 ? 0
-                            : target_offset - start_offset == 0
-                                ? 0
-                                : (underflow << (WORD_BITS - (target_offset -
-                                                              start_offset))));
-                    underflow >>= target_offset - start_offset;
-                    if (be.is_insertion()) {
-                        if (be.value()) {
-                            new_word |= MASK << target_offset;
-                        }
-                        start_offset = target_offset + 1;
-                        if (underflow_length) [[unlikely]]
-                            underflow_length--;
-                        else
-                            overflow_length++;
-                    } else {
-                        word >>= 1;
-                        word |= underflow << 63;
-                        underflow >>= 1;
-                        if (overflow_length)
-                            overflow_length--;
-                        else [[likely]]
-                            underflow_length++;
-                        start_offset = target_offset;
-                    }
-                    current_index++;
-                    if (current_index >= buf_.size()) {
-                        break;
-                    }
-                    be = buf_[current_index];
-                    target_word = be.index() / WORD_BITS;
-                    [[unlikely]] target_offset = be.index() % WORD_BITS;
-                }
-                new_word |= start_offset < WORD_BITS ? (word << start_offset)
-                                                     : uint64_t(0);
-                new_overflow =
-                    overflow_length
-                        ? data_[current_word] >> (WORD_BITS - overflow_length)
-                        : 0;
-                [[unlikely]] data_[current_word] = new_word;
-            } else {
-                if (underflow_length) {
-                    data_[current_word] =
-                        (data_[current_word] >> underflow_length) |
-                        (underflow << (WORD_BITS - underflow_length));
-                } else if (overflow_length) {
-                    new_overflow =
-                        data_[current_word] >> (WORD_BITS - overflow_length);
-                    [[likely]] data_[current_word] =
-                        (data_[current_word] << overflow_length) | overflow;
-                } else {
-                    overflow = 0;
-                }
-            }
-            overflow = new_overflow;
-        }
-        if (capacity_ > words) {
-            [[likely]] data_[words] = 0;
-        }
-        buf_.clear();
-        if constexpr (compressed && allow_convert) {
-            c_rle_check_convert();
-        }
-    }//*/
 
     bool c_at(uint32_t i) const {
         bool ret;
@@ -1754,7 +1634,7 @@ class leaf : uncopyable {
         // std::cout << "c_select(" << x << ") called" << std::endl;
         bool val = type_info_ & C_ONE_MASK;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
-        uint8_t b_idx = 0;
+        uint16_t b_idx = 0;
         uint32_t e_index = buf_[b_idx].index();
         uint32_t c_i = 0;
         uint32_t count = 0;
@@ -1822,7 +1702,7 @@ class leaf : uncopyable {
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         buf& o_buf = other->edit_buffer();
         uint32_t old_size = size_;
-        uint8_t b_idx = 0;
+        uint16_t b_idx = 0;
         uint32_t d_idx = 0;
         while (copied < elems) {
             uint32_t rl = 0;
@@ -1899,7 +1779,7 @@ class leaf : uncopyable {
     void c_transfer_prepend(leaf* other, uint32_t elems) {
         assert(elems < other->size());
         buf& o_buf = other->edit_buffer();
-        uint8_t b_idx = 0;
+        uint16_t b_idx = 0;
         const uint8_t* o_data = reinterpret_cast<const uint8_t*>(other->data());
         uint32_t d_idx = 0;
         bool val = other->first_value();
@@ -2019,7 +1899,10 @@ class leaf : uncopyable {
     }
 
     void flatten() {
-        uint8_t b_idx = 0;
+        if constexpr (!sorted_buffers) {
+            buf_.sort();
+        }
+        uint16_t b_idx = 0;
         uint32_t e_idx = buf_[b_idx].index();
         uint32_t d_idx = 0;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
@@ -2087,13 +1970,16 @@ class leaf : uncopyable {
 
     template <bool commit_buffer = true>
     void c_commit() {
-        uint8_t b_idx = 0;
+        if constexpr (!sorted_buffers) {
+            buf_.sort();
+        }
+        uint16_t b_idx = 0;
         uint32_t d_idx = 0;
         uint32_t e_idx = buf_[b_idx].index();
         uint32_t elem_count = 0;
         uint32_t copied = 0;
         bool val = type_info_ & C_ONE_MASK;
-        bool first = commit_buffer ? c_at(0) : val;
+        bool first = commit_buffer && e_idx == 0 ? buf_[b_idx].value() : val;
         type_info_ &= 0b00011111;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         while (d_idx < run_index_) {
@@ -2280,7 +2166,7 @@ class leaf : uncopyable {
     }
 
     uint64_t c_dump(uint64_t* target, uint64_t start) {
-        uint8_t b_idx = 0;
+        uint16_t b_idx = 0;
         uint32_t e_idx = buf_[b_idx].index();
         bool val = type_info_ & C_ONE_MASK;
         uint32_t d_idx = 0;
@@ -2411,8 +2297,8 @@ class leaf : uncopyable {
         }
     }
 
-    void c_print(bool internal_only) const {
-        std::cout << "{\n\"type\": \"c_leaf\",\n"
+    std::ostream& c_print(bool internal_only = true, std::ostream& out = std::cout) const {
+        out << "{\n\"type\": \"c_leaf\",\n"
                   << "\"size\": " << size_ << ",\n"
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
@@ -2424,21 +2310,21 @@ class leaf : uncopyable {
                   << "\"buffer_size\": " << int(buffer_size) << ",\n"
                   << "\"buffer_count\": " << int(buf_.size());
         if (internal_only) {
-            std::cout << "}";
-            return;
+            out << "}";
+            return out;
         }
-        std::cout << ",\n" << "\"buffer\": [";
+        out << ",\n" << "\"buffer\": [";
         std::string p_val = "\n";
         for (auto be : buf_) {
-            std::cout << p_val << "{\"is_insertion\": " << true << ", "
+            out << p_val << "{\"is_insertion\": " << true << ", "
                       << "\"buffer_value\": " << be.value() << ", "
                       << "\"buffer_index\": " << be.index() << "}";
             p_val = ",\n";
         }
         if (buf_.size()) {
-            std::cout << "\n";
+            out << "\n";
         }
-        std::cout << "],\n\"runs\": [\n";
+        out << "],\n\"runs\": [\n";
         uint32_t d_idx = 0;
         uint8_t* data = reinterpret_cast<uint8_t*>(data_);
         while (d_idx < run_index_) {
@@ -2463,39 +2349,40 @@ class leaf : uncopyable {
                 r_bytes = 2;
             }
 
-            std::cout << "{\"run_index\": " << d_idx
+            out << "{\"run_index\": " << d_idx
                       << ", \"run_value\": " << rl << ", \"run_data\": \"";
             for (uint32_t i = d_idx; i < d_idx + r_bytes; i++) {
                 std::bitset<8> b(data[i]);
-                std::cout << b;
+                out << b;
                 if (i < d_idx + r_bytes - 1) {
-                    std::cout << " ";
+                    out << " ";
                 }
             }
             d_idx += r_bytes;
             if (d_idx == run_index_) {
-                std::cout << "\"}";
+                out << "\"}";
             } else {
-                std::cout << "\"},\n";
+                out << "\"},\n";
             }
         }
-        std::cout << "],\n\"data\": [\n";
+        out << "],\n\"data\": [\n";
         for (uint64_t k = 0; k < capacity_ * 8; k += 8) {
             uint64_t lim = std::min(k + 8, uint64_t(capacity_ * 8));
-            std::cout << "\"";
+            out << "\"";
             for (uint64_t i = k; i < lim; i++) {
                 std::bitset<8> b(data[i]);
-                std::cout << b;
+                out << b;
                 if (i < lim - 1) {
-                    std::cout << " ";
+                    out << " ";
                 }
             }
-            std::cout << "\"";
+            out << "\"";
             if (k + 8 < capacity_ * 8) {
-                std::cout << ",\n";
+                out << ",\n";
             }
         }
-        std::cout << "]}";
+        out << "]}";
+        return out;
     }
 };
 }  // namespace bv

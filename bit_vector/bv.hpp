@@ -50,12 +50,12 @@ namespace bv {
  *                          Needs to be one of {8, 16, 32, 64, 128}.
  * @tparam avx              Should avx population counting be used for rank.
  */
-template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
+template <uint16_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
           bool avx = true, bool aggressive_realloc = false,
-          bool hybrid_rle = false>
+          bool hybrid_rle = false, bool sorted_buffers = true>
 using simple_bv = bit_vector<
-    leaf<buffer_size, leaf_size, avx, hybrid_rle>,
-    node<leaf<buffer_size, leaf_size, avx, hybrid_rle>, uint64_t, leaf_size,
+    leaf<buffer_size, leaf_size, avx, hybrid_rle, sorted_buffers>,
+    node<leaf<buffer_size, leaf_size, avx, hybrid_rle, sorted_buffers>, uint64_t, leaf_size,
          branching_factor, aggressive_realloc, hybrid_rle>,
     malloc_alloc, leaf_size, branching_factor, uint64_t, aggressive_realloc,
     hybrid_rle>;
@@ -80,7 +80,7 @@ using simple_bv = bit_vector<
  *                          Needs to be one 8, 16, 32, 64 or 128.
  * @tparam avx              Should avx population counting be used for rank.
  */
-template <uint8_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
+template <uint16_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
           bool avx = true, bool aggressive_realloc = false,
           bool hybrid_rle = false>
 using small_bv = bit_vector<

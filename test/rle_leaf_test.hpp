@@ -178,6 +178,10 @@ void rle_leaf_set_test(uint32_t size, uint32_t i_count) {
     ASSERT_EQ(l->p_sum(), 0u);
     for (size_t i = 0; i < size; i++) {
         l->set(i, i < i_count);
+        ASSERT_EQ(l->p_sum(), std::min(size_t(i_count), i + 1)) << "i=" << i;
+        for (uint32_t j = 0; j < size; j++) {
+            ASSERT_EQ(l->at(j), j <= i && j < i_count) << "i=" << i << ", j=" << j;
+        }
     }
     ASSERT_EQ(l->size(), size);
     ASSERT_EQ(l->p_sum(), i_count);

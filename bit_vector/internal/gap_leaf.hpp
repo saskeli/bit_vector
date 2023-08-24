@@ -471,8 +471,8 @@ class gap_leaf : uncopyable {
      */
     const uint64_t* data() { return data_; }
 
-    void print(bool internal_only = true) const {
-        std::cout << "{\n\"type\": \"gap leaf\",\n"
+    std::ostream& print(bool internal_only = true, std::ostream& out = std::cout) const {
+        out << "{\n\"type\": \"gap leaf\",\n"
                   << "\"size\": " << size_ << ",\n"
                   << "\"capacity\": " << capacity_ << ",\n"
                   << "\"p_sum\": " << p_sum_ << ",\n"
@@ -480,19 +480,20 @@ class gap_leaf : uncopyable {
                   << "\"last block space\": " << last_block_space_ << ",\n"
                   << "\"max gap\": " << GAP_SIZE << ",\n";
         if (!internal_only) {
-            std::cout << "\"blocks\": [\n";
+            out << "\"blocks\": [\n";
             for (uint32_t i = 0; i < capacity_ / BLOCK_WORDS; i++) {
-                std::cout << "\"block\": {\n"
+                out << "\"block\": {\n"
                           << "\"gap\": " << gaps_.at(i) << "\n"
                           << "\"data\": [\n";
                 for (uint16_t wi = 0; wi < BLOCK_WORDS; wi++) {
                     std::bitset<64> b(data_[i * BLOCK_WORDS + wi]);
-                    std::cout << "\"" << b << "\"" << (wi + 1 < BLOCK_WORDS ? "," : "]}") << "\n";
+                    out << "\"" << b << "\"" << (wi + 1 < BLOCK_WORDS ? "," : "]}") << "\n";
                 }
-                std::cout << (i + 1 < capacity_ / BLOCK_WORDS ? "," : "]") << "\n";
+                out << (i + 1 < capacity_ / BLOCK_WORDS ? "," : "]") << "\n";
             }
         }
-        std::cout << "}";
+        out << "}";
+        return out;
     }
 
     uint32_t validate() {

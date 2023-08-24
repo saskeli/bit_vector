@@ -43,7 +43,8 @@ struct result {
 };
 
 template <class leaf, class alloc, class random, class source>
-result test(uint32_t* arr, uint32_t n, alloc* allocator, random gen, source src) {
+result test(uint32_t* arr, uint32_t n, alloc* allocator, random gen,
+            source src) {
     using std::chrono::duration_cast;
     using std::chrono::high_resolution_clock;
     using std::chrono::nanoseconds;
@@ -83,7 +84,6 @@ result test(uint32_t* arr, uint32_t n, alloc* allocator, random gen, source src)
     res.rank = (double)duration_cast<nanoseconds>(t2 - t1).count();
 
     uint32_t max = l->p_sum();
-    max += max ? 0 : 1;
     for (uint32_t i = 0; i < n; i++) {
         arr[i] = (gen(src) % max) + 1;
     }
@@ -104,13 +104,11 @@ result test(uint32_t* arr, uint32_t n, alloc* allocator, random gen, source src)
     t2 = high_resolution_clock::now();
     res.remove = (double)duration_cast<nanoseconds>(t2 - t1).count();
 
-    std::cout << res.insert / n << "\t"
-              << res.remove / n << "\t"
-              << res.access / n << "\t"
-              << res.rank / n << "\t"
+    std::cout << res.insert / n << "\t" << res.remove / n << "\t"
+              << res.access / n << "\t" << res.rank / n << "\t"
               << res.select / n << std::endl;
-    return res;
     allocator->deallocate_leaf(l);
+    return res;
 }
 
 void help() {
@@ -123,7 +121,10 @@ void help() {
               << "            4 for buffered (8) leaf\n"
               << "            5 for buffered (16) leaf\n"
               << "            6 for 6-bit 64-block leaf\n"
-              << "            7 for 6-bit 128-block leaf\n";
+              << "            7 for 6-bit 128-block leaf\n"
+              << "            8 for unsorted buffered (256) leaf\n"
+              << "            9 for unsorted buffered (512) leaf\n"
+              << "            10 for unsorted buffered (1024) leaf\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector. (<= 10000, "
                  "10000 default)\n";
@@ -172,29 +173,36 @@ int main(int argc, char const* argv[]) {
     std::cout << "insert\tremove\taccess\trank\tselect\n";
 
     for (uint32_t i = 0; i < steps; i++) {
+        std::cout << "run " << i << std::endl;
         if (type == 0) {
-            res += test<bv::leaf<0, 16384>>(
-                arr, size, allocator, gen, mt);
+            res += test<bv::leaf<0, 16384>>(arr, size, allocator, gen, mt);
         } else if (type == 1) {
-            res += test<bv::gap_leaf<16384, 32, 6>>(
-                arr, size, allocator, gen, mt);
+            res +=
+                test<bv::gap_leaf<16384, 32, 6>>(arr, size, allocator, gen, mt);
         } else if (type == 2) {
-            res += test<bv::gap_leaf<16384, 32, 7>>(
-                arr, size, allocator, gen, mt);
+            res +=
+                test<bv::gap_leaf<16384, 32, 7>>(arr, size, allocator, gen, mt);
         } else if (type == 3) {
-            res += test<bv::gap_leaf<16384, 32, 8>>(
-                arr, size, allocator, gen, mt);
+            res +=
+                test<bv::gap_leaf<16384, 32, 8>>(arr, size, allocator, gen, mt);
         } else if (type == 4) {
-            res += test<bv::leaf<8, 16384>>(
-                arr, size, allocator, gen, mt);
+            res += test<bv::leaf<8, 16384>>(arr, size, allocator, gen, mt);
         } else if (type == 5) {
-            res += test<bv::leaf<16, 16384>>(
-                arr, size, allocator, gen, mt);
+            res += test<bv::leaf<16, 16384>>(arr, size, allocator, gen, mt);
         } else if (type == 6) {
-            res += test<bv::gap_leaf<16384, 64, 6>>(
-                arr, size, allocator, gen, mt);
+            res +=
+                test<bv::gap_leaf<16384, 64, 6>>(arr, size, allocator, gen, mt);
         } else if (type == 7) {
-            res += test<bv::gap_leaf<16384, 128, 6>>(
+            res += test<bv::gap_leaf<16384, 128, 6>>(arr, size, allocator, gen,
+                                                     mt);
+        } else if (type == 8) {
+            res += test<bv::leaf<256, 16384, true, false, false>>(
+                arr, size, allocator, gen, mt);
+        } else if (type == 9) {
+            res += test<bv::leaf<512, 16384, true, false, false>>(
+                arr, size, allocator, gen, mt);
+        } else if (type == 10) {
+            res += test<bv::leaf<1024, 16384, true, false, false>>(
                 arr, size, allocator, gen, mt);
         }
     }

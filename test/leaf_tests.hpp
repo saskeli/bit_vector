@@ -687,6 +687,32 @@ TEST(SimpleLeaf, Commit) { leaf_commit_test<sl, ma>(SIZE); }
 
 TEST(SimpleUnsLeaf, Commit) { leaf_commit_test<uns_buf_leaf, ma>(SIZE); }
 
+TEST(SimpleUnsLeaf, LbufInsert) {
+    typedef leaf<1024, 16384, true, false, false> lefa;
+    ma alloc;
+    lefa* l = alloc.template allocate_leaf<lefa>(256);
+    for (uint32_t i = 0; i < 5000; i++) {
+        l->insert(i, i % 2);
+    }
+    ASSERT_EQ(l->size(), 5000u);
+    ASSERT_EQ(l->p_sum(), 2500u);
+    for (uint32_t i = 0; i < 5000; i++) {
+        ASSERT_EQ(l->at(i), i % 2);
+    }
+
+    for (uint32_t i = 0; i < 5000; i++) {
+        l->insert(2500, true);
+    }
+    ASSERT_EQ(l->size(), 10000u);
+    ASSERT_EQ(l->p_sum(), 7500u);
+    for (uint32_t i = 0; i < 1000; i++) {
+        bool ex = i % 2 || (i >= 2500 && i < 7500);
+        ASSERT_EQ(l->at(i), ex);
+    }
+    
+    alloc.deallocate_leaf(l);
+}
+
 // A couple of tests to check that unbuffered works as well.
 TEST(SimpleLeafUnb, Insert) { leaf_insert_test<ubl, ma>(10000); }
 
