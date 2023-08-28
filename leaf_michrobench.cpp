@@ -122,9 +122,11 @@ void help() {
               << "            5 for buffered (16) leaf\n"
               << "            6 for 6-bit 64-block leaf\n"
               << "            7 for 6-bit 128-block leaf\n"
-              << "            8 for unsorted buffered (256) leaf\n"
-              << "            9 for unsorted buffered (512) leaf\n"
-              << "            10 for unsorted buffered (1024) leaf\n";
+              << "            8 for unsorted buffered (16) leaf\n"
+              << "            9 for unsorted buffered (32) leaf\n"
+              << "            10 for unsorted buffered (64) leaf\n"
+              << "            11 for unsorted buffered (128) leaf\n"
+              << "            12 for unsorted buffered (256) leaf\n";
     std::cout << "   <seed>   seed to use for running the test\n";
     std::cout << "   <size>   number of bits in the bitvector. (<= 10000, "
                  "10000 default)\n";
@@ -173,7 +175,6 @@ int main(int argc, char const* argv[]) {
     std::cout << "insert\tremove\taccess\trank\tselect\n";
 
     for (uint32_t i = 0; i < steps; i++) {
-        std::cout << "run " << i << std::endl;
         if (type == 0) {
             res += test<bv::leaf<0, 16384>>(arr, size, allocator, gen, mt);
         } else if (type == 1) {
@@ -196,13 +197,19 @@ int main(int argc, char const* argv[]) {
             res += test<bv::gap_leaf<16384, 128, 6>>(arr, size, allocator, gen,
                                                      mt);
         } else if (type == 8) {
-            res += test<bv::leaf<256, 16384, true, false, false>>(
+            res += test<bv::leaf<16, 16384, true, false, false>>(
                 arr, size, allocator, gen, mt);
         } else if (type == 9) {
-            res += test<bv::leaf<512, 16384, true, false, false>>(
+            res += test<bv::leaf<32, 16384, true, false, false>>(
                 arr, size, allocator, gen, mt);
         } else if (type == 10) {
-            res += test<bv::leaf<1024, 16384, true, false, false>>(
+            res += test<bv::leaf<64, 16384, true, false, false>>(
+                arr, size, allocator, gen, mt);
+        } else if (type == 11) {
+            res += test<bv::leaf<128, 16384, true, false, false>>(
+                arr, size, allocator, gen, mt);
+        } else if (type == 12) {
+            res += test<bv::leaf<256, 16384, true, false, false>>(
                 arr, size, allocator, gen, mt);
         }
     }

@@ -7,6 +7,7 @@
 #include <random>
 
 #include "bit_vector/bv.hpp"
+
 #include "bit_vector/internal/gcc_pragmas.hpp"
 #include "deps/valgrind/callgrind.h"
 #include "dynamic/dynamic.hpp"

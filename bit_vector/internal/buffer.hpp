@@ -459,6 +459,24 @@ class buffer {
         return SCRATCH_ELEMS;
     }
 
+    std::ostream& print(bool use_scratch = false, std::ostream& out = std::cout) {
+        BufferElement* buf = use_scratch ? scratch : buffer_;
+        out << "{\n"
+            << "\"buffer size\": " << buffer_size << ",\n"
+            << "\"buffer elems\": " << buffer_elems_ << ",\n"
+            << "\"compressed\": " << compressed << ",\n"
+            << "\"sorted\": " << sorted << ",\n"
+            << "\"elements\": [";
+        for (uint16_t i = 0; i < buffer_elems_; i++) {
+            out << (i == 0 ? "\n" : ",\n")
+                << "{\"index\": " << buf[i].index() << ", "
+                << "\"value\": " << buf[i].value() << ", "
+                << "\"is_insertion\": " << buf[i].is_insertion() << "}";
+        }
+        out << "]}";
+        return out;
+     }
+
    private:
     template <uint16_t block_size, bool in_target>
     void sort(BufferElement source[], BufferElement target[]) {
@@ -466,33 +484,42 @@ class buffer {
             for (uint64_t i = 0; i < buffer_size; i += block_size) {
                 bf_sort<block_size>(target + i);
             }
-            return;
         } else {
             const constexpr uint16_t sub_block_size = block_size / 2;
+            const constexpr uint16_t blocks = buffer_size / block_size;
             sort<sub_block_size, !in_target>(target, source);
-            for (uint16_t offset = 0; offset < buffer_size;
-                 offset += block_size) {
-                uint16_t inversions = 0;
-                uint16_t a_idx = offset;
-                uint16_t b_idx = offset + sub_block_size;
-                uint16_t a_limit = b_idx;
-                uint16_t b_limit = offset + block_size;
-                for (uint16_t i = 0; i < block_size; i++) {
-                    if (a_idx < a_limit) [[likely]] {
-                        if (b_idx < b_limit) [[likely]] {
-                            BufferElement be = source[a_idx] + inversions;
-                            if (be < source[b_idx]) {
-                                target[offset + i] = be;
-                                ++a_idx;
+            uint16_t a_idx[blocks];
+            uint16_t b_idx[blocks];
+            uint16_t a_lim[blocks];
+            uint16_t b_lim[blocks];
+            uint16_t inversions[blocks];
+
+            for (uint16_t i = 0; i < blocks; ++i) {
+                a_idx[i] = i * block_size;
+                b_idx[i] = a_idx[i] + sub_block_size;
+                a_lim[i] = b_idx[i];
+                b_lim[i] = b_idx[i] + sub_block_size;
+                inversions[i] = 0;
+            }
+
+            for (uint16_t i = 0; i < block_size; ++i) {
+                for (uint16_t j = 0; j < blocks; ++j) {
+                    if (a_idx[j] < a_lim[j]) {
+                        BufferElement pot = source[a_idx[j]] + inversions[j];
+                        if (b_idx[j] < b_lim[j]) {
+                            if (pot < source[b_idx[j]]) {
+                                target[block_size * j + i] = pot;
+                                ++a_idx[j];
                             } else {
-                                target[offset + i] = source[b_idx++];
-                                ++inversions;
+                                target[block_size * j + i] = source[b_idx[j]++];
+                                inversions[j]++;
                             }
                         } else {
-                            target[offset + i] = source[a_idx++] + inversions;
+                            target[block_size * j + i] = pot;
+                            ++a_idx[j];
                         }
                     } else {
-                        target[offset + i] = source[b_idx++];
+                        target[block_size * j + i] = source[b_idx[j]++];
                     }
                 }
             }

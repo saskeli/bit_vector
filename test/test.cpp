@@ -6,9 +6,10 @@
 #include "../bit_vector/internal/circular_buffer.hpp"
 #include "../bit_vector/internal/leaf.hpp"
 #include "../bit_vector/internal/node.hpp"
-#include "../bit_vector/internal/gcc_pragmas.hpp"
 
+#include "../bit_vector/internal/gcc_pragmas.hpp"
 #include "../deps/DYNAMIC/include/dynamic/dynamic.hpp"
+#pragma GCC diagnostic pop
 
 #include "../deps/googletest/googletest/include/gtest/gtest.h"
 
