@@ -512,7 +512,7 @@ class buffer {
                                 ++a_idx[j];
                             } else {
                                 target[block_size * j + i] = source[b_idx[j]++];
-                                inversions[j]++;
+                                ++inversions[j];
                             }
                         } else {
                             target[block_size * j + i] = pot;

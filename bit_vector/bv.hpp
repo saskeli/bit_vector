@@ -7,7 +7,7 @@
 #include "internal/node.hpp"
 #include "internal/gap_leaf.hpp"
 
-namespace bv {
+namespace dbv {
 
 /**
  * @file bv.hpp
@@ -53,11 +53,11 @@ namespace bv {
 template <uint16_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
           bool avx = true, bool aggressive_realloc = false,
           bool hybrid_rle = false, bool sorted_buffers = true>
-using simple_bv = bit_vector<
-    leaf<buffer_size, leaf_size, avx, hybrid_rle, sorted_buffers>,
-    node<leaf<buffer_size, leaf_size, avx, hybrid_rle, sorted_buffers>, uint64_t, leaf_size,
+using simple_bv = bv::bit_vector<
+    bv::leaf<buffer_size, leaf_size, avx, hybrid_rle, sorted_buffers>,
+    bv::node<bv::leaf<buffer_size, leaf_size, avx, hybrid_rle, sorted_buffers>, uint64_t, leaf_size,
          branching_factor, aggressive_realloc, hybrid_rle>,
-    malloc_alloc, leaf_size, branching_factor, uint64_t, aggressive_realloc,
+    bv::malloc_alloc, leaf_size, branching_factor, uint64_t, aggressive_realloc,
     hybrid_rle>;
 
 /**
@@ -83,11 +83,11 @@ using simple_bv = bit_vector<
 template <uint16_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
           bool avx = true, bool aggressive_realloc = false,
           bool hybrid_rle = false>
-using small_bv = bit_vector<
-    leaf<buffer_size, leaf_size, avx, hybrid_rle>,
-    node<leaf<buffer_size, leaf_size, avx, hybrid_rle>, uint32_t, leaf_size,
+using small_bv = bv::bit_vector<
+    bv::leaf<buffer_size, leaf_size, avx, hybrid_rle>,
+    bv::node<bv::leaf<buffer_size, leaf_size, avx, hybrid_rle>, uint32_t, leaf_size,
          branching_factor, aggressive_realloc, hybrid_rle>,
-    malloc_alloc, leaf_size, branching_factor, uint32_t, aggressive_realloc,
+    bv::malloc_alloc, leaf_size, branching_factor, uint32_t, aggressive_realloc,
     hybrid_rle>;
 
 /**
@@ -99,6 +99,6 @@ using small_bv = bit_vector<
  * Buffer size = 8, leaf size = 2^14 and branching factor = 64
  */
 typedef simple_bv<8, 16384, 64> bv;
-}  // namespace bv
+}  // namespace dbv
 
 #endif

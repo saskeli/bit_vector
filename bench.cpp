@@ -17,7 +17,7 @@
 #include "bit_vector/internal/deb.hpp"
 
 void test_sdsl(uint64_t size, uint64_t steps, uint64_t seed) {
-    bv::simple_bv<16, 16384, 64, true, true> bv;
+    dbv::simple_bv<16, 16384, 64, true, true> bv;
 
     std::mt19937 mt(seed);
     std::uniform_int_distribution<unsigned long long> gen(
@@ -385,26 +385,26 @@ int main(int argc, char const* argv[]) {
         test<dyn::suc_bv, 0, 0, 8, 8192>(size, steps, seed);
     } else if (type == 1) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
+        test<dbv::simple_bv<16, 16384, 64, true, true>, 1, 16, 64, 16384>(
             size, steps, seed);
     } else if (type == 2) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<8, 16384, 64, true, true>, 1, 8, 64, 16384>(
+        test<dbv::simple_bv<8, 16384, 64, true, true>, 1, 8, 64, 16384>(
             size, steps, seed);
     } else if (type == 3) {
         std::cerr << "uint64_t, 64, 0, 16384" << std::endl;
-        test<bv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
+        test<dbv::simple_bv<0, 16384, 64, true, true>, 1, 0, 64, 16384>(
             size, steps, seed);
     } else if (type == 4) {
         std::cerr << "uint64_t, 0, 0, 0" << std::endl;
         test_sdsl(size, steps, seed);
     } else if (type == 5) {
         std::cerr << "uint64_t, 64, 16, 16384" << std::endl;
-        test<bv::simple_bv<16, 16384, 64, true, true, true>, 1, 16, 64, 16384,
+        test<dbv::simple_bv<16, 16384, 64, true, true, true>, 1, 16, 64, 16384,
              false>(size, steps, seed);
     } else if (type == 6) {
         std::cerr << "unsorted, 64, 512, 16384" << std::endl;
-        test<bv::simple_bv<512, 16384, 64, true, true, false, false>, 1, 512, 64,
+        test<dbv::simple_bv<512, 16384, 64, true, true, false, false>, 1, 512, 64,
              16384, false>(size, steps, seed);
     }
     return 0;
