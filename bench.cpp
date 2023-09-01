@@ -404,7 +404,7 @@ int main(int argc, char const* argv[]) {
              false>(size, steps, seed);
     } else if (type == 6) {
         std::cerr << "unsorted, 64, 512, 16384" << std::endl;
-        test<bv::simple_bv<512, 16384, 64, true, true, false, false>, 1, 512, 64,
+        test<bv::simple_bv<128, 16384, 64, true, true, false, false>, 1, 128, 64,
              16384, false>(size, steps, seed);
     }
     return 0;

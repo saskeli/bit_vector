@@ -117,7 +117,7 @@ class buffer {
         for (uint16_t i = buffer_elems_; i < buffer_size; i++) [[unlikely]] {
             buffer_[i] = BufferElement::max();
         }
-        sort<buffer_size, true>(scratch, buffer_);
+        sort<buffer_size, true>(buffer_, scratch);
     }
 
     bool is_full() const { return buffer_elems_ == buffer_size; }
@@ -478,48 +478,68 @@ class buffer {
      }
 
    private:
+    template<uint16_t init, uint16_t step, uint16_t size>
+    constexpr std::array<uint16_t, size> init_arr() {
+        std::array<uint16_t, size> ret;
+        for (uint16_t i = 0; i < size; ++i) {
+            ret[i] = i * step + init;
+        }
+        return ret;
+    }
+
     template <uint16_t block_size, bool in_target>
-    void sort(BufferElement source[], BufferElement target[]) {
+    void sort(BufferElement target[], BufferElement source[]) {
         if constexpr (block_size <= bf_limit && in_target) {
             for (uint64_t i = 0; i < buffer_size; i += block_size) {
-                bf_sort<block_size>(target + i);
+                bf_sort<block_size>(buffer_ + i);
             }
         } else {
             const constexpr uint16_t sub_block_size = block_size / 2;
             const constexpr uint16_t blocks = buffer_size / block_size;
-            sort<sub_block_size, !in_target>(target, source);
-            uint16_t a_idx[blocks];
-            uint16_t b_idx[blocks];
-            uint16_t a_lim[blocks];
-            uint16_t b_lim[blocks];
-            uint16_t inversions[blocks];
+            sort<sub_block_size, !in_target>(source, target);
+            auto a_s(init_arr<0, block_size, blocks>());
+            auto a_e(init_arr<sub_block_size - 1, block_size, blocks>());
+            auto b_s(init_arr<sub_block_size, block_size, blocks>());
+            auto b_e(init_arr<block_size - 1, block_size, blocks>());
+            auto s_inv(init_arr<0, 0, blocks>());
+            auto e_inv(init_arr<sub_block_size, 0, blocks>());
 
-            for (uint16_t i = 0; i < blocks; ++i) {
-                a_idx[i] = i * block_size;
-                b_idx[i] = a_idx[i] + sub_block_size;
-                a_lim[i] = b_idx[i];
-                b_lim[i] = b_idx[i] + sub_block_size;
-                inversions[i] = 0;
-            }
-
-            for (uint16_t i = 0; i < block_size; ++i) {
+            for (uint16_t i = 0; i < block_size / 2; ++i) {
                 for (uint16_t j = 0; j < blocks; ++j) {
-                    if (a_idx[j] < a_lim[j]) {
-                        BufferElement pot = source[a_idx[j]] + inversions[j];
-                        if (b_idx[j] < b_lim[j]) {
-                            if (pot < source[b_idx[j]]) {
-                                target[block_size * j + i] = pot;
-                                ++a_idx[j];
+                    if (a_s[j] <= a_e[j]) [[likely]] {
+                        auto pot = source[a_s[j]] + s_inv[j];
+                        if (b_s[j] <= b_e[j]) [[likely]] {
+                            if (pot < source[b_s[j]]) {
+                                target[j * block_size + i] = pot;
+                                ++a_s[j];
                             } else {
-                                target[block_size * j + i] = source[b_idx[j]++];
-                                inversions[j]++;
+                                target[j * block_size + i] = source[b_s[j]++];
+                                ++s_inv[j];
                             }
                         } else {
-                            target[block_size * j + i] = pot;
-                            ++a_idx[j];
+                            target[j * block_size + i] = pot;
+                            ++a_s[j];
                         }
                     } else {
-                        target[block_size * j + i] = source[b_idx[j]++];
+                        target[j * block_size + i] = source[b_s[j]++];
+                    }
+
+                    if (a_e[j] >= a_s[j]) [[likely]] {
+                        auto pot = source[a_e[j]] + e_inv[j];
+                        if (b_e[j] >= b_s[j]) [[likely]] {
+                            if (source[b_e[j]] <= pot) {
+                                target[j * block_size + block_size - i - 1] = pot;
+                                --a_e[j];
+                            } else {
+                                target[j * block_size + block_size - i - 1] = source[b_e[j]--];
+                                --e_inv[j];
+                            }
+                        } else {
+                            target[j * block_size + block_size - i - 1] = pot;
+                            --a_e[j];
+                        }
+                    } else {
+                        target[j * block_size + block_size - i - 1] = source[b_e[j]--];
                     }
                 }
             }
