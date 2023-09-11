@@ -69,7 +69,7 @@ namespace bv {
  * @tparam compressed If true, additional bookkeeping will be done to
  * ensure compressed leaves behave correctly.
  */
-template <class leaf_type, class dtype, uint32_t leaf_size, uint8_t branches,
+template <class leaf_type, class dtype, uint32_t leaf_size, uint16_t branches,
           bool aggressive_realloc = false, bool compressed = false>
 class node : uncopyable {
    private:
@@ -81,7 +81,7 @@ class node : uncopyable {
     /**
      * @brief Number of active children.
      */
-    uint8_t child_count_;  // Bad word alignment. betewen 16 and 48 dead bits...
+    uint16_t child_count_;  // Bad word alignment. betewen 16 and 48 dead bits...
     /**
      * @brief Cumulative child sizes and `(~0) >> 1` for non-existing children.
      */
@@ -139,7 +139,7 @@ class node : uncopyable {
      * @param index Index to access.
      */
     bool at(dtype index) const {
-        uint8_t child_index = child_sizes_.find(index + 1);
+        uint16_t child_index = child_sizes_.find(index + 1);
         index -= child_index != 0 ? child_sizes_.get(child_index - 1) : 0;
         if (has_leaves()) {
             [[unlikely]] return reinterpret_cast<leaf_type*>(
@@ -164,7 +164,7 @@ class node : uncopyable {
      */
     template <class allocator>
     int set(dtype index, bool v, allocator alloc) {
-        uint8_t child_index = child_sizes_.find(index + 1);
+        uint16_t child_index = child_sizes_.find(index + 1);
         int change = 0;
         if (has_leaves()) {
             leaf_type* child =
@@ -203,7 +203,7 @@ class node : uncopyable {
             index -= child_index != 0 ? child_sizes_.get(child_index - 1) : 0;
             change = child->set(index, v, alloc);
         }
-        uint8_t c_count = child_count_;
+        uint16_t c_count = child_count_;
         child_sums_.increment(child_index, c_count, change);
         return change;
     }
@@ -220,7 +220,7 @@ class node : uncopyable {
      * @return \f$\sum_{i = 0}^{\mathrm{index - 1}} \mathrm{bv}[i]\f$.
      */
     dtype rank(dtype index) const {
-        uint8_t child_index = child_sizes_.find(index);
+        uint16_t child_index = child_sizes_.find(index);
         dtype res = 0;
         if (child_index != 0) {
             res = child_sums_.get(child_index - 1);
@@ -248,7 +248,7 @@ class node : uncopyable {
      * \mathrm{bv}[j]\right) =  \f$ count.
      */
     dtype select(dtype count) const {
-        uint8_t child_index = child_sums_.find(count);
+        uint16_t child_index = child_sums_.find(count);
         dtype res = 0;
         if (child_index != 0) {
             res = child_sizes_.get(child_index - 1);
@@ -278,13 +278,13 @@ class node : uncopyable {
     void deallocate(allocator* alloc) {
         if (has_leaves()) {
             leaf_type** children = reinterpret_cast<leaf_type**>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 leaf_type* l = children[i];
                 alloc->deallocate_leaf(l);
             }
         } else {
             node** children = reinterpret_cast<node**>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 node* n = children[i];
                 n->deallocate(alloc);
                 alloc->deallocate_node(n);
@@ -297,7 +297,7 @@ class node : uncopyable {
      *
      * @return Number of children.
      */
-    uint8_t child_count() const { return child_count_; }
+    uint16_t child_count() const { return child_count_; }
 
     /**
      * @brief Get pointer to the children of this node.
@@ -370,7 +370,7 @@ class node : uncopyable {
      *
      * @return Pointer to the i<sup>th</sup> child.
      */
-    void* child(uint8_t i) { return children_[i]; }
+    void* child(uint16_t i) { return children_[i]; }
 
     /**
      * @brief Insert "value" at "index".
@@ -423,10 +423,10 @@ class node : uncopyable {
      *
      * @param elems Number of elements to remove.
      */
-    void clear_first(uint8_t elems) {
+    void clear_first(uint16_t elems) {
         child_sizes_.clear_first(elems, child_count_);
         child_sums_.clear_first(elems, child_count_);
-        for (uint8_t i = 0; i < child_count_ - elems; i++) {
+        for (uint16_t i = 0; i < child_count_ - elems; i++) {
             children_[i] = children_[i + elems];
         }
         child_count_ -= elems;
@@ -443,12 +443,12 @@ class node : uncopyable {
      * @param other Node to transfer elements from.
      * @param elems Number of elements to transfer.
      */
-    void transfer_append(node* other, uint8_t elems) {
+    void transfer_append(node* other, uint16_t elems) {
         void** o_children = other->children();
         branching* o_sizes = other->child_sizes();
         branching* o_sums = other->child_sums();
-        uint8_t local_index = child_count_;
-        for (uint8_t i = 0; i < elems; i++) {
+        uint16_t local_index = child_count_;
+        for (uint16_t i = 0; i < elems; i++) {
             children_[local_index] = o_children[i];
             local_index++;
         }
@@ -467,7 +467,7 @@ class node : uncopyable {
      *
      * @param elems Number of elements to remove
      */
-    void clear_last(uint8_t elems) {
+    void clear_last(uint16_t elems) {
         child_sizes_.clear_last(elems, child_count_);
         child_sums_.clear_last(elems, child_count_);
         child_count_ -= elems;
@@ -484,13 +484,13 @@ class node : uncopyable {
      * @param other Node to transfer elements from.
      * @param elems Number of elements to transfer.
      */
-    void transfer_prepend(node* other, uint8_t elems) {
+    void transfer_prepend(node* other, uint16_t elems) {
         void** o_children = other->children();
         branching* o_sizes = other->child_sizes();
         branching* o_sums = other->child_sums();
-        uint8_t o_size = other->child_count();
+        uint16_t o_size = other->child_count();
         memmove(children_ + elems, children_, child_count_ * sizeof(void*));
-        for (uint8_t i = 0; i < elems; i++) {
+        for (uint16_t i = 0; i < elems; i++) {
             children_[i] = o_children[o_size - elems + i];
         }
         child_sizes_.prepend(elems, child_count_, o_size, o_sizes);
@@ -512,8 +512,8 @@ class node : uncopyable {
         void** o_children = other->children();
         branching* o_sizes = other->child_sizes();
         branching* o_sums = other->child_sums();
-        uint8_t o_size = other->child_count();
-        for (uint8_t i = 0; i < o_size; i++) {
+        uint16_t o_size = other->child_count();
+        for (uint16_t i = 0; i < o_size; i++) {
             children_[child_count_ + i] = o_children[i];
         }
         child_sizes_.append(o_size, child_count_, o_sizes);
@@ -534,12 +534,12 @@ class node : uncopyable {
         if (has_leaves()) {
             leaf_type* const* children =
                 reinterpret_cast<leaf_type* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 ret += children[i]->bits_size();
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 ret += children[i]->bits_size();
             }
         }
@@ -549,12 +549,12 @@ class node : uncopyable {
     void flush() {
         if (has_leaves()) {
             leaf_type** children = reinterpret_cast<leaf_type**>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->flush();
             }
         } else {
             node** children = reinterpret_cast<node**>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->flush();
             }
         }
@@ -563,12 +563,12 @@ class node : uncopyable {
     uint64_t dump(uint64_t* data, uint64_t offset) {
         if (has_leaves()) {
             leaf_type** children = reinterpret_cast<leaf_type**>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 offset = children[i]->dump(data, offset);
             }
         } else {
             node** children = reinterpret_cast<node**>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 offset = children[i]->dump(data, offset);
             }
         }
@@ -603,7 +603,7 @@ class node : uncopyable {
         if (has_leaves()) {
             leaf_type* const* children =
                 reinterpret_cast<leaf_type* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 uint64_t child_size = children[i]->size();
                 assert(child_size >= leaf_size / 3);
                 child_s_sum += child_size;
@@ -618,7 +618,7 @@ class node : uncopyable {
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 uint64_t child_size = children[i]->size();
                 assert(child_size >= branches / 3);
                 child_s_sum += child_size;
@@ -648,7 +648,7 @@ class node : uncopyable {
                   << "\"child_count\": " << int(child_count_) << ",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"child_sizes\": [";
-        for (uint8_t i = 0; i < branches; i++) {
+        for (uint16_t i = 0; i < branches; i++) {
             std::cout << child_sizes_.get(i);
             if (i != branches - 1) {
                 std::cout << ", ";
@@ -657,7 +657,7 @@ class node : uncopyable {
         std::cout << "],\n"
                   << "\"p_sum\": " << p_sum() << ",\n"
                   << "\"child_sums\": [";
-        for (uint8_t i = 0; i < branches; i++) {
+        for (uint16_t i = 0; i < branches; i++) {
             std::cout << child_sums_.get(i);
             if (i != branches - 1) {
                 std::cout << ", ";
@@ -668,7 +668,7 @@ class node : uncopyable {
         if (has_leaves()) {
             leaf_type* const* children =
                 reinterpret_cast<leaf_type* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->print(internal_only);
                 if (i != child_count_ - 1) {
                     std::cout << ",";
@@ -677,7 +677,7 @@ class node : uncopyable {
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->print(internal_only);
                 if (i != child_count_ - 1) {
                     std::cout << ",";
@@ -693,14 +693,14 @@ class node : uncopyable {
         if (has_leaves()) {
             leaf_type* const* children =
                 reinterpret_cast<leaf_type* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 auto op = children[i]->leaf_usage();
                 p.first += op.first;
                 p.second += op.second;
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
-            for (uint8_t i = 0; i < child_count_; i++) {
+            for (uint16_t i = 0; i < child_count_; i++) {
                 auto op = children[i]->leaf_usage();
                 p.first += op.first;
                 p.second += op.second;
@@ -724,7 +724,7 @@ class node : uncopyable {
      * @tparam allocator type of alloc.
      */
     template <class allocator>
-    void split_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
+    void split_leaf(uint16_t index, leaf_type* leaf, allocator* alloc) {
         dtype cap = leaf->capacity();
         //leaf->print(false);
         //std::cout << std::endl;
@@ -775,7 +775,7 @@ class node : uncopyable {
      * @param alloc Instance of allocator to use for reallocation.
      */
     template <class allocator>
-    void rebalance_leaf(uint8_t index, leaf_type* leaf, allocator* alloc) {
+    void rebalance_leaf(uint16_t index, leaf_type* leaf, allocator* alloc) {
         //if (!compressed && do_debug) {
         //        std::cout << "Rebalancing leaf " << int(index) << ":" << std::endl;
         //}
@@ -903,7 +903,7 @@ class node : uncopyable {
                 }
             }
             // Update cumulative sizes and sums.
-            for (uint8_t i = child_count_; i > index; i--) {
+            for (uint16_t i = child_count_; i > index; i--) {
                 children_[i] = children_[i - 1];
             }
             children_[index] = new_child;
@@ -1029,17 +1029,9 @@ class node : uncopyable {
      */
     template <class allocator>
     void leaf_insert(dtype index, bool value, allocator* alloc) {
-        uint8_t child_index = child_sizes_.find(index);
+        uint16_t child_index = child_sizes_.find(index);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
-        //if (!compressed && do_debug){
-        //    std::cout << "leaf insert" << std::endl;
-        //    child->print();
-        //    std::cout << std::endl;
-        //}
         if (child->need_realloc()) {
-            //if (!compressed && do_debug) {
-            //    std::cout << "Need realloc" << std::endl;
-            //}
             dtype cap = child->capacity();
             dtype n_cap = child->desired_capacity();
             if constexpr (compressed) {
@@ -1074,11 +1066,6 @@ class node : uncopyable {
             child = reinterpret_cast<leaf_type*>(children_[child_index]);
             [[unlikely]] (void(0));
         }
-        //if (!compressed && do_debug) {
-        //    std::cout << "After possible realloc" << std::endl;
-        //    child->print();
-        //    std::cout << std::endl;
-        //}
         if (child_index != 0) {
             [[likely]] index -= child_sizes_.get(child_index - 1);
         }
@@ -1105,7 +1092,7 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for allocation.
      */
     template <class allocator>
-    void rebalance_node(uint8_t index, allocator* alloc) {
+    void rebalance_node(uint16_t index, allocator* alloc) {
         // Number of elements that can be added to the left sibling.
         uint32_t l_cap = 0;
         if (index > 0) {
@@ -1183,7 +1170,7 @@ class node : uncopyable {
      */
     template <class allocator>
     void node_insert(dtype index, bool value, allocator* alloc) {
-        uint8_t child_index = child_sizes_.find(index);
+        uint16_t child_index = child_sizes_.find(index);
         node* child = reinterpret_cast<node*>(children_[child_index]);
 #ifdef DEBUG
         if (child_index >= child_count_) {
@@ -1263,7 +1250,7 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for allocation and reallocation.
      */
     template <class allocator>
-    void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint8_t idx,
+    void rebalance_leaves_left(leaf_type* a, leaf_type* b, uint16_t idx,
                                allocator* alloc) {
         dtype b_cap = b->capacity();
         dtype addition = (a->size() - leaf_size / 3) / 2;
@@ -1311,7 +1298,7 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for reallocation and deallocation.
      */
     template <class allocator>
-    void merge_leaves(leaf_type* a, leaf_type* b, uint8_t idx,
+    void merge_leaves(leaf_type* a, leaf_type* b, uint16_t idx,
                       allocator* alloc) {
         dtype a_cap = a->capacity();
         if (a_cap * WORD_BITS < a->size() + b->size()) {
@@ -1323,7 +1310,7 @@ class node : uncopyable {
         }
         a->append_all(b);
         alloc->deallocate_leaf(b);
-        for (uint8_t i = idx; i < child_count_ - 1; i++) {
+        for (uint16_t i = idx; i < child_count_ - 1; i++) {
             children_[i] = children_[i + 1];
         }
         children_[idx] = a;
@@ -1347,7 +1334,7 @@ class node : uncopyable {
      */
     template <class allocator>
     bool leaf_remove(dtype index, allocator* alloc) {
-        uint8_t child_index = child_sizes_.find(index + 1);
+        uint16_t child_index = child_sizes_.find(index + 1);
         leaf_type* child = reinterpret_cast<leaf_type*>(children_[child_index]);
         if (child->size() <= leaf_size / 3) {
             if (child_index == 0) {
@@ -1404,7 +1391,7 @@ class node : uncopyable {
      * @param b "Right" node.
      * @param idx Index of "left" node for updating cumulative sizes and sums.
      */
-    void rebalance_nodes_right(node* a, node* b, uint8_t idx) {
+    void rebalance_nodes_right(node* a, node* b, uint16_t idx) {
         a->transfer_append(b, (b->child_count() - branches / 3) / 2);
         child_sizes_.set(idx, a->size());
         [[unlikely]] child_sums_.set(idx, a->p_sum());
@@ -1424,7 +1411,7 @@ class node : uncopyable {
      * @param idx Index of the Left node for use when updating cumulative sizes
      * and sums.
      */
-    void rebalance_nodes_left(node* a, node* b, uint8_t idx) {
+    void rebalance_nodes_left(node* a, node* b, uint16_t idx) {
         b->transfer_prepend(a, (a->child_count() - branches / 3) / 2);
         if (idx == 0) {
             child_sizes_.set(0, a->size());
@@ -1451,10 +1438,10 @@ class node : uncopyable {
      * @param alloc Allocator instance to use for deallocation.
      */
     template <class allocator>
-    void merge_nodes(node* a, node* b, uint8_t idx, allocator* alloc) {
+    void merge_nodes(node* a, node* b, uint16_t idx, allocator* alloc) {
         a->append_all(b);
         alloc->deallocate_node(b);
-        for (uint8_t i = idx; i < child_count_ - 1; i++) {
+        for (uint16_t i = idx; i < child_count_ - 1; i++) {
             children_[i] = children_[i + 1];
         }
         children_[idx] = a;
@@ -1478,7 +1465,7 @@ class node : uncopyable {
      */
     template <class allocator>
     bool node_remove(dtype index, allocator* alloc) {
-        uint8_t child_index = child_sizes_.find(index + 1);
+        uint16_t child_index = child_sizes_.find(index + 1);
         node* child = reinterpret_cast<node*>(children_[child_index]);
         if (child->child_count_ <= branches / 3) {
             if (child_index == 0) {

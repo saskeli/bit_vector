@@ -47,10 +47,10 @@ namespace bv {
  *                          leaf.\n Needs to be divisible by 64 and in the
  *                          [265, 16777215) range.
  * @tparam branching_factor Maximum number of children for an internal node.\n
- *                          Needs to be one of {8, 16, 32, 64, 128}.
+ *                          Needs to be a power of two >= 8.
  * @tparam avx              Should avx population counting be used for rank.
  */
-template <uint16_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
+template <uint16_t buffer_size, uint64_t leaf_size, uint16_t branching_factor,
           bool avx = true, bool aggressive_realloc = false,
           bool hybrid_rle = false, bool sorted_buffers = true>
 using simple_bv = bit_vector<
@@ -77,10 +77,10 @@ using simple_bv = bit_vector<
  * @tparam leaf_size        Maximum number of elements stored in a single
  *                          leaf.\n 265 <= `leaf_size` < 16777215.
  * @tparam branching_factor Maximum number of children for an internal node.\n
- *                          Needs to be one 8, 16, 32, 64 or 128.
+ *                          Needs to be  a power of two >= 8.
  * @tparam avx              Should avx population counting be used for rank.
  */
-template <uint16_t buffer_size, uint64_t leaf_size, uint8_t branching_factor,
+template <uint16_t buffer_size, uint64_t leaf_size, uint16_t branching_factor,
           bool avx = true, bool aggressive_realloc = false,
           bool hybrid_rle = false>
 using small_bv = bit_vector<

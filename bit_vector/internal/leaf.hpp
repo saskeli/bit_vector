@@ -731,7 +731,7 @@ class leaf : uncopyable {
         if (!sorted_buffers) {
             o_buf.sort();
         }
-        uint8_t ob_idx = 0;
+        uint16_t ob_idx = 0;
         while (d_idx < o_bytes) {
             uint32_t rl = 0;
             uint8_t r_bytes = 1;
@@ -820,11 +820,6 @@ class leaf : uncopyable {
      * @param elems Number of elements to transfer.
      */
     void transfer_append(leaf* other, uint32_t elems) {
-        // if (compressed && do_debug) {
-        //     std::cout << "Transfer append" << std::endl;
-        //     print(false);
-        //     std::cout << std::endl;
-        // }
         if constexpr (compressed) {
             if (is_compressed()) {
                 flatten();
@@ -844,10 +839,6 @@ class leaf : uncopyable {
         } else {
             other->commit();
         }
-        // if (compressed && do_debug) {
-        //     std::cout << "Other is not compressed and I am flat" <<
-        //     std::endl; print(false); std::cout << std::endl;
-        // }
         const uint64_t* o_data = other->data();
         uint32_t split_point = size_ % WORD_BITS;
         uint32_t target_word = size_ / WORD_BITS;

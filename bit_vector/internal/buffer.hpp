@@ -17,7 +17,7 @@ class buffer {
    private:
     class BufferElement {
         static const constexpr uint32_t ONE = 1;
-        static const constexpr uint8_t OFFSET = 0b10;
+        static const constexpr uint16_t OFFSET = 0b10;
         uint32_t v_;
 
         BufferElement(uint32_t val) : v_(val) {}

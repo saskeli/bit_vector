@@ -34,7 +34,7 @@ namespace bv {
  * ensure compressed leaves behave correctly.
  */
 template <class leaf, class node, class allocator, uint32_t leaf_size,
-          uint8_t branches, class dtype, bool aggressive_realloc = false,
+          uint16_t branches, class dtype, bool aggressive_realloc = false,
           bool compressed = false>
 class bit_vector : uncopyable {
    private:

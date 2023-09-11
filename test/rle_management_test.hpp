@@ -18,7 +18,6 @@ void node_split_rle_test() {
     n->append_child(l);
     EXPECT_EQ(n->child_count(), 2u);
     n->insert(300, true, a);
-
     EXPECT_EQ(n->child_count(), 3u);
     EXPECT_EQ(n->size(), ((~uint32_t(0)) >> 1) + 301u);
     EXPECT_EQ(n->p_sum(), 1u);
@@ -29,7 +28,7 @@ void node_split_rle_test() {
     }
     EXPECT_EQ(n->select(1), 300u);
 
-    n->deallocate(a);
+    //n->deallocate(a);
     a->deallocate_leaf(n);
     delete a;
 }
