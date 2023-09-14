@@ -366,12 +366,13 @@ void node_access_single_leaf_test() {
     for (uint64_t j = 0; j < 128; j++) {
         l->insert(0, j % 2 != 0);
     }
+    
     n->append_child(l);
 
     ASSERT_EQ(64u, n->p_sum());
     ASSERT_EQ(128u, n->size());
     ASSERT_EQ(1u, n->child_count());
-
+    
     for (uint64_t i = 0; i < 128; i++) {
         ASSERT_EQ(i % 2 == 0, n->at(i));
     }

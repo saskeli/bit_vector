@@ -33,9 +33,7 @@ class branchless_scan : uncopyable {
      */
     dtype elems_[branches];
 
-    static_assert((branches == 8) || (branches == 16) || (branches == 32) ||
-                      (branches == 64) || (branches == 128) || (branches == 256) ||
-                      (branches == 512) || (branches == 1024) || (branches == 2048),
+    static_assert((__builtin_popcount(branches) == 1) && (branches < std::numeric_limits<uint16_t>::max()),
                   "branching factor needs to be a reasonable power of 2");
 
    public:
@@ -118,12 +116,14 @@ class branchless_scan : uncopyable {
 
     /**
      * @brief Inserts a new value into the cumulative sums.
-     * 
-     * Intended for use when a new node is created after an old node by splitting. 
-     * Thus `index` is greater than 0 and less than or equal to `array_size`.
-     * 
-     * Cumulative sums of only 1 element will be impacted since this is just a split.
-     * 
+     *
+     * Intended for use when a new node is created after an old node by
+     * splitting. Thus `index` is greater than 0 and less than or equal to
+     * `array_size`.
+     *
+     * Cumulative sums of only 1 element will be impacted since this is just a
+     * split.
+     *
      * @param index Position of new element.
      * @param array_size Number of elements currently in the array.
      * @param value Value of the new element.
@@ -199,7 +199,8 @@ class branchless_scan : uncopyable {
      * @param array_size Number of elements stored in `this`.
      * @param other      Other cumulative size structure to copy from.
      */
-    void append(uint16_t n_elems, uint16_t array_size, const branchless_scan* const other) {
+    void append(uint16_t n_elems, uint16_t array_size,
+                const branchless_scan* const other) {
         dtype addend = array_size != 0 ? elems_[array_size - 1] : 0;
         for (uint16_t i = 0; i < n_elems; i++) {
             elems_[i + array_size] = addend + other->get(i);
@@ -280,70 +281,18 @@ class branchless_scan : uncopyable {
         constexpr dtype SIGN_BIT = ~((~dtype(0)) >> 1);
         constexpr dtype num_bits = sizeof(dtype) * 8;
         constexpr dtype lines = CACHE_LINE / sizeof(dtype);
+        constexpr const uint16_t u_bits = 30 - __builtin_clz(branches);
         for (dtype i = 0; i < branches; i += lines) {
             __builtin_prefetch(elems_ + i);
         }
-        uint16_t idx;
-        if constexpr (branches == 2048) {
-            idx = (uint16_t(1) << 10) - 1;
+        uint16_t idx = (uint16_t(1) << u_bits) - 1;
+        for (uint16_t i = u_bits; i > 0; --i) {
+            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >>
+                    (num_bits - i - 1)) |
+                   (uint16_t(1) << (i - 1));
         }
-        if constexpr (branches == 1024) {
-            idx = (uint16_t(1) << 9) - 1;
-        } else if constexpr (branches > 1024) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 11)) |
-                   (uint16_t(1) << 9);
-        }
-        if constexpr (branches == 512) {
-            idx = (uint16_t(1) << 8) - 1;
-        } else if constexpr (branches > 512) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 10)) |
-                   (uint16_t(1) << 8);
-        }
-        if constexpr (branches == 256) {
-            idx = (uint16_t(1) << 7) - 1;
-        } else if constexpr (branches > 256) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 9)) |
-                   (uint16_t(1) << 7);
-        }
-        if constexpr (branches == 128) {
-            idx = (uint16_t(1) << 6) - 1;
-        } else if constexpr (branches > 128) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 8)) |
-                   (uint16_t(1) << 6);
-        }
-            
-        if constexpr (branches == 64) {
-            idx = (uint16_t(1) << 5) - 1;
-        } else if constexpr (branches > 64) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 7)) |
-                   (uint16_t(1) << 5);
-        }
-            
-        if constexpr (branches == 32) {
-            idx = (uint16_t(1) << 4) - 1;
-        } else if constexpr (branches > 32) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 6)) |
-                   (uint16_t(1) << 4);
-        }
-        if constexpr (branches == 16) {
-            idx = (uint16_t(1) << 3) - 1;
-        } else if constexpr (branches > 16) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 5)) |
-                   (uint16_t(1) << 3);
-        }
-        
-        if constexpr (branches == 8) {
-            idx = (uint16_t(1) << 2) - 1;
-        } else {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 4)) |
-                   (uint16_t(1) << 2);
-        }
-
-        idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 3)) |
-               (uint16_t(1) << 1);
-        idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 2)) |
-               uint16_t(1);
-        return idx ^ (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
+        idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
+        return idx;
     }
 };
 

@@ -100,9 +100,7 @@ class node : uncopyable {
     static_assert((leaf_size % 128) == 0,
                   "leaf size needs to be divisible by 128");
     static_assert(leaf_size < 0xffffff, "leaf size must fit in 24 bits");
-    static_assert((branches == 8) || (branches == 16) || (branches == 32) ||
-                      (branches == 64) || (branches == 128),
-                  "branching factor needs to be a reasonable power of 2");
+    static_assert(branches > 2, "Convenient shortcuts and assumptions if this holds.")
 
    public:
     /**
