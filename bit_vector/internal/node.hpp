@@ -1392,7 +1392,7 @@ class node : uncopyable {
     void rebalance_nodes_right(node* a, node* b, uint16_t idx) {
         a->transfer_append(b, (b->child_count() - branches / 3) / 2);
         child_sizes_.set(idx, a->size());
-        [[unlikely]] child_sums_.set(idx, a->p_sum());
+        child_sums_.set(idx, a->p_sum());
     }
 
     /**

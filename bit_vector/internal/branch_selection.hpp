@@ -33,7 +33,8 @@ class branchless_scan : uncopyable {
      */
     dtype elems_[branches];
 
-    static_assert((__builtin_popcount(branches) == 1) && (branches < std::numeric_limits<uint16_t>::max()),
+    static_assert((__builtin_popcount(branches) == 1) &&
+                      (branches < std::numeric_limits<uint16_t>::max()),
                   "branching factor needs to be a reasonable power of 2");
 
    public:
@@ -287,12 +288,246 @@ class branchless_scan : uncopyable {
         }
         uint16_t idx = (uint16_t(1) << u_bits) - 1;
         for (uint16_t i = u_bits; i > 0; --i) {
-            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >>
-                    (num_bits - i - 1)) |
+            idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - i - 1)) |
                    (uint16_t(1) << (i - 1));
         }
         idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
         return idx;
+    }
+};
+
+template <class dtype, dtype branches>
+class heap_order_branching {
+   private:
+    static_assert((__builtin_popcount(branches) == 1) && (brances > 1) &&
+                      (branches < std::numeric_limits<uint16_t>::max()),
+                  "branching factor needs to be a reasonable power of 2");
+
+    dtype values_[branches];
+
+   public:
+    heap_order_branching() : values_() {}
+
+    /**
+     * @brief Get the cumulative sum at `index`.
+     *
+     * @param index Index to query.
+     * @return Cumulative sum at `index`.
+     */
+    dtype get(uint16_t index) const {
+        if (index == branches - 1) {
+            return values_[0];
+        }
+        uint16_t trg = branches / 2;
+        uint16_t offset = trg / 2;
+        uint16_t idx = 1;
+        dtype res = 0;
+        const constexpr uint16_t levels = 31 - __builtin_clz(branches);
+        for (uint32_t i = 0; i < levels; ++i) {
+            if (trg >= index) {
+                res += values_[idx];
+                trg += offset;
+                idx *= 2;
+                ++idx;
+            } else {
+                trg -= offset;
+                idx *= 2;
+            }
+            offset /= 2;
+        }
+        return res;
+    }
+
+    /**
+     * @brief Set the value at `index` to `value`.
+     *
+     * Does no updating of internal sums or parameter validation.
+     *
+     * A call to `get(i)` will return `v` after a `set(i, v)` call. All other
+     * values will remain unchanged.
+     *
+     * @param index Index of value to modify.
+     * @param value New value to set.
+     */
+    void set(uint16_t index, dtype value) { }
+
+    /**
+     * @brief Increments all values in \f$[\mathrm{from},
+     * \mathrm{array\size_})\f$ range
+     *
+     * Cumulative sums will always increment all subsequent values. Has to be
+     * passed as a parameter, since the value is not maintained by the
+     * `branch_selection` object.
+     *
+     * The value may be negative or zero and will behave as expected.
+     *
+     * @tparam T Either a signer or unsigned integer type.
+     * @param from       Start point of increment.
+     * @param array_size End point of increment (size of array).
+     * @param change     Value to add ot each element in the range.
+     */
+    template <class T>
+    void increment(uint16_t from, uint16_t array_size, T change) {
+        
+    }
+
+    /**
+     * @brief Inserts a new value into the cumulative sums.
+     *
+     * Intended for use when a new node is created between 2 existing nodes.
+     * Thus `index` is greater than 0 and less than `array_size`.
+     *
+     * The cumulative sums of only 2 elements will be impacted since new
+     * "things" are not added. Rather some of the existing "things" are
+     * rebalanced, with the new element having some of the "old" "things".
+     *
+     * @param index Position of new element.
+     * @param array_size Number of elements currently in the array.
+     * @param a_value Value of the left element.
+     * @param b_value Value of the right element.
+     */
+    void insert(uint16_t index, uint16_t array_size, dtype a_value,
+                dtype b_value) {
+        
+    }
+
+    /**
+     * @brief Inserts a new value into the cumulative sums.
+     *
+     * Intended for use when a new node is created after an old node by
+     * splitting. Thus `index` is greater than 0 and less than or equal to
+     * `array_size`.
+     *
+     * Cumulative sums of only 1 element will be impacted since this is just a
+     * split.
+     *
+     * @param index Position of new element.
+     * @param array_size Number of elements currently in the array.
+     * @param value Value of the new element.
+     */
+    void insert(uint16_t index, uint16_t array_size, dtype value) {
+        
+    }
+
+    /**
+     * @brief Removes a value from the cumulative sums
+     *
+     * Intended for use when merging nodes.
+     *
+     * Does not update the cumulative sums as it is expected that the elements
+     * in the removed node have been moved.
+     *
+     * @param index Position of element to remove.
+     * @param array_size Number of elements in the array.
+     */
+    void remove(uint16_t index, uint16_t array_size) {
+        
+    }
+
+    /**
+     * @brief Removes the first `n` elements from the structure.
+     *
+     * Intended for use when rebalancing. A sibling has taken over some of the
+     * children and this is called to remove the moved children from the current
+     * node. Subsequent cumulative sums will be updated accordingly.
+     *
+     * @param n          Number of elements to remove.
+     * @param array_size Number of elements stored.
+     */
+    void clear_first(uint16_t n, uint16_t array_size) {
+        
+    }
+
+    /**
+     * @brief Removes the last `n` elements from the structure.
+     *
+     * Intended for use when rebalancing. A sibling has taken over some of the
+     * children and this is called to remove the moved children from the current
+     * node.
+     *
+     * @param n          Number of elements to remove.
+     * @param array_size Number of elements stored.
+     */
+    void clear_last(uint16_t n, uint16_t array_size) {
+        
+    }
+
+    /**
+     * @brief Adds elements from `other` to the end of `this`
+     *
+     * Intended for use when rebalancing. Adds `n_elemes` elements from `other`
+     * to the end of "these" cumulative sums. Should be subsequently removed
+     * from `other`
+     *
+     * @param n_elems    Number of elements to append.
+     * @param array_size Number of elements stored in `this`.
+     * @param other      Other cumulative size structure to copy from.
+     */
+    void append(uint16_t n_elems, uint16_t array_size,
+                const branchless_scan* const other) {
+        
+    }
+
+    /**
+     * @brief Adds single element to the end of `this`
+     *
+     * Used when splitting root nodes.
+     *
+     * @param index Size of this.
+     * @param value Value to append.
+     */
+    void append(uint16_t index, dtype value) {
+        
+    }
+
+    /**
+     * @brief Adds elements form `other` to the start of `this`
+     *
+     * Intended for use when rebalancing. Adds `n_elemes` elements from `other`
+     * to the start of "these" cumulative sums. Should be subsequently removed
+     * from `other`
+     *
+     * @param n_elems    Number of elements to append.
+     * @param array_size Number of elements stored in `this`.
+     * @param o_size     Number of elements stored in `other`.
+     * @param other      Other cumulative size structure to copy from.
+     */
+    void prepend(uint16_t n_elems, uint16_t array_size, uint16_t o_size,
+                 const branchless_scan* const other) {
+        
+    }
+
+    /**
+     * @brief Find the lowest child index s.t. the cumulative sum at the index
+     * is at least q.
+     *
+     * This is implemented as a branchless binary search that uses the "sign
+     * bit" for index manipulations instead of conditional moves. This is the
+     * reason for limiting the maximum data structure size to `(~dtype(0)) >>
+     * 1`.
+     *
+     * If \f$q > \f$ `elems_[branches - 1]`, this will return either the index
+     * of the last child or the index following the last child. Either way, this
+     * will likely very quickly lead to undefined behaviour and segmentation
+     * fault.
+     *
+     * If `elems_[branches - 1] > (~(dtype(0)) >> 1`, querying is considered
+     * undefined behaviour.
+     *
+     * This conditionally compiles the binary search based on acceptable branch
+     * factors. For low branching factors this is expected to be slightly slower
+     * than efficient vectorized linear searches. For higher branchin factors
+     * this branchless binary search should be faster as long as cache
+     * performance is good. Agressive prefetching is done in an attempt to
+     * ensure that cache misses don't occur during querying. See
+     * https://github.com/saskeli/search_microbench for a simple benchmark.
+     *
+     * @param q Query target
+     * @return \f$\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sums}[i] \geq
+     * q)\f$.
+     */
+    uint16_t find(dtype q) const {
+        
     }
 };
 
