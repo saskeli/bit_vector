@@ -22,7 +22,7 @@ void branching_increment_test() {
     for (uint32_t i = 1; i <= n_branches; i++) {
         b.set(i - 1, i);
     }
-    b.increment(n_branches / 2, n_branches, 1);
+    b.increment(n_branches / 2, 1);
     for (uint32_t i = 0; i < n_branches / 2; i++) {
         ASSERT_EQ(b.get(i), i + 1);
     }
@@ -37,7 +37,7 @@ void branching_delete_first_n_test() {
     for (uint32_t i = 1; i <= n_branches; i++) {
         b.set(i - 1, i);
     }
-    b.clear_first(n_branches / 2, n_branches);
+    b.clear_first(n_branches / 2);
     for (uint8_t i = 0; i < n_branches / 2; i ++) {
         ASSERT_EQ(b.get(i), uint64_t(i + 1));
     }
@@ -77,7 +77,7 @@ void branching_prepend_n_test() {
         a.set(i - 1, i);
         b.set(i - 1, i);
     }
-    a.prepend(n_branches / 2, n_branches / 2, n_branches / 2, &b);
+    a.prepend(n_branches / 2, n_branches / 2, &b);
     for (uint8_t i = 0; i < n_branches; i++) {
         ASSERT_EQ(a.get(i), uint64_t(i + 1)) << "i = " << int(i);
     }
@@ -95,7 +95,7 @@ void branching_transfer_prepend_n_test() {
         ASSERT_EQ(a.get(i - 1), i);
         ASSERT_EQ(b.get(i - 1) , i * 2) << "i = " << i;
     }
-    a.prepend(3, n_branches / 2, n_branches / 2, &b);
+    a.prepend(3, n_branches / 2, &b);
     b.clear_last(3, n_branches);
     for (uint32_t i = 1; i < 3 + n_branches / 2; i++) {
         ASSERT_EQ(a.get(i - 1), min(i, 3u) * 2 + (i > 3 ? i - 3 : 0)) << "i = " << i;
@@ -111,7 +111,7 @@ void branching_insert_test() {
     for (uint32_t i = 1; i <= n_branches / 2; i++) {
         b.set(i - 1, i * 100);
     }
-    b.insert(2, n_branches / 2, 50, 50);
+    b.insert(2, 50, 50);
     ASSERT_EQ(b.get(0), 100u);
     ASSERT_EQ(b.get(1), 150u);
     for (uint8_t i = 2; i < 1 + n_branches / 2; i++) {
@@ -128,7 +128,7 @@ void branch_remove_test() {
     for (uint32_t i = 0; i < n_branches / 2; i++) {
         ASSERT_EQ(b.get(i), uint32_t(i + 1));
     }
-    b.remove(2, n_branches / 2);
+    b.remove(2);
     for (uint32_t i = 0; i < 2; i++) {
         ASSERT_EQ(b.get(i), uint32_t(i + 1));
     }

@@ -41,11 +41,7 @@ class branchless_scan : uncopyable {
     /**
      * Constructor creates an empty container for cumulative sums.
      */
-    branchless_scan() {
-        for (dtype i = 0; i < branches; i++) {
-            elems_[i] = (~dtype(0)) >> 1;
-        }
-    }
+    branchless_scan() : elems_() { }
 
     /**
      * @brief Get the cumulative sum at `index`.
@@ -55,10 +51,12 @@ class branchless_scan : uncopyable {
      */
     dtype get(uint16_t index) const { return elems_[index]; }
 
+    dtype p_sum() const { return elems_[branches - 1]; }
+
     /**
      * @brief Set the value at `index` to `value`.
      *
-     * Does no updating of internal sums or parameter validation.
+     * Does no updating of internal sums or do parameter validation.
      *
      * A call to `get(i)` will return `v` after a `set(i, v)` call. All other
      * values will remain unchanged.
@@ -72,20 +70,17 @@ class branchless_scan : uncopyable {
      * @brief Increments all values in \f$[\mathrm{from},
      * \mathrm{array\size_})\f$ range
      *
-     * Cumulative sums will always increment all subsequent values. Has to be
-     * passed as a parameter, since the value is not maintained by the
-     * `branch_selection` object.
+     * Cumulative sums will always increment all subsequent values.
      *
      * The value may be negative or zero and will behave as expected.
      *
      * @tparam T Either a signer or unsigned integer type.
      * @param from       Start point of increment.
-     * @param array_size End point of increment (size of array).
      * @param change     Value to add ot each element in the range.
      */
     template <class T>
-    void increment(uint16_t from, uint16_t array_size, T change) {
-        for (uint16_t i = from; i < array_size; i++) {
+    void increment(uint16_t from, T change) {
+        for (uint16_t i = from; i < branches; i++) {
             elems_[i] += change;
         }
     }
@@ -101,14 +96,13 @@ class branchless_scan : uncopyable {
      * rebalanced, with the new element having some of the "old" "things".
      *
      * @param index Position of new element.
-     * @param array_size Number of elements currently in the array.
      * @param a_value Value of the left element.
      * @param b_value Value of the right element.
      */
-    void insert(uint16_t index, uint16_t array_size, dtype a_value,
+    void insert(uint16_t index, dtype a_value,
                 dtype b_value) {
         assert(index > 0);
-        for (uint16_t i = array_size; i > index; i--) {
+        for (uint16_t i = branches - 1; i > index; i--) {
             elems_[i] = elems_[i - 1];
         }
         elems_[index - 1] = index != 1 ? elems_[index - 2] + a_value : a_value;
@@ -126,12 +120,11 @@ class branchless_scan : uncopyable {
      * split.
      *
      * @param index Position of new element.
-     * @param array_size Number of elements currently in the array.
      * @param value Value of the new element.
      */
-    void insert(uint16_t index, uint16_t array_size, dtype value) {
+    void insert(uint16_t index, dtype value) {
         assert(index > 0);
-        for (uint16_t i = array_size; i >= index; i--) {
+        for (uint16_t i = branches - 1; i >= index; i--) {
             elems_[i] = elems_[i - 1];
         }
         elems_[index - 1] -= value;
@@ -146,13 +139,11 @@ class branchless_scan : uncopyable {
      * in the removed node have been moved.
      *
      * @param index Position of element to remove.
-     * @param array_size Number of elements in the array.
      */
-    void remove(uint16_t index, uint16_t array_size) {
-        for (uint16_t i = index; i < array_size - 1; i++) {
+    void remove(uint16_t index) {
+        for (uint16_t i = index; i < branches - 1; i++) {
             elems_[i] = elems_[i + 1];
         }
-        elems_[array_size - 1] = (~dtype(0)) >> 1;
     }
 
     /**
@@ -163,13 +154,15 @@ class branchless_scan : uncopyable {
      * node. Subsequent cumulative sums will be updated accordingly.
      *
      * @param n          Number of elements to remove.
-     * @param array_size Number of elements stored.
      */
-    void clear_first(uint16_t n, uint16_t array_size) {
+    void clear_first(uint16_t n) {
         dtype subtrahend = elems_[n - 1];
-        for (uint16_t i = n; i < array_size; i++) {
+        dtype m_v = elems_[branches - 1] - subtrahend;
+        for (uint16_t i = n; i < branches; i++) {
             elems_[i - n] = elems_[i] - subtrahend;
-            elems_[i] = (~dtype(0)) >> 1;
+        }
+        for (uint16_t i = branches - n; i < branches; ++i) {
+            elems_[i] = m_v;
         }
     }
 
@@ -184,15 +177,16 @@ class branchless_scan : uncopyable {
      * @param array_size Number of elements stored.
      */
     void clear_last(uint16_t n, uint16_t array_size) {
-        for (uint16_t i = array_size - n; i < array_size; i++) {
-            elems_[i] = (~dtype(0)) >> 1;
+        dtype m_v = n < array_size ? elems_[array_size - n - 1] : 0;
+        for (uint16_t i = array_size - n; i < branches; i++) {
+            elems_[i] = m_v;
         }
     }
 
     /**
      * @brief Adds elements from `other` to the end of `this`
      *
-     * Intended for use when rebalancing. Adds `n_elemes` elements from `other`
+     * Intended for use when rebalancing. Adds `n_elems` elements from `other`
      * to the end of "these" cumulative sums. Should be subsequently removed
      * from `other`
      *
@@ -205,6 +199,9 @@ class branchless_scan : uncopyable {
         dtype addend = array_size != 0 ? elems_[array_size - 1] : 0;
         for (uint16_t i = 0; i < n_elems; i++) {
             elems_[i + array_size] = addend + other->get(i);
+        }
+        for (uint16_t i = n_elems + array_size; i < branches; ++i) {
+            elems_[i] = elems_[array_size + n_elems - 1];
         }
     }
 
@@ -222,6 +219,10 @@ class branchless_scan : uncopyable {
         } else {
             elems_[index] = elems_[index - 1] + value;
         }
+        for (uint16_t i = index + 1; i < branches; ++i) {
+            elems_[i] = elems_[i - 1];
+        } 
+        
     }
 
     /**
@@ -232,19 +233,18 @@ class branchless_scan : uncopyable {
      * from `other`
      *
      * @param n_elems    Number of elements to append.
-     * @param array_size Number of elements stored in `this`.
      * @param o_size     Number of elements stored in `other`.
      * @param other      Other cumulative size structure to copy from.
      */
-    void prepend(uint16_t n_elems, uint16_t array_size, uint16_t o_size,
+    void prepend(uint16_t n_elems, uint16_t o_size,
                  const branchless_scan* const other) {
-        memmove(elems_ + n_elems, elems_, array_size * sizeof(dtype));
+        memmove(elems_ + n_elems, elems_, (branches - n_elems) * sizeof(dtype));
         dtype subtrahend =
             n_elems < o_size ? other->get(o_size - n_elems - 1) : 0;
         for (uint16_t i = 0; i < n_elems; i++) {
             elems_[i] = other->get(i + o_size - n_elems) - subtrahend;
         }
-        for (uint16_t i = n_elems; i < array_size + n_elems; i++) {
+        for (uint16_t i = n_elems; i < branches; i++) {
             elems_[i] += elems_[n_elems - 1];
         }
     }
@@ -268,9 +268,9 @@ class branchless_scan : uncopyable {
      *
      * This conditionally compiles the binary search based on acceptable branch
      * factors. For low branching factors this is expected to be slightly slower
-     * than efficient vectorized linear searches. For higher branchin factors
+     * than efficient vectorized linear searches. For higher branching factors
      * this branchless binary search should be faster as long as cache
-     * performance is good. Agressive prefetching is done in an attempt to
+     * performance is good. Aggressive prefetching is done in an attempt to
      * ensure that cache misses don't occur during querying. See
      * https://github.com/saskeli/search_microbench for a simple benchmark.
      *
@@ -299,10 +299,10 @@ class branchless_scan : uncopyable {
 template <class dtype, dtype branches>
 class heap_order_branching {
    private:
-    static_assert((__builtin_popcount(branches) == 1) && (brances > 1) &&
+    static_assert((__builtin_popcount(branches) == 1) && (branches > 1) &&
                       (branches < std::numeric_limits<uint16_t>::max()),
                   "branching factor needs to be a reasonable power of 2");
-
+    inline static dtype scratch_[branches];
     dtype values_[branches];
 
    public:
@@ -318,30 +318,35 @@ class heap_order_branching {
         if (index == branches - 1) {
             return values_[0];
         }
+        ++index;
         uint16_t trg = branches / 2;
         uint16_t offset = trg / 2;
         uint16_t idx = 1;
         dtype res = 0;
         const constexpr uint16_t levels = 31 - __builtin_clz(branches);
         for (uint32_t i = 0; i < levels; ++i) {
-            if (trg >= index) {
-                res += values_[idx];
-                trg += offset;
-                idx *= 2;
-                ++idx;
-            } else {
-                trg -= offset;
-                idx *= 2;
-            }
+            bool b = index >= trg;
+            res += b * values_[idx];
+            trg += b * 2 * offset - offset;
+            idx = idx * 2 + b;
             offset /= 2;
         }
         return res;
     }
 
     /**
+     * @brief Gets the total for the entire structure.
+     * 
+     * @return Cumulative sum at `branches - 1`.
+    */
+    dtype p_sum() const {
+        return values_[0];
+    }
+
+    /**
      * @brief Set the value at `index` to `value`.
      *
-     * Does no updating of internal sums or parameter validation.
+     * Does no updating of internal sums or do parameter validation.
      *
      * A call to `get(i)` will return `v` after a `set(i, v)` call. All other
      * values will remain unchanged.
@@ -349,7 +354,36 @@ class heap_order_branching {
      * @param index Index of value to modify.
      * @param value New value to set.
      */
-    void set(uint16_t index, dtype value) { }
+    void set(uint16_t index, dtype value) { 
+        if (index == branches - 1) {
+            values_[0] = value;
+            return;
+        }
+        ++index;
+        uint16_t trg = branches / 2;
+        uint16_t offset = trg / 2;
+        uint16_t idx = 1;
+        int64_t res = value;
+        const constexpr uint16_t levels = 31 - __builtin_clz(branches);
+        for (uint32_t i = 0; i < levels; ++i) {
+            bool b = index >= trg;
+            res -= b * values_[idx];
+            trg += b * 2 * offset - offset;
+            idx = idx * 2 + b;
+            offset /= 2;
+        }
+        --index;
+        trg = branches / 2;
+        offset = trg / 2;
+        idx = 1;
+        for (uint32_t i = 0; i < levels; ++i) {
+            bool b = index >= trg;
+            values_[idx] += (!b) * res;
+            trg += b * 2 * offset - offset;
+            idx = idx * 2 + b;
+            offset /= 2;
+        }
+    }
 
     /**
      * @brief Increments all values in \f$[\mathrm{from},
@@ -362,13 +396,26 @@ class heap_order_branching {
      * The value may be negative or zero and will behave as expected.
      *
      * @tparam T Either a signer or unsigned integer type.
-     * @param from       Start point of increment.
-     * @param array_size End point of increment (size of array).
-     * @param change     Value to add ot each element in the range.
+     * @param index      Element to increment.
+     * @param change     Value to add.
      */
     template <class T>
-    void increment(uint16_t from, uint16_t array_size, T change) {
-        
+    void increment(uint16_t index, T change) {
+        if (from == branches - 1) {
+            values_[0] += change;
+            return;
+        }
+        uint16_t trg = branches / 2;
+        uint16_t offset = trg / 2;
+        uint16_t idx = 1;
+        const constexpr uint16_t levels = 31 - __builtin_clz(branches);
+        for (uint32_t i = 0; i < levels; ++i) {
+            bool b = index >= trg;
+            values_[idx] += (!b) * change;
+            trg += b * 2 * offset - offset;
+            idx = idx * 2 + b;
+            offset /= 2;
+        }
     }
 
     /**
@@ -382,13 +429,13 @@ class heap_order_branching {
      * rebalanced, with the new element having some of the "old" "things".
      *
      * @param index Position of new element.
-     * @param array_size Number of elements currently in the array.
      * @param a_value Value of the left element.
      * @param b_value Value of the right element.
      */
-    void insert(uint16_t index, uint16_t array_size, dtype a_value,
+    void insert(uint16_t index, dtype a_value,
                 dtype b_value) {
-        
+        assert(index > 0);
+
     }
 
     /**
@@ -464,7 +511,7 @@ class heap_order_branching {
      * @param other      Other cumulative size structure to copy from.
      */
     void append(uint16_t n_elems, uint16_t array_size,
-                const branchless_scan* const other) {
+                const heap_order_branching* const other) {
         
     }
 
@@ -493,7 +540,7 @@ class heap_order_branching {
      * @param other      Other cumulative size structure to copy from.
      */
     void prepend(uint16_t n_elems, uint16_t array_size, uint16_t o_size,
-                 const branchless_scan* const other) {
+                 const heap_order_branching* const other) {
         
     }
 
@@ -527,7 +574,7 @@ class heap_order_branching {
      * q)\f$.
      */
     uint16_t find(dtype q) const {
-        
+        return 0;
     }
 };
 

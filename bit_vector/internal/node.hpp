@@ -100,7 +100,7 @@ class node : uncopyable {
     static_assert((leaf_size % 128) == 0,
                   "leaf size needs to be divisible by 128");
     static_assert(leaf_size < 0xffffff, "leaf size must fit in 24 bits");
-    static_assert(branches > 2, "Convenient shortcuts and assumptions if this holds.")
+    static_assert(branches > 2, "Convenient shortcuts and assumptions if this holds.");
 
    public:
     /**
@@ -201,8 +201,7 @@ class node : uncopyable {
             index -= child_index != 0 ? child_sizes_.get(child_index - 1) : 0;
             change = child->set(index, v, alloc);
         }
-        uint16_t c_count = child_count_;
-        child_sums_.increment(child_index, c_count, change);
+        child_sums_.increment(child_index, change);
         return change;
     }
 
@@ -330,7 +329,7 @@ class node : uncopyable {
      * @return Number of elements in subtree.
      */
     dtype size() const {
-        return child_count_ > 0 ? child_sizes_.get(child_count_ - 1) : 0;
+        return child_sizes_.p_sum();
     }
 
     /**
@@ -339,7 +338,7 @@ class node : uncopyable {
      * @return Number of 1-bits in subtree.
      */
     dtype p_sum() const {
-        return child_count_ > 0 ? child_sums_.get(child_count_ - 1) : 0;
+        return child_sums_.p_sum();
     }
 
     /**
@@ -422,8 +421,8 @@ class node : uncopyable {
      * @param elems Number of elements to remove.
      */
     void clear_first(uint16_t elems) {
-        child_sizes_.clear_first(elems, child_count_);
-        child_sums_.clear_first(elems, child_count_);
+        child_sizes_.clear_first(elems);
+        child_sums_.clear_first(elems);
         for (uint16_t i = 0; i < child_count_ - elems; i++) {
             children_[i] = children_[i + elems];
         }
@@ -491,8 +490,8 @@ class node : uncopyable {
         for (uint16_t i = 0; i < elems; i++) {
             children_[i] = o_children[o_size - elems + i];
         }
-        child_sizes_.prepend(elems, child_count_, o_size, o_sizes);
-        child_sums_.prepend(elems, child_count_, o_size, o_sums);
+        child_sizes_.prepend(elems, o_size, o_sizes);
+        child_sums_.prepend(elems, o_size, o_sums);
         child_count_ += elems;
         other->clear_last(elems);
     }
@@ -639,29 +638,29 @@ class node : uncopyable {
      * @param internal_only If true, leaves will not output their data arrays to
      * save space
      */
-    void print(bool internal_only = true) const {
-        std::cout << "{\n\"type\": \"node\",\n"
+    std::ostream& print(bool internal_only = true, std::ostream& out = std::cout) const {
+        out << "{\n\"type\": \"node\",\n"
                   << "\"has_leaves\": " << (has_leaves() ? "true" : "false")
                   << ",\n"
                   << "\"child_count\": " << int(child_count_) << ",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"child_sizes\": [";
         for (uint16_t i = 0; i < branches; i++) {
-            std::cout << child_sizes_.get(i);
+            out << child_sizes_.get(i);
             if (i != branches - 1) {
-                std::cout << ", ";
+                out << ", ";
             }
         }
-        std::cout << "],\n"
+        out << "],\n"
                   << "\"p_sum\": " << p_sum() << ",\n"
                   << "\"child_sums\": [";
         for (uint16_t i = 0; i < branches; i++) {
-            std::cout << child_sums_.get(i);
+            out << child_sums_.get(i);
             if (i != branches - 1) {
-                std::cout << ", ";
+                out << ", ";
             }
         }
-        std::cout << "],\n"
+        out << "],\n"
                   << "\"children\": [\n";
         if (has_leaves()) {
             leaf_type* const* children =
@@ -669,21 +668,22 @@ class node : uncopyable {
             for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->print(internal_only);
                 if (i != child_count_ - 1) {
-                    std::cout << ",";
+                    out << ",";
                 }
-                std::cout << "\n";
+                out << "\n";
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
             for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->print(internal_only);
                 if (i != child_count_ - 1) {
-                    std::cout << ",";
+                    out << ",";
                 }
-                std::cout << "\n";
+                out << "\n";
             }
         }
-        std::cout << "]}";
+        out << "]}";
+        return out;
     }
 
     std::pair<uint64_t, uint64_t> leaf_usage() const {
@@ -749,8 +749,8 @@ class node : uncopyable {
         }
         children_[index] = sibling;
         children_[index + 1] = leaf;
-        child_sizes_.insert(index + 1, child_count_, leaf->size());
-        child_sums_.insert(index + 1, child_count_, leaf->p_sum());
+        child_sizes_.insert(index + 1, leaf->size());
+        child_sums_.insert(index + 1, leaf->p_sum());
         child_count_++;
     }
 
@@ -801,7 +801,7 @@ class node : uncopyable {
             }
             [[likely]] (void(0));
         }
-        // Number of leaves that can fit in the "right" sibling (with potential
+        // Number of elements that can fit in the "right" sibling (with potential
         // reallocation).
         uint32_t r_cap = 0;
         if (index < child_count_ - 1) {
@@ -905,9 +905,9 @@ class node : uncopyable {
                 children_[i] = children_[i - 1];
             }
             children_[index] = new_child;
-            child_sizes_.insert(index, child_count_, a_child->size(),
+            child_sizes_.insert(index, a_child->size(),
                                 new_child->size());
-            child_sums_.insert(index, child_count_, a_child->p_sum(),
+            child_sums_.insert(index, a_child->p_sum(),
                                new_child->p_sum());
             [[unlikely]] child_count_++;
         } else if (r_cap > l_cap) {
@@ -1023,7 +1023,7 @@ class node : uncopyable {
      *
      * @param index Location of insertion.
      * @param value Value to insert.
-     * @param alloc Instance of alloctor to use for allocation and reallocation.
+     * @param alloc Instance of allocator to use for allocation and reallocation.
      */
     template <class allocator>
     void leaf_insert(dtype index, bool value, allocator* alloc) {
@@ -1067,8 +1067,8 @@ class node : uncopyable {
         if (child_index != 0) {
             [[likely]] index -= child_sizes_.get(child_index - 1);
         }
-        child_sizes_.increment(child_index, child_count_, 1u);
-        child_sums_.increment(child_index, child_count_, value);
+        child_sizes_.increment(child_index, 1u);
+        child_sums_.increment(child_index, value);
         child->insert(index, value);
     }
 
@@ -1124,9 +1124,9 @@ class node : uncopyable {
             for (size_t i = child_count_; i > index; i--) {
                 children_[i] = children_[i - 1];
             }
-            child_sizes_.insert(index, child_count_, a_node->size(),
+            child_sizes_.insert(index, a_node->size(),
                                 new_child->size());
-            child_sums_.insert(index, child_count_, a_node->p_sum(),
+            child_sums_.insert(index, a_node->p_sum(),
                                new_child->p_sum());
             children_[index] = new_child;
             child_count_++;
@@ -1186,8 +1186,8 @@ class node : uncopyable {
         if (child_index != 0) {
             [[likely]] index -= child_sizes_.get(child_index - 1);
         }
-        child_sizes_.increment(child_index, child_count_, 1u);
-        child_sums_.increment(child_index, child_count_, value);
+        child_sizes_.increment(child_index, 1u);
+        child_sums_.increment(child_index, value);
         child->insert(index, value, alloc);
     }
 
@@ -1312,8 +1312,8 @@ class node : uncopyable {
             children_[i] = children_[i + 1];
         }
         children_[idx] = a;
-        child_sizes_.remove(idx, child_count_);
-        child_sums_.remove(idx, child_count_);
+        child_sizes_.remove(idx);
+        child_sums_.remove(idx);
         child_count_--;
     }
 
@@ -1368,8 +1368,8 @@ class node : uncopyable {
                 [[unlikely]] children_[child_index] = child;
             }
         }
-        child_sizes_.increment(child_index, child_count_, -1);
-        child_sums_.increment(child_index, child_count_, -int(value));
+        child_sizes_.increment(child_index, -1);
+        child_sums_.increment(child_index, -int(value));
         return value;
     }
 
@@ -1443,8 +1443,8 @@ class node : uncopyable {
             children_[i] = children_[i + 1];
         }
         children_[idx] = a;
-        child_sizes_.remove(idx, child_count_);
-        child_sums_.remove(idx, child_count_);
+        child_sizes_.remove(idx);
+        child_sums_.remove(idx);
         child_count_--;
     }
 
@@ -1491,8 +1491,8 @@ class node : uncopyable {
             [[likely]] index -= child_sizes_.get(child_index - 1);
         }
         bool value = child->remove(index, alloc);
-        child_sizes_.increment(child_index, child_count_, -1);
-        child_sums_.increment(child_index, child_count_, -int(value));
+        child_sizes_.increment(child_index, -1);
+        child_sums_.increment(child_index, -int(value));
         return value;
     }
 };

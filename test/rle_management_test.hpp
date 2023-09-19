@@ -16,17 +16,17 @@ void node_split_rle_test() {
     n->append_child(l);
     l = a->template allocate_leaf<leaf>(32, 300, false);
     n->append_child(l);
-    EXPECT_EQ(n->child_count(), 2u);
+    ASSERT_EQ(n->child_count(), 2u);
     n->insert(300, true, a);
-    EXPECT_EQ(n->child_count(), 3u);
-    EXPECT_EQ(n->size(), ((~uint32_t(0)) >> 1) + 301u);
-    EXPECT_EQ(n->p_sum(), 1u);
-    EXPECT_EQ(n->at(300), true);
+    ASSERT_EQ(n->child_count(), 3u);
+    ASSERT_EQ(n->size(), ((~uint32_t(0)) >> 1) + 301u);
+    ASSERT_EQ(n->p_sum(), 1u);
+    ASSERT_EQ(n->at(300), true);
     for (size_t i = 0; i < n->size(); i += 10000) {
-        EXPECT_EQ(n->at(i), false);
-        EXPECT_EQ(n->rank(i), (i > 300) * 1u);
+        ASSERT_EQ(n->at(i), false);
+        ASSERT_EQ(n->rank(i), (i > 300) * 1u);
     }
-    EXPECT_EQ(n->select(1), 300u);
+    ASSERT_EQ(n->select(1), 300u);
 
     //n->deallocate(a);
     a->deallocate_leaf(n);
@@ -37,13 +37,13 @@ template<class r_bv>
 void root_split_rle_test() {
     r_bv bv((~uint32_t(0)) >> 1, true);
     bv.validate();
-    EXPECT_EQ(bv.size(), (~uint32_t(0)) >> 1);
-    EXPECT_EQ(bv.sum(), (~uint32_t(0)) >> 1);
+    ASSERT_EQ(bv.size(), (~uint32_t(0)) >> 1);
+    ASSERT_EQ(bv.sum(), (~uint32_t(0)) >> 1);
 
     bv.insert(500000, false);
 
-    EXPECT_EQ(bv.size(), 1 + ((~uint32_t(0)) >> 1));
-    EXPECT_EQ(bv.sum(), (~uint32_t(0)) >> 1);
+    ASSERT_EQ(bv.size(), 1 + ((~uint32_t(0)) >> 1));
+    ASSERT_EQ(bv.sum(), (~uint32_t(0)) >> 1);
 
 }
 
