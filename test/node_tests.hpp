@@ -411,7 +411,6 @@ void node_access_leaf_test(uint64_t b) {
     ASSERT_EQ(3 * (b / 3) * 64, n->p_sum());
     ASSERT_EQ(3 * (b / 3) * 128, n->size());
     ASSERT_EQ(3 * (b / 3), n->child_count());
-
     for (uint64_t i = 0; i < (b / 3) * 128; i++) {
         ASSERT_EQ(false, n->at(i));
     }

@@ -41,7 +41,7 @@ class branchless_scan : uncopyable {
     /**
      * Constructor creates an empty container for cumulative sums.
      */
-    branchless_scan() : elems_() { }
+    branchless_scan() : elems_() {}
 
     /**
      * @brief Get the cumulative sum at `index`.
@@ -99,8 +99,7 @@ class branchless_scan : uncopyable {
      * @param a_value Value of the left element.
      * @param b_value Value of the right element.
      */
-    void insert(uint16_t index, dtype a_value,
-                dtype b_value) {
+    void insert(uint16_t index, dtype a_value, dtype b_value) {
         assert(index > 0);
         for (uint16_t i = branches - 1; i > index; i--) {
             elems_[i] = elems_[i - 1];
@@ -221,8 +220,7 @@ class branchless_scan : uncopyable {
         }
         for (uint16_t i = index + 1; i < branches; ++i) {
             elems_[i] = elems_[i - 1];
-        } 
-        
+        }
     }
 
     /**
@@ -294,6 +292,15 @@ class branchless_scan : uncopyable {
         idx ^= (dtype((elems_[idx] - q) & SIGN_BIT) >> (num_bits - 1));
         return idx;
     }
+
+    std::ostream& print(std::ostream& out = std::cout) const {
+        std::cout << "[";
+        for (uint16_t i = 0; i < branches; ++i) {
+            std::cout << elems_[i] << (i == branches - 1 ? "]\n" : ", ");
+        }
+        std::cout << std::flush;
+        return out;
+    }
 };
 
 template <class dtype, dtype branches>
@@ -336,12 +343,10 @@ class heap_order_branching {
 
     /**
      * @brief Gets the total for the entire structure.
-     * 
+     *
      * @return Cumulative sum at `branches - 1`.
-    */
-    dtype p_sum() const {
-        return values_[0];
-    }
+     */
+    dtype p_sum() const { return values_[0]; }
 
     /**
      * @brief Set the value at `index` to `value`.
@@ -354,7 +359,7 @@ class heap_order_branching {
      * @param index Index of value to modify.
      * @param value New value to set.
      */
-    void set(uint16_t index, dtype value) { 
+    void set(uint16_t index, dtype value) {
         if (index == branches - 1) {
             values_[0] = value;
             return;
@@ -383,6 +388,7 @@ class heap_order_branching {
             idx = idx * 2 + b;
             offset /= 2;
         }
+        values_[0] += res;
     }
 
     /**
@@ -401,7 +407,7 @@ class heap_order_branching {
      */
     template <class T>
     void increment(uint16_t index, T change) {
-        if (from == branches - 1) {
+        if (index == branches - 1) {
             values_[0] += change;
             return;
         }
@@ -416,6 +422,7 @@ class heap_order_branching {
             idx = idx * 2 + b;
             offset /= 2;
         }
+        values_[0] += change;
     }
 
     /**
@@ -432,10 +439,15 @@ class heap_order_branching {
      * @param a_value Value of the left element.
      * @param b_value Value of the right element.
      */
-    void insert(uint16_t index, dtype a_value,
-                dtype b_value) {
+    void insert(uint16_t index, dtype a_value, dtype b_value) {
         assert(index > 0);
-
+        to_scratch();
+        for (uint16_t i = branches - 1; i > index; i--) {
+            scratch_[i] = scratch_[i - 1];
+        }
+        scratch_[index - 1] = index != 1 ? scratch_[index - 2] + a_value : a_value;
+        scratch_[index] = scratch_[index - 1] + b_value;
+        from_scratch();
     }
 
     /**
@@ -449,11 +461,16 @@ class heap_order_branching {
      * split.
      *
      * @param index Position of new element.
-     * @param array_size Number of elements currently in the array.
      * @param value Value of the new element.
      */
-    void insert(uint16_t index, uint16_t array_size, dtype value) {
-        
+    void insert(uint16_t index, dtype value) {
+        assert(index > 0);
+        to_scratch();
+        for (uint16_t i = branches - 1; i >= index; i--) {
+            scratch_[i] = scratch_[i - 1];
+        }
+        scratch_[index - 1] -= value;
+        from_scratch();
     }
 
     /**
@@ -465,10 +482,13 @@ class heap_order_branching {
      * in the removed node have been moved.
      *
      * @param index Position of element to remove.
-     * @param array_size Number of elements in the array.
      */
-    void remove(uint16_t index, uint16_t array_size) {
-        
+    void remove(uint16_t index) {
+        to_scratch();
+        for (uint16_t i = index; i < branches - 1; i++) {
+            scratch_[i] = scratch_[i + 1];
+        }
+        from_scratch();
     }
 
     /**
@@ -479,10 +499,18 @@ class heap_order_branching {
      * node. Subsequent cumulative sums will be updated accordingly.
      *
      * @param n          Number of elements to remove.
-     * @param array_size Number of elements stored.
      */
-    void clear_first(uint16_t n, uint16_t array_size) {
-        
+    void clear_first(uint16_t n) {
+        to_scratch();
+        dtype subtrahend = scratch_[n - 1];
+        dtype m_v = scratch_[branches - 1] - subtrahend;
+        for (uint16_t i = n; i < branches; i++) {
+            scratch_[i - n] = scratch_[i] - subtrahend;
+        }
+        for (uint16_t i = branches - n; i < branches; ++i) {
+            scratch_[i] = m_v;
+        }
+        from_scratch();
     }
 
     /**
@@ -496,13 +524,18 @@ class heap_order_branching {
      * @param array_size Number of elements stored.
      */
     void clear_last(uint16_t n, uint16_t array_size) {
-        
+        to_scratch();
+        dtype m_v = n < array_size ? scratch_[array_size - n - 1] : 0;
+        for (uint16_t i = array_size - n; i < branches; i++) {
+            scratch_[i] = m_v;
+        }
+        from_scratch();
     }
 
     /**
      * @brief Adds elements from `other` to the end of `this`
      *
-     * Intended for use when rebalancing. Adds `n_elemes` elements from `other`
+     * Intended for use when rebalancing. Adds `n_elems` elements from `other`
      * to the end of "these" cumulative sums. Should be subsequently removed
      * from `other`
      *
@@ -511,8 +544,19 @@ class heap_order_branching {
      * @param other      Other cumulative size structure to copy from.
      */
     void append(uint16_t n_elems, uint16_t array_size,
-                const heap_order_branching* const other) {
-        
+                heap_order_branching* other) {
+        other->to_scratch();
+        dtype o_arr[branches];
+        std::memcpy(o_arr, scratch_, branches * sizeof(dtype));
+        to_scratch();
+        dtype addend = array_size != 0 ? scratch_[array_size - 1] : 0;
+        for (uint16_t i = 0; i < n_elems; i++) {
+            scratch_[i + array_size] = addend + o_arr[i];
+        }
+        for (uint16_t i = n_elems + array_size; i < branches; ++i) {
+            scratch_[i] = scratch_[array_size + n_elems - 1];
+        }
+        from_scratch();
     }
 
     /**
@@ -524,7 +568,7 @@ class heap_order_branching {
      * @param value Value to append.
      */
     void append(uint16_t index, dtype value) {
-        
+        increment(index, value);
     }
 
     /**
@@ -535,23 +579,29 @@ class heap_order_branching {
      * from `other`
      *
      * @param n_elems    Number of elements to append.
-     * @param array_size Number of elements stored in `this`.
      * @param o_size     Number of elements stored in `other`.
      * @param other      Other cumulative size structure to copy from.
      */
-    void prepend(uint16_t n_elems, uint16_t array_size, uint16_t o_size,
-                 const heap_order_branching* const other) {
-        
+    void prepend(uint16_t n_elems, uint16_t o_size,
+                 heap_order_branching* other) {
+        to_scratch();
+        dtype tmp[branches];
+        std::memcpy(tmp, scratch_, branches * sizeof(dtype));
+        other->to_scratch();
+        dtype subtrahend =
+            n_elems < o_size ? scratch_[o_size - n_elems - 1]: 0;
+        for (uint16_t i = 0; i < n_elems; i++) {
+            scratch_[i] = scratch_[i + o_size - n_elems] - subtrahend;
+        }
+        for (uint16_t i = n_elems; i < branches; i++) {
+            scratch_[i] = tmp[i - n_elems] + scratch_[n_elems - 1];
+        }
+        from_scratch();
     }
 
     /**
      * @brief Find the lowest child index s.t. the cumulative sum at the index
      * is at least q.
-     *
-     * This is implemented as a branchless binary search that uses the "sign
-     * bit" for index manipulations instead of conditional moves. This is the
-     * reason for limiting the maximum data structure size to `(~dtype(0)) >>
-     * 1`.
      *
      * If \f$q > \f$ `elems_[branches - 1]`, this will return either the index
      * of the last child or the index following the last child. Either way, this
@@ -573,8 +623,59 @@ class heap_order_branching {
      * @return \f$\underset{i}{\mathrm{arg min}}(\mathrm{cum\_sums}[i] \geq
      * q)\f$.
      */
-    uint16_t find(dtype q) const {
-        return 0;
+    uint16_t find(dtype q) const { 
+        uint16_t idx = 1;
+        uint16_t trg = 0;
+        for (uint16_t offset = branches / 2; offset > 0; offset /= 2) {
+            bool b = values_[idx] < q;
+            q -= b * values_[idx];
+            idx = idx * 2 + b;
+            trg += b * offset;
+        }
+        return trg;
+    }
+
+    std::ostream& print(std::ostream& out = std::cout) const {
+        std::cout << "[";
+        for (uint16_t i = 0; i < branches; ++i) {
+            std::cout << values_[i] << (i == branches - 1 ? "]\n" : ", ");
+        }
+        std::cout << std::flush;
+        return out;
+    }
+
+   private:
+    template<uint16_t idx>
+    __attribute__((always_inline)) void to_scratch(dtype partial, uint16_t& target_idx) {
+        if constexpr (idx >= branches / 2) {
+            if (target_idx > 0) {
+                scratch_[target_idx++] = partial;
+            }
+            scratch_[target_idx++] = partial + values_[idx];
+        } else {
+            to_scratch<idx * 2>(partial, target_idx);
+            to_scratch<idx * 2 + 1>(partial + values_[idx], target_idx);
+        }
+    }
+
+    void to_scratch() {
+        uint16_t target_idx = 0;
+        to_scratch<1>(0, target_idx);
+        scratch_[branches - 1] = values_[0];
+    }
+
+    template<uint16_t offset>
+    __attribute__((always_inline)) void from_scratch(dtype partial, uint16_t source_idx, uint16_t target_index) {
+        values_[target_index] = scratch_[source_idx] - partial;
+        if constexpr (offset) {
+            from_scratch<offset / 2>(partial, source_idx - offset, target_index * 2);
+            from_scratch<offset / 2>(partial + values_[target_index], source_idx + offset, target_index * 2 + 1);
+        }
+    }
+
+    void from_scratch() {
+        from_scratch<branches / 4>(0, branches / 2 - 1, 1);
+        values_[0] = scratch_[branches - 1];
     }
 };
 

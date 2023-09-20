@@ -178,4 +178,31 @@ TEST(SimpleBranch, Remove) { branch_remove_test<branch, BRANCH>(); }
 
 TEST(SimpleBranch, AppendElem) { branch_append_elem_test<branch, BRANCH>(); }
 
+// New induced heap orderer bst branch thingy.
+TEST(LogBranch, Access) { branching_set_access_test<log_branch, BRANCH>(); }
+
+TEST(LogBranch, Increment) { branching_increment_test<log_branch, BRANCH>(); }
+
+TEST(LogBranch, ClearFirst) {
+    branching_delete_first_n_test<log_branch, BRANCH>();
+}
+
+TEST(LogBranch, Appending) { branching_append_n_test<log_branch, BRANCH>(); }
+
+TEST(LogBranch, ClearLast) {
+    branching_delete_last_n_test<log_branch, BRANCH>();
+}
+
+TEST(LogBranch, Prepending) { branching_prepend_n_test<log_branch, BRANCH>(); }
+
+TEST(LogBranch, TransferPrepend) {
+    branching_transfer_prepend_n_test<log_branch, BRANCH>();
+}
+
+TEST(LogBranch, Insert) { branching_insert_test<log_branch, BRANCH>(); }
+
+TEST(LogBranch, Remove) { branch_remove_test<log_branch, BRANCH>(); }
+
+TEST(LogBranch, AppendElem) { branch_append_elem_test<log_branch, BRANCH>(); }
+
 #endif

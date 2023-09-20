@@ -25,6 +25,7 @@ typedef leaf<BUFFER_SIZE, SIZE, true, false, false> uns_buf_leaf;
 typedef leaf<0, SIZE> ubl;
 typedef node<sl, uint64_t, SIZE, BRANCH> nd;
 typedef branchless_scan<uint64_t, BRANCH> branch;
+typedef heap_order_branching<uint64_t, BRANCH> log_branch;
 typedef bit_vector<sl, nd, ma, SIZE, BRANCH, uint64_t> test_bv;
 typedef leaf<16, SIZE, true, true> rll;
 typedef node<rll, uint64_t, SIZE, 64, true, true> rl_node;

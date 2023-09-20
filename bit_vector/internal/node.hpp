@@ -73,7 +73,8 @@ template <class leaf_type, class dtype, uint32_t leaf_size, uint16_t branches,
           bool aggressive_realloc = false, bool compressed = false>
 class node : uncopyable {
    private:
-    typedef branchless_scan<dtype, branches> branching;
+    //typedef branchless_scan<dtype, branches> branching;
+    typedef heap_order_branching<dtype, branches> branching;
     /**
      * @brief Bit indicating whether the nodes children are laves or nodes.
      */
@@ -169,14 +170,11 @@ class node : uncopyable {
                 reinterpret_cast<leaf_type*>(children_[child_index]);
             if constexpr (compressed) {
                 if (child->is_compressed() && child->need_realloc()) {
-                    std::cerr << "Compressed leaf desires reallocation" << std::endl;
                     dtype cap = child->capacity();
                     dtype n_cap = child->desired_capacity();
                     if (cap * WORD_BITS >= leaf_size || n_cap * WORD_BITS >= leaf_size) {
-                        std::cerr << " -> rebalancing" << std::endl;
                         rebalance_leaf(child_index, child, alloc);
                     } else {
-                        std::cerr << " -> reallocating" << std::endl;
                         children_[child_index] = alloc->reallocate_leaf(
                             child, cap, n_cap);
                     }
