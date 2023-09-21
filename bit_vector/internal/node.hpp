@@ -73,8 +73,8 @@ template <class leaf_type, class dtype, uint32_t leaf_size, uint16_t branches,
           bool aggressive_realloc = false, bool compressed = false>
 class node : uncopyable {
    private:
-    //typedef branchless_scan<dtype, branches> branching;
-    typedef heap_order_branching<dtype, branches> branching;
+    typedef branchless_scan<dtype, branches> branching;
+    //typedef heap_order_branching<dtype, branches> branching;
     /**
      * @brief Bit indicating whether the nodes children are laves or nodes.
      */

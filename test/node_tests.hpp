@@ -893,7 +893,6 @@ void node_insert_leaf_rebalance_test(uint64_t size) {
     for (uint64_t i = 0; i < size; i++) {
         n->insert(0, i % 2, a);
     }
-
     ASSERT_EQ(size, n->p_sum());
     ASSERT_EQ(2 * size, n->size());
     ASSERT_EQ(3u, n->child_count());

@@ -360,35 +360,9 @@ class heap_order_branching {
      * @param value New value to set.
      */
     void set(uint16_t index, dtype value) {
-        if (index == branches - 1) {
-            values_[0] = value;
-            return;
-        }
-        ++index;
-        uint16_t trg = branches / 2;
-        uint16_t offset = trg / 2;
-        uint16_t idx = 1;
-        int64_t res = value;
-        const constexpr uint16_t levels = 31 - __builtin_clz(branches);
-        for (uint32_t i = 0; i < levels; ++i) {
-            bool b = index >= trg;
-            res -= b * values_[idx];
-            trg += b * 2 * offset - offset;
-            idx = idx * 2 + b;
-            offset /= 2;
-        }
-        --index;
-        trg = branches / 2;
-        offset = trg / 2;
-        idx = 1;
-        for (uint32_t i = 0; i < levels; ++i) {
-            bool b = index >= trg;
-            values_[idx] += (!b) * res;
-            trg += b * 2 * offset - offset;
-            idx = idx * 2 + b;
-            offset /= 2;
-        }
-        values_[0] += res;
+        to_scratch();
+        scratch_[index] = value;
+        from_scratch();
     }
 
     /**
