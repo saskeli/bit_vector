@@ -18,6 +18,7 @@ class Wavelet_tree {
         }
         return m_v;
     }();
+    static_assert(CODE_LENGTH <= 8);
     static const constexpr uint16_t WT_NODES = uint16_t(1) << CODE_LENGTH;
     static_assert(WT_NODES >= 2);
 
@@ -38,8 +39,8 @@ class Wavelet_tree {
         uint8_t c_len = code_lengths[e];
         uint16_t node_id = 1;
         uint64_t inherited_offset = 0;
-        for (uint16_t i = 0; i < c_len; ++i) {
-            bool v = (code >> i) & uint8_t(1);
+        for (uint16_t i = c_len - 1; i < c_len; --i) {
+            bool v = (code >> i) & 1;
             bit_vector.insert(nodes[node_id].left + inherited_offset + idx, v);
             ++nodes[node_id].size;
             if (v) {
@@ -57,6 +58,7 @@ class Wavelet_tree {
     }
 
     uint8_t access(uint64_t idx) const {
+        
         uint8_t e = 0;
 
         uint16_t node_id = 1;
@@ -79,7 +81,7 @@ class Wavelet_tree {
             }
 
         }
-        return r_map[r];
+        return r_map[e];
     }
 };
 
