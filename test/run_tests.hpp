@@ -270,6 +270,7 @@ void run_sdsl_test(uint64_t* input, uint64_t len) {
     }
 }
 
+#ifdef GTEST_ON
 TEST(Run, A) {
     uint64_t a[] = {1570};
     run_test<simple_bv<8, 256, 8>, dyn::suc_bv>(a, 1);
@@ -409,5 +410,6 @@ TEST(RunRle, D) {
                     1,      0,  26, 0, 0,  28, 1,  0,  30, 0};
     run_test<run_len_bv, bv::bv>(a, 94, 1);
 }
+#endif
 
 #endif

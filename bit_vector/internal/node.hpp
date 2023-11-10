@@ -100,7 +100,7 @@ class node : uncopyable {
     static_assert((leaf_size % 128) == 0,
                   "leaf size needs to be divisible by 128");
     static_assert(leaf_size < 0xffffff, "leaf size must fit in 24 bits");
-    static_assert(branches > 2, "Convenient shortcuts and assumptions if this holds.")
+    static_assert(branches > 2, "Convenient shortcuts and assumptions if this holds.");
 
    public:
     /**
@@ -639,29 +639,29 @@ class node : uncopyable {
      * @param internal_only If true, leaves will not output their data arrays to
      * save space
      */
-    void print(bool internal_only = true) const {
-        std::cout << "{\n\"type\": \"node\",\n"
+    std::ostream& print(bool internal_only = true, std::ostream& out = std::cout) const {
+        out << "{\n\"type\": \"node\",\n"
                   << "\"has_leaves\": " << (has_leaves() ? "true" : "false")
                   << ",\n"
                   << "\"child_count\": " << int(child_count_) << ",\n"
                   << "\"size\": " << size() << ",\n"
                   << "\"child_sizes\": [";
         for (uint16_t i = 0; i < branches; i++) {
-            std::cout << child_sizes_.get(i);
+            out << child_sizes_.get(i);
             if (i != branches - 1) {
-                std::cout << ", ";
+                out << ", ";
             }
         }
-        std::cout << "],\n"
+        out << "],\n"
                   << "\"p_sum\": " << p_sum() << ",\n"
                   << "\"child_sums\": [";
         for (uint16_t i = 0; i < branches; i++) {
-            std::cout << child_sums_.get(i);
+            out << child_sums_.get(i);
             if (i != branches - 1) {
-                std::cout << ", ";
+                out << ", ";
             }
         }
-        std::cout << "],\n"
+        out << "],\n"
                   << "\"children\": [\n";
         if (has_leaves()) {
             leaf_type* const* children =
@@ -669,21 +669,22 @@ class node : uncopyable {
             for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->print(internal_only);
                 if (i != child_count_ - 1) {
-                    std::cout << ",";
+                    out << ",";
                 }
-                std::cout << "\n";
+                out << "\n";
             }
         } else {
             node* const* children = reinterpret_cast<node* const*>(children_);
             for (uint16_t i = 0; i < child_count_; i++) {
                 children[i]->print(internal_only);
                 if (i != child_count_ - 1) {
-                    std::cout << ",";
+                    out << ",";
                 }
-                std::cout << "\n";
+                out << "\n";
             }
         }
-        std::cout << "]}";
+        out << "]}";
+        return out;
     }
 
     std::pair<uint64_t, uint64_t> leaf_usage() const {
